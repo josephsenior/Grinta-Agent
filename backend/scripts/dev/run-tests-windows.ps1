@@ -14,7 +14,7 @@ $ignore = @(
     '--ignore=tests/unit/memory',
     '--ignore=tests/unit/runtime/plugins',
     # Additional aggressive ignores for remaining Windows-unfriendly areas
-    '--ignore=tests/unit/agenthub',
+    '--ignore=tests/unit/engines',
     '--ignore=tests/unit/controller',
     '--ignore=tests/unit/core',
     '--ignore=tests/unit/llm',

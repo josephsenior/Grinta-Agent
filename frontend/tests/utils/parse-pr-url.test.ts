@@ -115,7 +115,7 @@ describe("parse-pr-url", () => {
   });
 
   describe("real-world scenarios", () => {
-    it("should handle typical microagent finish messages", () => {
+    it("should handle typical playbook finish messages", () => {
       const text = `
         I have successfully created a pull request with the requested changes.
         You can view the PR here: https://github.com/Forge/Forge/pull/1234

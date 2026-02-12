@@ -3,12 +3,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from forge.server.routes.monitoring import app as monitoring_router
-from forge.server.middleware.request_metrics import RequestMetricsMiddleware
+from backend.server.routes.monitoring import app as monitoring_router
+from backend.server.middleware.request_metrics import RequestMetricsMiddleware
 
 # Access registry reset for deterministic tests
 try:
-    from forge.server.middleware.request_metrics import reset_request_metrics
+    from backend.server.middleware.request_metrics import reset_request_metrics
 except Exception:
     reset_request_metrics = None
 

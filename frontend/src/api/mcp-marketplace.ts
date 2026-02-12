@@ -4,6 +4,7 @@ import type {
   MCPMarketplaceFilters,
   MCPCategory,
 } from "#/types/mcp-marketplace";
+import { DOCUMENTATION_URL } from "#/constants/app";
 import { logger } from "#/utils/logger";
 
 /**
@@ -1354,7 +1355,7 @@ function deriveOfficialServerMetadata(
     documentation:
       typeof server?.documentation === "string"
         ? server.documentation
-        : "https://docs.forge.dev/usage/mcp",
+        : DOCUMENTATION_URL.MCP,
   } as const;
 }
 

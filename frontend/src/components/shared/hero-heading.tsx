@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import BuildIt from "#/icons/build-it.svg?react";
 import { I18nKey } from "#/i18n/declaration";
+import { DOCUMENTATION_URL } from "#/constants/app";
 
 export function HeroHeading() {
   const { t } = useTranslation();
@@ -17,7 +18,7 @@ export function HeroHeading() {
           <a
             rel="noopener noreferrer"
             target="_blank"
-            href="https://docs.forge.dev/usage/getting-started"
+            href={DOCUMENTATION_URL.GETTING_STARTED}
             className="text-white underline underline-offset-[3px]"
           >
             {t(I18nKey.LANDING$START_HELP_LINK)}

@@ -1,7 +1,7 @@
 import { delay, http, HttpResponse } from "msw";
 import { GitRepository, Branch, PaginatedBranchesResponse } from "#/types/git";
 import { Provider } from "#/types/settings";
-import { MicroagentContentResponse, RepositoryMicroagent } from "#/api/forge.types";
+import { PlaybookContentResponse, RepositoryPlaybook } from "#/api/forge.types";
 
 // Generate a list of mock repositories with realistic data
 const generateMockRepositories = (
@@ -39,11 +39,11 @@ const generateMockBranches = (count: number): Branch[] =>
     ).toISOString(),
   }));
 
-// Generate mock microagents for a repository
-const generateMockMicroagents = (count: number): RepositoryMicroagent[] =>
+// Generate mock playbooks for a repository
+const generateMockPlaybooks = (count: number): RepositoryPlaybook[] =>
   Array.from({ length: count }, (_, i) => ({
-    name: `microagent-${i + 1}`,
-    path: `.Forge/microagents/microagent-${i + 1}.md`,
+    name: `playbook-${i + 1}`,
+    path: `.Forge/playbooks/playbook-${i + 1}.md`,
     created_at: new Date(
       Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000,
     ).toISOString(),
@@ -58,8 +58,8 @@ const MOCK_REPOSITORIES = {
 // Mock branches (same for all repos for simplicity)
 const MOCK_BRANCHES = generateMockBranches(25);
 
-// Mock microagents (same for all repos for simplicity)
-const MOCK_MICROAGENTS = generateMockMicroagents(5);
+// Mock playbooks (same for all repos for simplicity)
+const MOCK_PLAYBOOKS = generateMockPlaybooks(5);
 
 // Helper functions - defined before use
 function extractRepositoryQueryParams(params: URLSearchParams) {
@@ -296,9 +296,9 @@ export const GIT_REPOSITORY_HANDLERS = [
     return HttpResponse.json(limitedBranches);
   }),
 
-  // Repository microagents endpoint
+  // Repository playbooks endpoint
   http.get(
-    "/api/user/repository/:owner/:repo/microagents",
+    "/api/user/repository/:owner/:repo/playbooks",
     async ({ params }) => {
       const { owner, repo } = params;
 
@@ -308,13 +308,13 @@ export const GIT_REPOSITORY_HANDLERS = [
         });
       }
 
-      return HttpResponse.json(MOCK_MICROAGENTS);
+      return HttpResponse.json(MOCK_PLAYBOOKS);
     },
   ),
 
-  // Repository microagent content endpoint
+  // Repository playbook content endpoint
   http.get(
-    "/api/user/repository/:owner/:repo/microagents/content",
+    "/api/user/repository/:owner/:repo/playbooks/content",
     async ({ request, params }) => {
       const { owner, repo } = params;
       const url = new URL(request.url);
@@ -327,26 +327,26 @@ export const GIT_REPOSITORY_HANDLERS = [
         );
       }
 
-      // Find the microagent by path
-      const microagent = MOCK_MICROAGENTS.find((m) => m.path === filePath);
+      // Find the playbook by path
+      const playbook = MOCK_PLAYBOOKS.find((m) => m.path === filePath);
 
-      if (!microagent) {
-        return HttpResponse.json("Microagent not found", { status: 404 });
+      if (!playbook) {
+        return HttpResponse.json("Playbook not found", { status: 404 });
       }
 
-      const response: MicroagentContentResponse = {
-        content: `# ${microagent.name}
+      const response: PlaybookContentResponse = {
+        content: `# ${playbook.name}
 
-A helpful microagent for repository tasks.
+A helpful playbook for repository tasks.
 
 ## Instructions
 
-This microagent helps with specific tasks related to the repository.
+This playbook helps with specific tasks related to the repository.
 
 ### Usage
 
 1. Describe your task clearly
-2. The microagent will analyze the context
+2. The playbook will analyze the context
 3. Follow the provided recommendations
 
 ### Capabilities
@@ -358,8 +358,8 @@ This microagent helps with specific tasks related to the repository.
 
 ---
 
-*Generated mock content for ${microagent.name}*`,
-        path: microagent.path,
+*Generated mock content for ${playbook.name}*`,
+        path: playbook.path,
         git_provider: "github",
         triggers: ["code review", "bug fix", "feature development"],
       };

@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Languages } from "lucide-react";
 import { LanguageInput } from "#/components/features/settings/app-settings/language-input";
-import { Accordion } from "#/components/features/settings/Accordion";
+import { Accordion } from "#/components/features/settings/accordion";
 
 interface LanguageSectionProps {
   language: string;

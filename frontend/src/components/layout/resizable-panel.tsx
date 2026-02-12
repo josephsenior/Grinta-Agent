@@ -1,10 +1,5 @@
 import React, { CSSProperties, JSX, useEffect, useRef, useState } from "react";
-import {
-  VscChevronDown,
-  VscChevronLeft,
-  VscChevronRight,
-  VscChevronUp,
-} from "react-icons/vsc";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { IconButton } from "../shared/buttons/icon-button";
 
@@ -169,12 +164,12 @@ export function ResizablePanel({
         onMouseDown={collapse === Collapse.SPLIT ? onMouseDown : undefined}
       >
         <IconButton
-          icon={isHorizontal ? <VscChevronLeft /> : <VscChevronUp />}
+          icon={isHorizontal ? <ChevronLeft /> : <ChevronUp />}
           ariaLabel="Collapse"
           onClick={onCollapse}
         />
         <IconButton
-          icon={isHorizontal ? <VscChevronRight /> : <VscChevronDown />}
+          icon={isHorizontal ? <ChevronRight /> : <ChevronDown />}
           ariaLabel="Expand"
           onClick={onExpand}
         />

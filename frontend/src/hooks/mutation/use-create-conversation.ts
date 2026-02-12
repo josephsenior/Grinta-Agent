@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import posthog from "posthog-js";
+import posthog from "#/utils/posthog";
 import Forge from "#/api/forge";
 import { SuggestedTask } from "#/api/forge.types";
 import { Provider } from "#/types/settings";
-import { CreateMicroagent } from "#/api/forge.types";
+import { CreatePlaybook } from "#/api/forge.types";
 
 interface CreateConversationVariables {
   query?: string;
@@ -14,7 +14,7 @@ interface CreateConversationVariables {
   };
   suggestedTask?: SuggestedTask;
   conversationInstructions?: string;
-  createMicroagent?: CreateMicroagent;
+  createPlaybook?: CreatePlaybook;
 }
 
 export const useCreateConversation = () => {
@@ -28,7 +28,7 @@ export const useCreateConversation = () => {
         repository,
         suggestedTask,
         conversationInstructions,
-        createMicroagent,
+        createPlaybook,
       } = variables;
 
       return Forge.createConversation(
@@ -38,7 +38,7 @@ export const useCreateConversation = () => {
         suggestedTask,
         repository?.branch,
         conversationInstructions,
-        createMicroagent,
+        createPlaybook,
       );
     },
     onSuccess: async (_, { query, repository }) => {

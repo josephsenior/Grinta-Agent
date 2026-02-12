@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import posthog from "#/utils/posthog";
 import { handleStatusMessage } from "#/services/actions";
 import {
   displayErrorToast,

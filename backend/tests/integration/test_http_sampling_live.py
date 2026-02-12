@@ -43,15 +43,15 @@ def build_client(env: dict, tracer_store: list | None = None):
     if tracer_store is not None:
         fake = _TestTracer(tracer_store)
 
-        def _get_tracer(_name: str = "forge.server"):
+        def _get_tracer(_name: str = "backend.server"):
             return fake
 
         setattr(ot_trace, "get_tracer", _get_tracer)
 
     # Force a fresh import of the app module
-    if "forge.server.app" in importlib.sys.modules:
-        importlib.reload(importlib.import_module("forge.server.app"))
-    from forge.server.app import app  # type: ignore
+    if "backend.server.app" in importlib.sys.modules:
+        importlib.reload(importlib.import_module("backend.server.app"))
+    from backend.server.app import app  # type: ignore
 
     return TestClient(app)
 

@@ -1,4 +1,4 @@
-import { Button } from "@heroui/react";
+import { Button } from "#/components/ui/button";
 import React, { ReactElement } from "react";
 
 export interface IconButtonProps {
@@ -17,8 +17,8 @@ export function IconButton({
   return (
     <Button
       type="button"
-      variant="flat"
-      onPress={onClick}
+      variant="ghost"
+      onClick={onClick}
       className="cursor-pointer text-[12px] bg-transparent aspect-square px-0 min-w-[20px] h-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 focus-visible:ring-offset-neutral-900"
       aria-label={ariaLabel}
       data-testid={testId}

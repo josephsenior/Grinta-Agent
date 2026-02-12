@@ -61,8 +61,7 @@ export function LoadingState({
       <LoadingSpinner size={spinnerSize} variant={spinnerVariant} />
       {loadingText && (
         <p
-          className="text-sm text-[var(--text-tertiary)] animate-pulse"
-          style={{ wordBreak: "normal", whiteSpace: "normal" }}
+          className="text-sm text-[var(--text-tertiary)] animate-pulse break-normal whitespace-normal"
         >
           {loadingText}
         </p>

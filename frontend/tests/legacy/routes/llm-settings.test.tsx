@@ -178,7 +178,7 @@ describe("Content", () => {
       expect(baseUrl).toHaveValue("");
       expect(apiKey).toHaveValue("");
       expect(apiKey).toHaveProperty("placeholder", "");
-      expect(agent).toHaveValue("CodeActAgent");
+      expect(agent).toHaveValue("Orchestrator");
       expect(condensor).toBeChecked();
     });
 
@@ -470,8 +470,8 @@ describe("Form submission", () => {
     expect(agent).toHaveValue("");
     expect(submitButton).toBeDisabled();
 
-    await userEvent.type(agent, "CodeActAgent");
-    expect(agent).toHaveValue("CodeActAgent");
+    await userEvent.type(agent, "Orchestrator");
+    expect(agent).toHaveValue("Orchestrator");
     expect(submitButton).toBeDisabled();
 
     // toggle confirmation mode

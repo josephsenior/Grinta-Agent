@@ -89,8 +89,7 @@ function EmptyState({ isVisible, title, subtitle }: EmptyStateProps) {
               {title}
             </h3>
             <p
-              className="text-[var(--text-tertiary)] text-sm font-medium"
-              style={{ wordBreak: "normal", whiteSpace: "normal" }}
+              className="text-[var(--text-tertiary)] text-sm font-medium break-normal whitespace-normal"
             >
               {subtitle}
             </p>

@@ -110,11 +110,9 @@ function StreamingTerminalContent({
   return (
     <div
       ref={contentRef}
-      className="terminal-content px-3 py-2 overflow-y-auto font-mono text-xs leading-relaxed"
+      className="terminal-content px-3 py-2 overflow-y-auto font-mono text-xs leading-relaxed [scrollbar-gutter:stable] transition-[max-height] duration-200 ease-in-out"
       style={{
         maxHeight,
-        scrollbarGutter: "stable",
-        transition: "max-height 0.2s ease-in-out",
       }}
     >
       <pre className="whitespace-pre-wrap text-foreground-secondary/90">

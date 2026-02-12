@@ -98,62 +98,36 @@ export class ErrorBoundary extends Component<
 
       return (
         <div
-          style={{
-            minHeight: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1rem",
-            backgroundColor: "#111827",
-          }}
+          className="min-h-screen flex items-center justify-center p-4 bg-[#111827]"
         >
-          <div style={{ maxWidth: "28rem", width: "100%" }}>
+          <div className="max-w-[28rem] w-full">
             <div
-              style={{
-                backgroundColor: "#1f2937",
-                border: "1px solid #374151",
-                borderRadius: "1rem",
-                padding: "2rem",
-                textAlign: "center",
-              }}
+              className="bg-[#1f2937] border border-[#374151] rounded-2xl p-8 text-center"
             >
               {/* Error Icon */}
               <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  marginBottom: "1.5rem",
-                }}
+                className="flex justify-center mb-6"
               >
                 <div
-                  style={{
-                    padding: "1rem",
-                    backgroundColor: "rgba(239, 68, 68, 0.1)",
-                    borderRadius: "50%",
-                  }}
+                  className="p-4 bg-red-500/10 rounded-full"
                 >
                   <AlertTriangle
-                    style={{ width: "3rem", height: "3rem", color: "#ef4444" }}
+                    className="w-12 h-12 text-red-500"
                   />
                 </div>
               </div>
 
               {/* Error Title */}
-              <div style={{ marginBottom: "1.5rem" }}>
+              <div className="mb-6">
                 <h2
-                  style={{
-                    fontSize: "1.5rem",
-                    fontWeight: "bold",
-                    color: "white",
-                    marginBottom: "0.5rem",
-                  }}
+                  className="text-2xl font-bold text-white mb-2"
                 >
                   {i18n.t(
                     "error.oopsSomethingWentWrong",
                     "Oops! Something went wrong",
                   )}
                 </h2>
-                <p style={{ color: "#d1d5db" }}>
+                <p className="text-gray-300">
                   {i18n.t(
                     "error.unexpectedErrorDontWorry",
                     "We encountered an unexpected error. Don't worry, we're on it!",
@@ -161,89 +135,40 @@ export class ErrorBoundary extends Component<
                 </p>
               </div>
 
-              {/* Error Details (Development Only) */}
-              {process.env.NODE_ENV === "development" && error && (
+              {/* Error Details (Always show in OSS Mode) */}
+              {error && (
                 <details
-                  style={{
-                    textAlign: "left",
-                    backgroundColor: "#374151",
-                    borderRadius: "0.5rem",
-                    padding: "1rem",
-                    marginBottom: "1.5rem",
-                  }}
+                  className="text-left bg-[#374151] rounded-lg p-4 mb-6"
                 >
                   <summary
-                    style={{
-                      cursor: "pointer",
-                      fontSize: "0.875rem",
-                      fontWeight: "500",
-                      color: "#d1d5db",
-                      marginBottom: "0.5rem",
-                    }}
+                    className="cursor-pointer text-sm font-medium text-gray-300 mb-2"
                   >
                     {i18n.t(
-                      "error.errorDetailsDevelopment",
-                      "Error Details (Development)",
+                      "error.errorDetails",
+                      "Error Details",
                     )}
                   </summary>
                   <pre
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#9ca3af",
-                      overflow: "auto",
-                      maxHeight: "8rem",
-                    }}
+                    className="text-xs text-gray-400 overflow-auto max-h-48 whitespace-pre-wrap select-text"
                   >
-                    {error.message}
-                    {error.stack && `\n\n${error.stack}`}
+                    {/* Check if it's an API error with backend details */}
+                    {(error as any).response?.data?.technical_details || (error as any).response?.data?.message || error.message}
+                    {error.stack && `\n\nClient Stack:\n${error.stack}`}
                   </pre>
                 </details>
               )}
 
               {/* Action Buttons */}
               <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem",
-                }}
+                className="flex flex-col gap-3"
               >
                 {retryCount < maxRetries && (
                   <button
                     type="button"
                     onClick={this.handleRetry}
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.5rem",
-                      padding: "0.75rem 1rem",
-                      backgroundColor: "#3b82f6",
-                      color: "white",
-                      borderRadius: "0.75rem",
-                      border: "none",
-                      cursor: "pointer",
-                      fontWeight: "500",
-                    }}
-                    onMouseOver={(e): void => {
-                      const target = e.currentTarget;
-                      target.style.backgroundColor = "#2563eb";
-                    }}
-                    onMouseOut={(e): void => {
-                      const target = e.currentTarget;
-                      target.style.backgroundColor = "#3b82f6";
-                    }}
-                    onFocus={(e): void => {
-                      const target = e.currentTarget;
-                      target.style.backgroundColor = "#2563eb";
-                    }}
-                    onBlur={(e): void => {
-                      const target = e.currentTarget;
-                      target.style.backgroundColor = "#3b82f6";
-                    }}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-blue-500 text-white rounded-xl border-none cursor-pointer font-medium hover:bg-blue-600 focus:bg-blue-600"
                   >
-                    <RefreshCw style={{ width: "1rem", height: "1rem" }} />
+                    <RefreshCw className="w-4 h-4" />
                     {i18n.t("common.tryAgain", "Try Again")} (
                     {maxRetries - retryCount} {i18n.t("common.left", "left")})
                   </button>
@@ -252,76 +177,18 @@ export class ErrorBoundary extends Component<
                 <button
                   type="button"
                   onClick={this.handleReset}
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.5rem",
-                    padding: "0.75rem 1rem",
-                    backgroundColor: "#374151",
-                    color: "white",
-                    borderRadius: "0.75rem",
-                    border: "1px solid #4b5563",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                  onMouseOver={(e): void => {
-                    const target = e.currentTarget;
-                    target.style.backgroundColor = "#4b5563";
-                  }}
-                  onMouseOut={(e): void => {
-                    const target = e.currentTarget;
-                    target.style.backgroundColor = "#374151";
-                  }}
-                  onFocus={(e): void => {
-                    const target = e.currentTarget;
-                    target.style.backgroundColor = "#4b5563";
-                  }}
-                  onBlur={(e): void => {
-                    const target = e.currentTarget;
-                    target.style.backgroundColor = "#374151";
-                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-[#374151] text-white rounded-xl border border-[#4b5563] cursor-pointer font-medium hover:bg-[#4b5563] focus:bg-[#4b5563]"
                 >
-                  <Bug style={{ width: "1rem", height: "1rem" }} />
+                  <Bug className="w-4 h-4" />
                   {i18n.t("common.reset", "Reset")}
                 </button>
 
                 <button
                   type="button"
                   onClick={this.handleGoHome}
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.5rem",
-                    padding: "0.75rem 1rem",
-                    backgroundColor: "#374151",
-                    color: "white",
-                    borderRadius: "0.75rem",
-                    border: "1px solid #4b5563",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                  onMouseOver={(e): void => {
-                    const target = e.currentTarget;
-                    target.style.backgroundColor = "#4b5563";
-                  }}
-                  onMouseOut={(e): void => {
-                    const target = e.currentTarget;
-                    target.style.backgroundColor = "#374151";
-                  }}
-                  onFocus={(e): void => {
-                    const target = e.currentTarget;
-                    target.style.backgroundColor = "#4b5563";
-                  }}
-                  onBlur={(e): void => {
-                    const target = e.currentTarget;
-                    target.style.backgroundColor = "#374151";
-                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-[#374151] text-white rounded-xl border border-[#4b5563] cursor-pointer font-medium hover:bg-[#4b5563] focus:bg-[#4b5563]"
                 >
-                  <Home style={{ width: "1rem", height: "1rem" }} />
+                  <Home className="w-4 h-4" />
                   {i18n.t("common.goToConversations", "Go to Conversations")}
                 </button>
               </div>
@@ -329,11 +196,7 @@ export class ErrorBoundary extends Component<
               {/* Retry Count Info */}
               {retryCount > 0 ? (
                 <p
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "#9ca3af",
-                    marginTop: "1rem",
-                  }}
+                  className="text-sm text-gray-400 mt-4"
                 >
                   {i18n.t("error.retryAttempt", "Retry attempt")}: {retryCount}/
                   {maxRetries}

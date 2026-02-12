@@ -1,4 +1,4 @@
-import { FaGithub } from "react-icons/fa6";
+import { Github } from "lucide-react";
 import { Provider } from "#/types/settings";
 
 interface GitProviderIconProps {
@@ -8,7 +8,7 @@ interface GitProviderIconProps {
 export function GitProviderIcon({ gitProvider }: GitProviderIconProps) {
   return (
     <>
-      {gitProvider === "github" && <FaGithub size={14} />}
+      {gitProvider === "github" && <Github size={14} />}
     </>
   );
 }

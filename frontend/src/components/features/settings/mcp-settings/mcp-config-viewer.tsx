@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { MCPConfig, MCPSSEServer, MCPStdioServer } from "#/types/settings";
 import { I18nKey } from "#/i18n/declaration";
+import { DOCUMENTATION_URL } from "#/constants/app";
 
 interface MCPConfigViewerProps {
   mcpConfig?: MCPConfig;
@@ -95,7 +96,7 @@ export function MCPConfigViewer({ mcpConfig }: MCPConfigViewerProps) {
           {t(I18nKey.SETTINGS$MCP_CONFIGURATION)}
         </h3>
         <a
-          href="https://docs.forge.dev/usage/mcp"
+          href={DOCUMENTATION_URL.MCP}
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs text-primary-500 hover:text-primary-400 hover:underline transition-colors duration-200"

@@ -1,3 +1,0 @@
-[submodule "backend/third_party/tree-sitter-python"]
-	path = backend/third_party/tree-sitter-python
-	url = https://github.com/tree-sitter/tree-sitter-python.git

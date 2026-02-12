@@ -87,16 +87,13 @@ export function TypingIndicator({ action }: TypingIndicatorProps) {
       {/* Animated dots (bolt.diy style) */}
       <div className="flex items-center space-x-1">
         <span
-          className="w-1 h-1 bg-foreground-secondary rounded-full animate-[bounce_0.6s_infinite]"
-          style={{ animationDelay: "0ms" }}
+          className="w-1 h-1 bg-foreground-secondary rounded-full animate-[bounce_0.6s_infinite] [animation-delay:0ms]"
         />
         <span
-          className="w-1 h-1 bg-foreground-secondary rounded-full animate-[bounce_0.6s_infinite]"
-          style={{ animationDelay: "150ms" }}
+          className="w-1 h-1 bg-foreground-secondary rounded-full animate-[bounce_0.6s_infinite] [animation-delay:150ms]"
         />
         <span
-          className="w-1 h-1 bg-foreground-secondary rounded-full animate-[bounce_0.6s_infinite]"
-          style={{ animationDelay: "300ms" }}
+          className="w-1 h-1 bg-foreground-secondary rounded-full animate-[bounce_0.6s_infinite] [animation-delay:300ms]"
         />
       </div>
     </div>

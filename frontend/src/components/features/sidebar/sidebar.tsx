@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
-import { useSidebar } from "#/contexts/sidebar-context";
+import { useSidebar } from "#/context/sidebar-context";
 import { ConversationPanel } from "../conversation-panel/conversation-panel";
 import { ConversationPanelWrapper } from "../conversation-panel/conversation-panel-wrapper";
 import { SettingsModal } from "#/components/shared/modals/settings/settings-modal";
@@ -62,7 +62,7 @@ export function Sidebar() {
         <button
           type="button"
           onClick={toggleSidebar}
-          className="fixed left-0 top-1/2 -translate-y-1/2 p-3 rounded-r-lg bg-black/80 border-r border-y border-white/20 text-white/70 hover:text-white hover:bg-black/90 transition-all z-[10001] flex items-center justify-center backdrop-blur-sm shadow-lg"
+          className="fixed left-0 top-1/2 -translate-y-1/2 p-3 rounded-r-lg bg-black/80 border-r border-y border-white/20 text-white/70 hover:text-white hover:bg-black/90 transition-all z-10001 flex items-center justify-center backdrop-blur-sm shadow-lg"
           aria-label="Expand sidebar (or press Ctrl/Cmd + B)"
           data-sidebar-toggle
           title="Show sidebar (Ctrl/Cmd + B)"

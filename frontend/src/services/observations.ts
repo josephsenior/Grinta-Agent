@@ -10,7 +10,7 @@ import {
   startStream,
   appendStreamChunk,
   completeStream,
-} from "#/store/streaming-slice";
+} from "#/state/streaming-slice";
 
 // Helper function to handle browser-related observations
 function handleBrowserObservation(message: ObservationMessage) {

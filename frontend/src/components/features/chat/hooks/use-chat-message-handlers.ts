@@ -1,5 +1,5 @@
 import React from "react";
-import posthog from "posthog-js";
+import posthog from "#/utils/posthog";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AgentState } from "#/types/agent-state";

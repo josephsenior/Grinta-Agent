@@ -1,4 +1,4 @@
-import { FaGithub } from "react-icons/fa6";
+import { Github } from "lucide-react";
 import { RepositorySelection } from "#/api/forge.types";
 
 interface ConversationRepoLinkProps {
@@ -24,7 +24,7 @@ export function ConversationRepoLink({
   return (
     <div className="flex items-center gap-1">
       {selectedRepository.git_provider === "github" && (
-        <FaGithub size={14} className="text-foreground-secondary" />
+        <Github size={14} className="text-foreground-secondary" />
       )}
 
       <span

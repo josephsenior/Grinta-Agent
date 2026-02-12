@@ -1,5 +1,5 @@
 import { Menu } from "lucide-react";
-import { AppNavigation } from "#/components/layout/AppNavigation";
+import { AppNavigation } from "#/components/layout/app-navigation";
 
 interface MobileSidebarProps {
   mobileDrawerOpen: boolean;
@@ -15,9 +15,8 @@ export function MobileSidebar({
       {/* Mobile Drawer Overlay */}
       {mobileDrawerOpen && (
         <div
-          className="fixed inset-0 bg-[var(--bg-primary)]/60 backdrop-blur-sm"
+          className="fixed inset-0 bg-[var(--bg-primary)]/60 backdrop-blur-sm z-[9998] block"
           onClick={onClose}
-          style={{ zIndex: 9998, display: "block" }}
           data-mobile-overlay
         >
           <style>{`
@@ -32,12 +31,9 @@ export function MobileSidebar({
 
       {/* Mobile Drawer Sidebar */}
       <aside
-        className="fixed left-0 top-0 bottom-0 w-64 border-r border-[var(--border-primary)] overflow-y-auto shadow-2xl transition-transform duration-300 ease-in-out"
+        className="fixed left-0 top-0 bottom-0 w-64 border-r border-(--border-primary) overflow-y-auto shadow-2xl transition-transform duration-300 ease-in-out bg-(--bg-secondary) z-9999 block"
         style={{
-          backgroundColor: "var(--bg-secondary)",
-          zIndex: 9999,
           transform: mobileDrawerOpen ? "translateX(0)" : "translateX(-100%)",
-          display: "block",
         }}
         data-mobile-drawer
       >
@@ -59,7 +55,7 @@ export function MobileSidebar({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
+              className="p-2 rounded-lg hover:bg-(--bg-tertiary) text-[var(--text-primary)]"
               aria-label="Close drawer"
             >
               <svg
@@ -86,8 +82,7 @@ export function MobileSidebar({
       <button
         type="button"
         onClick={onClose}
-        className="fixed bottom-4 left-4 p-3 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-primary)] shadow-lg text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-all flex items-center justify-center"
-        style={{ zIndex: 10000, display: "block" }}
+        className="fixed bottom-4 left-4 p-3 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-primary)] shadow-lg text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-all flex items-center justify-center z-[10000]"
         data-mobile-button
         aria-label="Open navigation menu"
       >

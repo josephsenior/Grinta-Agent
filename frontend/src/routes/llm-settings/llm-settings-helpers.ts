@@ -347,7 +347,7 @@ function applyPrimarySettings({
   setCondenserMaxSize: (value: number | null) => void;
 }) {
   setCurrentSelectedModel(settings.LLM_MODEL ?? null);
-  setAgentValue(settings.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent");
+  setAgentValue(settings.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "Orchestrator");
   setConfirmationModeEnabled(
     settings.CONFIRMATION_MODE ?? DEFAULT_SETTINGS.CONFIRMATION_MODE,
   );

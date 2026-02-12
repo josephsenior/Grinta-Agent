@@ -7,13 +7,13 @@ import sys
 import time
 import docker
 import pytest
-import forge
+import backend
 from conftest import _load_runtime
-from forge.core.config import MCPConfig
-from forge.core.config.mcp_config import MCPSSEServerConfig, MCPStdioServerConfig
-from forge.core.logger import forge_logger as logger
-from forge.events.action import CmdRunAction, MCPAction
-from forge.events.observation import CmdOutputObservation, MCPObservation
+from backend.core.config import MCPConfig
+from backend.core.config.mcp_config import MCPSSEServerConfig, MCPStdioServerConfig
+from backend.core.logger import forge_logger as logger
+from backend.events.action import CmdRunAction, MCPAction
+from backend.events.observation import CmdOutputObservation, MCPObservation
 
 pytestmark = [
     pytest.mark.skipif(
@@ -46,7 +46,7 @@ def sse_mcp_docker_server():
     client = docker.from_env()
     container = None
     log_streamer = None
-    from forge.runtime.utils.log_streamer import LogStreamer
+    from backend.runtime.utils.log_streamer import LogStreamer
 
     try:
         logger.info(
@@ -99,7 +99,7 @@ def sse_mcp_docker_server():
 
 
 def test_default_activated_tools():
-    project_root = os.path.dirname(forge.__file__)
+    project_root = os.path.dirname(backend.__file__)
     mcp_config_path = os.path.join(project_root, "runtime", "mcp", "config.json")
     assert os.path.exists(mcp_config_path), (
         f"MCP config file not found at {mcp_config_path}"
@@ -247,7 +247,7 @@ async def test_both_stdio_and_sse_mcp(
 
 @pytest.mark.skip(reason="Tests checking for .dockerenv are disabled in local-only architecture")
 @pytest.mark.asyncio
-async def test_microagent_and_one_stdio_mcp_in_config(
+async def test_playbook_and_one_stdio_mcp_in_config(
     temp_dir, runtime_cls, run_as_Forge
 ):
     runtime = None

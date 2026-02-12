@@ -1,10 +1,10 @@
 import asyncio
 import logging
-from forge.core.config import ForgeConfig
-from forge.llm.llm_registry import LLMRegistry
-from forge.server.services.conversation_stats import ConversationStats
-from forge.server.session.session import Session
-from forge.storage.local import LocalFileStore
+from backend.core.config import ForgeConfig
+from backend.models.llm_registry import LLMRegistry
+from backend.server.services.conversation_stats import ConversationStats
+from backend.server.session.session import Session
+from backend.storage.local import LocalFileStore
 
 
 class DummySIO:

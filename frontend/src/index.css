@@ -5,11 +5,8 @@
 @import "./styles/ux-enhancements.css";
 @import "./styles/component-micro-interactions.css";
 /* @import "./styles/metasop-visualizations.css"; */
-/* TODO: Convert @apply to regular CSS for Tailwind v4 */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind base/components/utilities are loaded via tailwind.css (@import "tailwindcss") */
 
 @layer utilities {
   .text-gradient {

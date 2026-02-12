@@ -28,14 +28,12 @@ function EmptyState({
       <div className="text-center text-[var(--text-tertiary)] min-w-[320px] max-w-2xl px-4">
         <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
         <p
-          className="text-sm"
-          style={{ wordBreak: "normal", whiteSpace: "normal" }}
+          className="text-sm break-normal whitespace-normal"
         >
           {message}
         </p>
         <p
-          className="text-xs mt-1"
-          style={{ wordBreak: "normal", whiteSpace: "normal" }}
+          className="text-xs mt-1 break-normal whitespace-normal"
         >
           {subMessage}
         </p>

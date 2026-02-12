@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.23.0",
   "scripts": {
+    "dev": "pnpm dev:frontend",
     "lint:frontend": "pnpm --filter forge-frontend lint",
     "dev:frontend": "pnpm --filter forge-frontend dev"
   }

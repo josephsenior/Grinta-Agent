@@ -327,9 +327,6 @@ function MessageBody({
         type === "agent" && "text-foreground",
         type === "user" && "text-foreground",
       )}
-      style={{
-        whiteSpace: "normal",
-      }}
     >
       <Markdown
         components={buildMarkdownComponents({

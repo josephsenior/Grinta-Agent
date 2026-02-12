@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import React from "react";
-import posthog from "posthog-js";
+import posthog from "#/utils/posthog";
 import { useConfig } from "./use-config";
 import Forge from "#/api/forge";
 import { useShouldShowUserFeatures } from "#/hooks/use-should-show-user-features";

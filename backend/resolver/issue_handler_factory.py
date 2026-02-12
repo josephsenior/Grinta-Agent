@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from forge.integrations.service_types import ProviderType
-from forge.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
-from forge.resolver.interfaces.issue_definitions import (
+from backend.integrations.service_types import ProviderType
+from backend.resolver.interfaces.github import GithubIssueHandler, GithubPRHandler
+from backend.resolver.interfaces.issue_definitions import (
     ServiceContextIssue,
     ServiceContextPR,
 )
 
 if TYPE_CHECKING:
-    from forge.core.config import LLMConfig
+    from backend.core.config import LLMConfig
 
 
 class IssueHandlerFactory:

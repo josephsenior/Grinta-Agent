@@ -8928,19 +8928,19 @@
     "uk": "Результат інструменту MCP: {{mcp_tool_name}}"
   },
   "OBSERVATION_MESSAGE$RECALL": {
-    "en": "Microagent ready",
+    "en": "Playbook ready",
     "ja": "マイクロエージェントの準備完了",
     "zh-CN": "微代理已就绪",
     "zh-TW": "微代理已就緒",
     "ko-KR": "마이크로에이전트 준비됨",
     "no": "MikroAgent klar",
-    "it": "Microagent pronto",
-    "pt": "Microagent pronto",
-    "es": "Microagent listo",
+    "it": "Playbook pronto",
+    "pt": "Playbook pronto",
+    "es": "Playbook listo",
     "ar": "الوكيل المصغر جاهز",
-    "fr": "Microagent prêt",
+    "fr": "Playbook prêt",
     "tr": "MikroAjan hazır",
-    "de": "Microagent bereit",
+    "de": "Playbook bereit",
     "uk": "Мікроагент готовий"
   },
   "OBSERVATION_MESSAGE$THINK": {
@@ -10735,24 +10735,24 @@
     "ar": "خطأ في قبول شروط الخدمة",
     "tr": "Hizmet Şartlarını kabul ederken hata oluştu"
   },
-  "TIPS$CUSTOMIZE_MICROAGENT": {
-    "en": "You can customize Forge for your repo using an available microagent. Ask Forge to put a description of the repo, including how to run the code, into .Forge/microagents/repo.md.",
-    "ja": "利用可能なマイクロエージェントを使用して、リポジトリ用にForgeをカスタマイズできます。Forgeに、コードの実行方法を含むリポジトリの説明を.Forge/microagents/repo.mdに入れるよう依頼してください。",
-    "zh-CN": "您可以使用可用微代理为您的仓库自定义Forge。请Forge将仓库的描述（包括如何运行代码）放入.Forge/microagents/repo.md。",
-    "zh-TW": "您可以使用可用微代理為您的倉庫自定義Forge。請Forge將倉庫的描述（包括如何運行代碼）放入.Forge/microagents/repo.md。",
-    "ko-KR": "사용 가능한 마이크로에이전트를 사용하여 저장소에 맞게 Forge를 사용자 정의할 수 있습니다. Forge에게 코드 실행 방법을 포함한 저장소 설명을 .Forge/microagents/repo.md에 넣도록 요청하세요.",
-    "no": "Du kan tilpasse Forge for ditt repo ved å bruke en tilgjengelig mikroagent. Be Forge om å legge en beskrivelse av repoet, inkludert hvordan du kjører koden, i .Forge/microagents/repo.md.",
-    "it": "Puoi personalizzare Forge per il tuo repository utilizzando un microagente disponibile. Chiedi a Forge di inserire una descrizione del repository, incluso come eseguire il codice, in .Forge/microagents/repo.md.",
-    "pt": "Você pode personalizar o Forge para seu repositório usando um microagente disponível. Peça ao Forge para colocar uma descrição do repositório, incluindo como executar o código, em .Forge/microagents/repo.md.",
-    "es": "Puede personalizar Forge para su repositorio utilizando un microagente disponible. Pídale a Forge que ponga una descripción del repositorio, incluido cómo ejecutar el código, en .Forge/microagents/repo.md.",
-    "ar": "يمكنك تخصيص Forge لمستودعك باستخدام وكيل مصغر متاح. اطلب من Forge وضع وصف للمستودع، بما في ذلك كيفية تشغيل الكود، في .Forge/microagents/repo.md.",
-    "de": "Sie können Forge für Ihr Repository mit einem verfügbaren Mikroagenten anpassen. Bitten Sie Forge, eine Beschreibung des Repositorys, einschließlich der Ausführung des Codes, in .Forge/microagents/repo.md zu platzieren.",
-    "fr": "Vous pouvez personnaliser Forge pour votre dépôt en utilisant un micro-agent disponible. Demandez à Forge de mettre une description du dépôt, y compris comment exécuter le code, dans .Forge/microagents/repo.md.",
-    "tr": "Kullanılabilir bir mikro ajan kullanarak Forge'i deponuz için özelleştirebilirsiniz. Forge'ten deponun açıklamasını, kodun nasıl çalıştırılacağı dahil, .Forge/microagents/repo.md dosyasına koymasını isteyin.",
-    "uk": "Ви можете налаштувати Forge для свого репозиторію за допомогою доступного мікроагента. Попросіть Forge розмістити опис репозиторію, включаючи інформацію про те, як запустити код, у файлі .Forge/microagents/repo.md."
+  "TIPS$CUSTOMIZE_PLAYBOOK": {
+    "en": "You can customize Forge for your repo using an available playbook. Ask Forge to put a description of the repo, including how to run the code, into .Forge/playbooks/repo.md.",
+    "ja": "利用可能なマイクロエージェントを使用して、リポジトリ用にForgeをカスタマイズできます。Forgeに、コードの実行方法を含むリポジトリの説明を.Forge/playbooks/repo.mdに入れるよう依頼してください。",
+    "zh-CN": "您可以使用可用微代理为您的仓库自定义Forge。请Forge将仓库的描述（包括如何运行代码）放入.Forge/playbooks/repo.md。",
+    "zh-TW": "您可以使用可用微代理為您的倉庫自定義Forge。請Forge將倉庫的描述（包括如何運行代碼）放入.Forge/playbooks/repo.md。",
+    "ko-KR": "사용 가능한 마이크로에이전트를 사용하여 저장소에 맞게 Forge를 사용자 정의할 수 있습니다. Forge에게 코드 실행 방법을 포함한 저장소 설명을 .Forge/playbooks/repo.md에 넣도록 요청하세요.",
+    "no": "Du kan tilpasse Forge for ditt repo ved å bruke en tilgjengelig mikroagent. Be Forge om å legge en beskrivelse av repoet, inkludert hvordan du kjører koden, i .Forge/playbooks/repo.md.",
+    "it": "Puoi personalizzare Forge per il tuo repository utilizzando un playbooke disponibile. Chiedi a Forge di inserire una descrizione del repository, incluso come eseguire il codice, in .Forge/playbooks/repo.md.",
+    "pt": "Você pode personalizar o Forge para seu repositório usando um playbooke disponível. Peça ao Forge para colocar uma descrição do repositório, incluindo como executar o código, em .Forge/playbooks/repo.md.",
+    "es": "Puede personalizar Forge para su repositorio utilizando un playbooke disponible. Pídale a Forge que ponga una descripción del repositorio, incluido cómo ejecutar el código, en .Forge/playbooks/repo.md.",
+    "ar": "يمكنك تخصيص Forge لمستودعك باستخدام وكيل مصغر متاح. اطلب من Forge وضع وصف للمستودع، بما في ذلك كيفية تشغيل الكود، في .Forge/playbooks/repo.md.",
+    "de": "Sie können Forge für Ihr Repository mit einem verfügbaren Mikroagenten anpassen. Bitten Sie Forge, eine Beschreibung des Repositorys, einschließlich der Ausführung des Codes, in .Forge/playbooks/repo.md zu platzieren.",
+    "fr": "Vous pouvez personnaliser Forge pour votre dépôt en utilisant un micro-agent disponible. Demandez à Forge de mettre une description du dépôt, y compris comment exécuter le code, dans .Forge/playbooks/repo.md.",
+    "tr": "Kullanılabilir bir mikro ajan kullanarak Forge'i deponuz için özelleştirebilirsiniz. Forge'ten deponun açıklamasını, kodun nasıl çalıştırılacağı dahil, .Forge/playbooks/repo.md dosyasına koymasını isteyin.",
+    "uk": "Ви можете налаштувати Forge для свого репозиторію за допомогою доступного мікроагента. Попросіть Forge розмістити опис репозиторію, включаючи інформацію про те, як запустити код, у файлі .Forge/playbooks/repo.md."
   },
-  "CONVERSATION$SHOW_MICROAGENTS": {
-    "en": "Show Available Microagents",
+  "CONVERSATION$SHOW_PLAYBOOKS": {
+    "en": "Show Available Playbooks",
     "ja": "利用可能なマイクロエージェントを表示",
     "zh-CN": "显示可用微代理",
     "zh-TW": "顯示可用微代理",
@@ -10761,14 +10761,14 @@
     "ar": "عرض الوكلاء المصغرين المتاحة",
     "de": "Verfügbare Mikroagenten anzeigen",
     "fr": "Afficher les micro-agents disponibles",
-    "it": "Mostra microagenti disponibili",
-    "pt": "Mostrar microagentes disponíveis",
-    "es": "Mostrar microagentes disponibles",
+    "it": "Mostra playbooki disponibili",
+    "pt": "Mostrar playbookes disponíveis",
+    "es": "Mostrar playbookes disponibles",
     "tr": "Kullanılabilir mikro ajanları göster",
     "uk": "Показати доступних мікроагентів"
   },
-  "CONVERSATION$NO_MICROAGENTS": {
-    "en": "No available microagents found for this conversation.",
+  "CONVERSATION$NO_PLAYBOOKS": {
+    "en": "No available playbooks found for this conversation.",
     "ja": "この会話用の利用可能なマイクロエージェントが見つかりませんでした。",
     "zh-CN": "未找到此对话的可用微代理。",
     "zh-TW": "未找到此對話的可用微代理。",
@@ -10777,14 +10777,14 @@
     "ar": "لم يتم العثور على وكلاء مصغرين متاحة لهذه المحادثة.",
     "de": "Keine verfügbaren Mikroagenten für dieses Gespräch gefunden.",
     "fr": "Aucun micro-agent disponible trouvé pour cette conversation.",
-    "it": "Nessun microagente disponibile trovato per questa conversazione.",
-    "pt": "Nenhum microagente disponível encontrado para esta conversa.",
-    "es": "No se encontraron microagentes disponibles para esta conversación.",
+    "it": "Nessun playbooke disponibile trovato per questa conversazione.",
+    "pt": "Nenhum playbooke disponível encontrado para esta conversa.",
+    "es": "No se encontraron playbookes disponibles para esta conversación.",
     "tr": "Bu konuşma için kullanılabilir mikro ajan bulunamadı.",
     "uk": "Для цієї розмови не знайдено доступних мікроагентів."
   },
-  "CONVERSATION$FAILED_TO_FETCH_MICROAGENTS": {
-    "en": "Failed to fetch available microagents",
+  "CONVERSATION$FAILED_TO_FETCH_PLAYBOOKS": {
+    "en": "Failed to fetch available playbooks",
     "ja": "利用可能なマイクロエージェントの取得に失敗しました",
     "zh-CN": "获取可用微代理失败",
     "zh-TW": "獲取可用微代理失敗",
@@ -10793,14 +10793,14 @@
     "ar": "فشل في جلب الوكلاء المصغرين المتاحة",
     "de": "Fehler beim Abrufen von verfügbaren Mikroagenten",
     "fr": "Échec de la récupération des micro-agents disponibles",
-    "it": "Impossibile recuperare i microagenti disponibili",
-    "pt": "Falha ao buscar microagentes disponíveis",
-    "es": "Error al obtener microagentes disponibles",
+    "it": "Impossibile recuperare i playbooki disponibili",
+    "pt": "Falha ao buscar playbookes disponíveis",
+    "es": "Error al obtener playbookes disponibles",
     "tr": "Kullanılabilir mikro ajanlar getirilemedi",
     "uk": "Не вдалося отримати доступних мікроагентів"
   },
-  "MICROAGENTS_MODAL$TITLE": {
-    "en": "Available Microagents",
+  "PLAYBOOKS_MODAL$TITLE": {
+    "en": "Available Playbooks",
     "ja": "利用可能なマイクロエージェント",
     "zh-CN": "可用微代理",
     "zh-TW": "可用微代理",
@@ -10809,14 +10809,14 @@
     "ar": "الوكلاء المصغرين المتاحة",
     "de": "Verfügbare Mikroagenten",
     "fr": "Micro-agents disponibles",
-    "it": "Microagenti disponibili",
-    "pt": "Microagentes disponíveis",
-    "es": "Microagentes disponibles",
+    "it": "Playbooki disponibili",
+    "pt": "Playbookes disponíveis",
+    "es": "Playbookes disponibles",
     "tr": "Kullanılabilir mikro ajanlar",
     "uk": "Доступні мікроагенти"
   },
-  "MICROAGENTS_MODAL$WARNING": {
-    "en": "If you update the microagents, you will need to stop the conversation and then click on the refresh button to see the changes.",
+  "PLAYBOOKS_MODAL$WARNING": {
+    "en": "If you update the playbooks, you will need to stop the conversation and then click on the refresh button to see the changes.",
     "ja": "マイクロエージェントを更新する場合、会話を停止してから更新ボタンをクリックして変更を確認する必要があります。",
     "zh-CN": "如果您更新微代理，您需要停止对话，然后点击刷新按钮以查看更改。",
     "zh-TW": "如果您更新微代理，您需要停止對話，然後點擊重新整理按鈕以查看更改。",
@@ -10825,13 +10825,13 @@
     "ar": "إذا قمت بتحديث الوكلاء المصغرين، فستحتاج إلى إيقاف المحادثة ثم النقر على زر التحديث لرؤية التغييرات.",
     "de": "Wenn Sie die Mikroagenten aktualisieren, müssen Sie das Gespräch beenden und dann auf die Aktualisieren-Schaltfläche klicken, um die Änderungen zu sehen.",
     "fr": "Si vous mettez à jour les micro-agents, vous devrez arrêter la conversation puis cliquer sur le bouton actualiser pour voir les changements.",
-    "it": "Se aggiorni i microagenti, dovrai fermare la conversazione e poi cliccare sul pulsante aggiorna per vedere le modifiche.",
-    "pt": "Se você atualizar os microagentes, precisará parar a conversa e depois clicar no botão atualizar para ver as alterações.",
-    "es": "Si actualiza los microagentes, necesitará detener la conversación y luego hacer clic en el botón actualizar para ver los cambios.",
+    "it": "Se aggiorni i playbooki, dovrai fermare la conversazione e poi cliccare sul pulsante aggiorna per vedere le modifiche.",
+    "pt": "Se você atualizar os playbookes, precisará parar a conversa e depois clicar no botão atualizar para ver as alterações.",
+    "es": "Si actualiza los playbookes, necesitará detener la conversación y luego hacer clic en el botón actualizar para ver los cambios.",
     "tr": "Mikro ajanları güncellerseniz, konuşmayı durdurmanız ve ardından değişiklikleri görmek için yenile düğmesine tıklamanız gerekecektir.",
     "uk": "Якщо ви оновите мікроагенти, вам потрібно буде зупинити розмову, а потім натиснути кнопку оновлення, щоб побачити зміни."
   },
-  "MICROAGENTS_MODAL$TRIGGERS": {
+  "PLAYBOOKS_MODAL$TRIGGERS": {
     "en": "Triggers",
     "ja": "トリガー",
     "zh-CN": "触发器",
@@ -10847,7 +10847,7 @@
     "tr": "Tetikleyiciler",
     "uk": "Тригери"
   },
-  "MICROAGENTS_MODAL$INPUTS": {
+  "PLAYBOOKS_MODAL$INPUTS": {
     "en": "Inputs",
     "ja": "入力",
     "zh-CN": "输入",
@@ -10863,7 +10863,7 @@
     "tr": "Girdiler",
     "uk": "Вхідні дані"
   },
-  "MICROAGENTS_MODAL$TOOLS": {
+  "PLAYBOOKS_MODAL$TOOLS": {
     "en": "Tools",
     "ja": "ツール",
     "zh-CN": "工具",
@@ -10879,7 +10879,7 @@
     "tr": "Araçlar",
     "uk": "Інструменти"
   },
-  "MICROAGENTS_MODAL$CONTENT": {
+  "PLAYBOOKS_MODAL$CONTENT": {
     "en": "Content",
     "ja": "コンテンツ",
     "zh-CN": "内容",
@@ -10895,8 +10895,8 @@
     "tr": "İçerik",
     "uk": "Вміст"
   },
-  "MICROAGENTS_MODAL$NO_CONTENT": {
-    "en": "Microagent has no content",
+  "PLAYBOOKS_MODAL$NO_CONTENT": {
+    "en": "Playbook has no content",
     "ja": "マイクロエージェントにコンテンツがありません",
     "zh-CN": "微代理没有内容",
     "zh-TW": "微代理沒有內容",
@@ -10905,14 +10905,14 @@
     "ar": "الوكيل المصغر ليس لديه محتوى",
     "de": "Mikroagent hat keinen Inhalt",
     "fr": "Le micro-agent n'a pas de contenu",
-    "it": "Il microagente non ha contenuto",
-    "pt": "Microagente não tem conteúdo",
-    "es": "El microagente no tiene contenido",
+    "it": "Il playbooke non ha contenuto",
+    "pt": "Playbooke não tem conteúdo",
+    "es": "El playbooke no tiene contenido",
     "tr": "Mikroajanın içeriği yok",
     "uk": "Мікроагент не має вмісту"
   },
-  "MICROAGENTS_MODAL$FETCH_ERROR": {
-    "en": "Failed to fetch microagents. Please try again later.",
+  "PLAYBOOKS_MODAL$FETCH_ERROR": {
+    "en": "Failed to fetch playbooks. Please try again later.",
     "ja": "マイクロエージェントの取得に失敗しました。後でもう一度お試しください。",
     "zh-CN": "获取微代理失败。请稍后再试。",
     "zh-TW": "獲取微代理失敗。請稍後再試。",
@@ -10921,9 +10921,9 @@
     "ar": "فشل في جلب الوكلاء المصغرين. يرجى المحاولة مرة أخرى لاحقًا.",
     "de": "Mikroagenten konnten nicht abgerufen werden. Bitte versuchen Sie es später erneut.",
     "fr": "Échec de la récupération des micro-agents. Veuillez réessayer plus tard.",
-    "it": "Impossibile recuperare i microagenti. Riprova più tardi.",
-    "pt": "Falha ao buscar microagentes. Por favor, tente novamente mais tarde.",
-    "es": "Error al obtener microagentes. Por favor, inténtelo de nuevo más tarde.",
+    "it": "Impossibile recuperare i playbooki. Riprova più tardi.",
+    "pt": "Falha ao buscar playbookes. Por favor, tente novamente mais tarde.",
+    "es": "Error al obtener playbookes. Por favor, inténtelo de nuevo más tarde.",
     "tr": "Mikroajanlar getirilemedi. Lütfen daha sonra tekrar deneyin.",
     "uk": "Не вдалося отримати мікроагентів. Будь ласка, спробуйте пізніше."
   },
@@ -12079,52 +12079,52 @@
     "de": "Kein API-Schlüssel verfügbar",
     "uk": "Немає доступного API-ключа"
   },
-  "MICROAGENT_MANAGEMENT$TITLE": {
-    "en": "Microagent Management",
+  "PLAYBOOK_MANAGEMENT$TITLE": {
+    "en": "Playbook Management",
     "ja": "マイクロエージェント管理",
     "zh-CN": "微代理管理",
     "zh-TW": "微代理管理",
     "ko-KR": "마이크로에이전트 관리",
-    "no": "Microagent-administrasjon",
-    "it": "Gestione Microagent",
-    "pt": "Gerenciamento de Microagente",
-    "es": "Gestión de microagentes",
+    "no": "Playbook-administrasjon",
+    "it": "Gestione Playbook",
+    "pt": "Gerenciamento de Playbooke",
+    "es": "Gestión de playbookes",
     "ar": "إدارة الميكرووكيل",
-    "fr": "Gestion des microagents",
+    "fr": "Gestion des playbooks",
     "tr": "Mikroajan Yönetimi",
-    "de": "Microagent-Verwaltung",
+    "de": "Playbook-Verwaltung",
     "uk": "Управління мікроагентами"
   },
-  "MICROAGENT_MANAGEMENT$DESCRIPTION": {
-    "en": "Manage Microagents",
+  "PLAYBOOK_MANAGEMENT$DESCRIPTION": {
+    "en": "Manage Playbooks",
     "ja": "マイクロエージェントを管理する",
     "zh-CN": "管理微代理",
     "zh-TW": "管理微代理",
     "ko-KR": "마이크로에이전트 관리",
     "no": "Administrer mikroagenter",
-    "it": "Gestisci i Microagent",
-    "pt": "Gerenciar Microagentes",
-    "es": "Gestionar microagentes",
+    "it": "Gestisci i Playbook",
+    "pt": "Gerenciar Playbookes",
+    "es": "Gestionar playbookes",
     "ar": "إدارة الميكرووكلاء",
-    "fr": "Gérer les microagents",
+    "fr": "Gérer les playbooks",
     "tr": "Mikro ajanları yönet",
-    "de": "Microagents verwalten",
+    "de": "Playbooks verwalten",
     "uk": "Керування мікроагентами"
   },
-  "MICROAGENT_MANAGEMENT$USE_MICROAGENTS": {
-    "en": "Use microagents to customize the behavior of Forge, teach it about your repositories, and help it work faster.",
+  "PLAYBOOK_MANAGEMENT$USE_PLAYBOOKS": {
+    "en": "Use playbooks to customize the behavior of Forge, teach it about your repositories, and help it work faster.",
     "ja": "マイクロエージェントを使ってForgeの動作をカスタマイズし、リポジトリについて教え、より速く作業できるようにしましょう。",
     "zh-CN": "使用微代理自定义Forge的行为，让其了解您的仓库，并帮助其更快地工作。",
     "zh-TW": "使用微代理自訂 Forge 的行為，讓其了解您的倉庫，並幫助其更快地工作。",
     "ko-KR": "마이크로에이전트를 사용하여 Forge의 동작을 사용자 정의하고, 저장소에 대해 학습시키며, 더 빠르게 작업할 수 있도록 도와주세요.",
     "no": "Bruk mikroagenter for å tilpasse oppførselen til Forge, lære den om dine repositories, og hjelpe den å jobbe raskere.",
-    "it": "Usa i microagent per personalizzare il comportamento di Forge, insegnargli i tuoi repository e aiutarlo a lavorare più velocemente.",
-    "pt": "Use microagentes para personalizar o comportamento do Forge, ensiná-lo sobre seus repositórios e ajudá-lo a trabalhar mais rápido.",
-    "es": "Utiliza microagentes para personalizar el comportamiento de Forge, enseñarle sobre tus repositorios y ayudarle a trabajar más rápido.",
+    "it": "Usa i playbook per personalizzare il comportamento di Forge, insegnargli i tuoi repository e aiutarlo a lavorare più velocemente.",
+    "pt": "Use playbookes para personalizar o comportamento do Forge, ensiná-lo sobre seus repositórios e ajudá-lo a trabalhar mais rápido.",
+    "es": "Utiliza playbookes para personalizar el comportamiento de Forge, enseñarle sobre tus repositorios y ayudarle a trabajar más rápido.",
     "ar": "استخدم الوكلاء المصغرين لتخصيص سلوك Forge، وتعليمه حول مستودعاتك، ومساعدته على العمل بشكل أسرع.",
-    "fr": "Utilisez des microagents pour personnaliser le comportement d'Forge, lui apprendre vos dépôts et l'aider à travailler plus rapidement.",
+    "fr": "Utilisez des playbooks pour personnaliser le comportement d'Forge, lui apprendre vos dépôts et l'aider à travailler plus rapidement.",
     "tr": "Forge'in davranışını özelleştirmek, depolarınızı ona öğretmek ve daha hızlı çalışmasına yardımcı olmak için mikro ajanları kullanın.",
-    "de": "Verwenden Sie Microagents, um das Verhalten von Forge anzupassen, ihm Ihre Repositories beizubringen und ihm zu helfen, schneller zu arbeiten.",
+    "de": "Verwenden Sie Playbooks, um das Verhalten von Forge anzupassen, ihm Ihre Repositories beizubringen und ihm zu helfen, schneller zu arbeiten.",
     "uk": "Використовуйте мікроагенти, щоб налаштувати поведінку Forge, навчити його про ваші репозиторії та допомогти йому працювати швидше."
   },
   "AUTH$BY_SIGNING_UP_YOU_AGREE_TO_OUR": {
@@ -12255,20 +12255,20 @@
     "de": "Organisationen",
     "uk": "Організації"
   },
-  "COMMON$ADD_MICROAGENT": {
-    "en": "Add Microagent",
+  "COMMON$ADD_PLAYBOOK": {
+    "en": "Add Playbook",
     "ja": "マイクロエージェントを追加",
     "zh-CN": "添加微代理",
     "zh-TW": "新增微代理",
     "ko-KR": "마이크로에이전트 추가",
     "no": "Legg til mikroagent",
-    "it": "Aggiungi Microagent",
-    "pt": "Adicionar Microagente",
-    "es": "Agregar microagente",
+    "it": "Aggiungi Playbook",
+    "pt": "Adicionar Playbooke",
+    "es": "Agregar playbooke",
     "ar": "إضافة وكيل صغير",
-    "fr": "Ajouter un microagent",
+    "fr": "Ajouter un playbook",
     "tr": "Mikro ajan ekle",
-    "de": "Microagent hinzufügen",
+    "de": "Playbook hinzufügen",
     "uk": "Додати мікроагента"
   },
   "COMMON$CREATED_ON": {
@@ -12287,7 +12287,7 @@
     "de": "Erstellt",
     "uk": "Створено"
   },
-  "MICROAGENT_MANAGEMENT$LEARN_THIS_REPO": {
+  "PLAYBOOK_MANAGEMENT$LEARN_THIS_REPO": {
     "en": "Learn this repo",
     "ja": "このリポジトリを学習する",
     "zh-CN": "学习此仓库",
@@ -12303,164 +12303,164 @@
     "de": "Dieses Repository lernen",
     "uk": "Вивчити цей репозиторій"
   },
-  "MICROAGENT_MANAGEMENT$READY_TO_ADD_MICROAGENT": {
-    "en": "Ready to add a microagent?",
+  "PLAYBOOK_MANAGEMENT$READY_TO_ADD_PLAYBOOK": {
+    "en": "Ready to add a playbook?",
     "ja": "マイクロエージェントを追加する準備はできましたか？",
     "zh-CN": "准备好添加微代理了吗？",
     "zh-TW": "準備好新增微代理了嗎？",
     "ko-KR": "마이크로에이전트를 추가할 준비가 되셨나요?",
     "no": "Klar til å legge til en mikroagent?",
-    "it": "Pronto ad aggiungere un microagent?",
-    "pt": "Pronto para adicionar um microagente?",
-    "es": "¿Listo para agregar un microagente?",
+    "it": "Pronto ad aggiungere un playbook?",
+    "pt": "Pronto para adicionar um playbooke?",
+    "es": "¿Listo para agregar un playbooke?",
     "ar": "هل أنت مستعد لإضافة وكيل صغير؟",
-    "fr": "Prêt à ajouter un microagent ?",
+    "fr": "Prêt à ajouter un playbook ?",
     "tr": "Bir mikro ajan eklemeye hazır mısınız?",
-    "de": "Bereit, einen Microagent hinzuzufügen?",
+    "de": "Bereit, einen Playbook hinzuzufügen?",
     "uk": "Готові додати мікроагента?"
   },
-  "MICROAGENT_MANAGEMENT$Forge_CAN_LEARN_ABOUT_REPOSITORIES": {
-    "en": "Forge can automatically learn about your repositories and store its findings as markdown in a microagent. The microagent will help Forge run faster and more accurately in any future conversations.",
+  "PLAYBOOK_MANAGEMENT$Forge_CAN_LEARN_ABOUT_REPOSITORIES": {
+    "en": "Forge can automatically learn about your repositories and store its findings as markdown in a playbook. The playbook will help Forge run faster and more accurately in any future conversations.",
     "ja": "Forgeはあなたのリポジトリについて自動的に学習し、その結果をマイクロエージェント内のMarkdownとして保存できます。マイクロエージェントは今後の会話でForgeがより速く、より正確に動作するのに役立ちます。",
     "zh-CN": "Forge 可以自动学习您的仓库，并将其发现以 markdown 形式存储在微代理中。微代理将帮助 Forge 在未来的对话中运行得更快、更准确。",
     "zh-TW": "Forge 可以自動學習您的儲存庫，並將其發現以 markdown 形式儲存在微代理中。微代理將幫助 Forge 在未來的對話中運行得更快、更準確。",
     "ko-KR": "Forge는 사용자의 저장소를 자동으로 학습하고, 그 결과를 마이크로에이전트의 마크다운으로 저장할 수 있습니다. 마이크로에이전트는 앞으로의 대화에서 Forge가 더 빠르고 정확하게 동작하도록 도와줍니다.",
     "no": "Forge kan automatisk lære om dine repositorier og lagre funnene som markdown i en mikroagent. Mikroagenten vil hjelpe Forge å kjøre raskere og mer nøyaktig i fremtidige samtaler.",
-    "it": "Forge può apprendere automaticamente dai tuoi repository e memorizzare i risultati come markdown in un microagent. Il microagent aiuterà Forge a funzionare più velocemente e con maggiore precisione in conversazioni future.",
-    "pt": "O Forge pode aprender automaticamente sobre seus repositórios e armazenar suas descobertas como markdown em um microagente. O microagente ajudará o Forge a funcionar mais rápido e com mais precisão em conversas futuras.",
-    "es": "Forge puede aprender automáticamente sobre tus repositorios y almacenar sus hallazgos como markdown en un microagente. El microagente ayudará a que Forge funcione más rápido y con mayor precisión en futuras conversaciones.",
+    "it": "Forge può apprendere automaticamente dai tuoi repository e memorizzare i risultati come markdown in un playbook. Il playbook aiuterà Forge a funzionare più velocemente e con maggiore precisione in conversazioni future.",
+    "pt": "O Forge pode aprender automaticamente sobre seus repositórios e armazenar suas descobertas como markdown em um playbooke. O playbooke ajudará o Forge a funcionar mais rápido e com mais precisão em conversas futuras.",
+    "es": "Forge puede aprender automáticamente sobre tus repositorios y almacenar sus hallazgos como markdown en un playbooke. El playbooke ayudará a que Forge funcione más rápido y con mayor precisión en futuras conversaciones.",
     "ar": "يمكن لـ Forge التعرف تلقائيًا على مستودعاتك وتخزين النتائج كـ markdown في وكيل صغير. سيساعد الوكيل الصغير Forge على العمل بشكل أسرع وأكثر دقة في أي محادثات مستقبلية.",
-    "fr": "Forge peut automatiquement apprendre à connaître vos dépôts et stocker ses découvertes en markdown dans un microagent. Le microagent aidera Forge à fonctionner plus rapidement et plus précisément lors de futures conversations.",
+    "fr": "Forge peut automatiquement apprendre à connaître vos dépôts et stocker ses découvertes en markdown dans un playbook. Le playbook aidera Forge à fonctionner plus rapidement et plus précisément lors de futures conversations.",
     "tr": "Forge, depolarınızı otomatik olarak öğrenebilir ve bulgularını bir mikro ajan içinde markdown olarak saklayabilir. Mikro ajan, Forge'in gelecekteki konuşmalarda daha hızlı ve daha doğru çalışmasına yardımcı olur.",
-    "de": "Forge kann automatisch Informationen über Ihre Repositories sammeln und die Ergebnisse als Markdown in einem Microagent speichern. Der Microagent hilft Forge, in zukünftigen Gesprächen schneller und genauer zu arbeiten.",
+    "de": "Forge kann automatisch Informationen über Ihre Repositories sammeln und die Ergebnisse als Markdown in einem Playbook speichern. Der Playbook hilft Forge, in zukünftigen Gesprächen schneller und genauer zu arbeiten.",
     "uk": "Forge може автоматично вивчати ваші репозиторії та зберігати свої висновки у вигляді markdown у мікроагенті. Мікроагент допоможе Forge працювати швидше та точніше у майбутніх розмовах."
   },
-  "MICROAGENT_MANAGEMENT$ADD_A_MICROAGENT_TO": {
-    "en": "Add a Microagent to",
+  "PLAYBOOK_MANAGEMENT$ADD_A_PLAYBOOK_TO": {
+    "en": "Add a Playbook to",
     "ja": "にマイクロエージェントを追加",
     "zh-CN": "添加微代理到",
     "zh-TW": "新增微代理到",
     "ko-KR": "에 마이크로에이전트 추가",
     "no": "Legg til en mikroagent i",
-    "it": "Aggiungi un microagent a",
-    "pt": "Adicionar um microagente a",
-    "es": "Agregar un microagente a",
+    "it": "Aggiungi un playbook a",
+    "pt": "Adicionar um playbooke a",
+    "es": "Agregar un playbooke a",
     "ar": "إضافة وكيل صغير إلى",
-    "fr": "Ajouter un microagent à",
+    "fr": "Ajouter un playbook à",
     "tr": "Bir mikro ajan ekle",
-    "de": "Microagent hinzufügen zu",
+    "de": "Playbook hinzufügen zu",
     "uk": "Додати мікроагента до"
   },
-  "MICROAGENT_MANAGEMENT$ADD_A_MICROAGENT": {
-    "en": "Add a Microagent",
+  "PLAYBOOK_MANAGEMENT$ADD_A_PLAYBOOK": {
+    "en": "Add a Playbook",
     "ja": "マイクロエージェントを追加",
     "zh-CN": "添加微代理",
     "zh-TW": "新增微代理",
     "ko-KR": "마이크로에이전트 추가",
     "no": "Legg til en mikroagent",
-    "it": "Aggiungi un microagent",
-    "pt": "Adicionar um microagente",
-    "es": "Agregar un microagente",
+    "it": "Aggiungi un playbook",
+    "pt": "Adicionar um playbooke",
+    "es": "Agregar un playbooke",
     "ar": "إضافة وكيل صغير",
-    "fr": "Ajouter un microagent",
+    "fr": "Ajouter un playbook",
     "tr": "Bir mikro ajan ekle",
-    "de": "Microagent hinzufügen",
+    "de": "Playbook hinzufügen",
     "uk": "Додати мікроагента"
   },
-  "MICROAGENT_MANAGEMENT$UPDATE_MICROAGENT": {
-    "en": "Update microagent",
+  "PLAYBOOK_MANAGEMENT$UPDATE_PLAYBOOK": {
+    "en": "Update playbook",
     "ja": "マイクロエージェントを更新",
     "zh-CN": "更新微代理",
     "zh-TW": "更新微代理",
     "ko-KR": "마이크로에이전트 업데이트",
     "no": "Oppdater mikroagent",
-    "it": "Aggiorna microagent",
-    "pt": "Atualizar microagente",
-    "es": "Actualizar microagente",
+    "it": "Aggiorna playbook",
+    "pt": "Atualizar playbooke",
+    "es": "Actualizar playbooke",
     "ar": "تحديث الوكيل الصغير",
-    "fr": "Mettre à jour le microagent",
+    "fr": "Mettre à jour le playbook",
     "tr": "Mikro ajanı güncelle",
-    "de": "Microagent aktualisieren",
+    "de": "Playbook aktualisieren",
     "uk": "Оновити мікроагента"
   },
-  "MICROAGENT_MANAGEMENT$ADD_MICROAGENT_MODAL_DESCRIPTION": {
-    "en": "Forge will create a new microagent based on your instructions.",
+  "PLAYBOOK_MANAGEMENT$ADD_PLAYBOOK_MODAL_DESCRIPTION": {
+    "en": "Forge will create a new playbook based on your instructions.",
     "ja": "Forgeはあなたの指示に基づいて新しいマイクロエージェントを作成します。",
     "zh-CN": "Forge 将根据您的指示创建一个新的微代理。",
     "zh-TW": "Forge 將根據您的指示建立新的微代理。",
     "ko-KR": "Forge가 귀하의 지시에 따라 새로운 마이크로에이전트를 생성합니다.",
     "no": "Forge vil opprette en ny mikroagent basert på dine instruksjoner.",
-    "it": "Forge creerà un nuovo microagent in base alle tue istruzioni.",
-    "pt": "O Forge criará um novo microagente com base nas suas instruções.",
-    "es": "Forge creará un nuevo microagente según tus instrucciones.",
+    "it": "Forge creerà un nuovo playbook in base alle tue istruzioni.",
+    "pt": "O Forge criará um novo playbooke com base nas suas instruções.",
+    "es": "Forge creará un nuevo playbooke según tus instrucciones.",
     "ar": "سيقوم Forge بإنشاء وكيل صغير جديد بناءً على تعليماتك.",
-    "fr": "Forge créera un nouveau microagent selon vos instructions.",
+    "fr": "Forge créera un nouveau playbook selon vos instructions.",
     "tr": "Forge, talimatlarınıza göre yeni bir mikro ajan oluşturacaktır.",
-    "de": "Forge erstellt einen neuen Microagenten basierend auf Ihren Anweisungen.",
+    "de": "Forge erstellt einen neuen Playbooken basierend auf Ihren Anweisungen.",
     "uk": "Forge створить нового мікроагента відповідно до ваших інструкцій."
   },
-  "MICROAGENT_MANAGEMENT$WHAT_TO_DO": {
-    "en": "What would you like the Microagent to do?",
+  "PLAYBOOK_MANAGEMENT$WHAT_TO_DO": {
+    "en": "What would you like the Playbook to do?",
     "ja": "マイクロエージェントに何をさせたいですか？",
     "zh-CN": "您希望微代理做什么？",
     "zh-TW": "您希望微代理做什麼？",
     "ko-KR": "마이크로에이전트가 무엇을 하길 원하시나요?",
     "no": "Hva vil du at mikroagenten skal gjøre?",
-    "it": "Cosa vuoi che faccia il microagent?",
-    "pt": "O que você gostaria que o microagente fizesse?",
-    "es": "¿Qué te gustaría que hiciera el microagente?",
+    "it": "Cosa vuoi che faccia il playbook?",
+    "pt": "O que você gostaria que o playbooke fizesse?",
+    "es": "¿Qué te gustaría que hiciera el playbooke?",
     "ar": "ماذا تريد أن يفعل الوكيل الصغير؟",
-    "fr": "Que souhaitez-vous que le microagent fasse ?",
+    "fr": "Que souhaitez-vous que le playbook fasse ?",
     "tr": "Mikro ajanın ne yapmasını istersiniz?",
-    "de": "Was soll der Microagent tun?",
+    "de": "Was soll der Playbook tun?",
     "uk": "Що в,и хочете, щоб зробив мікроагент?"
   },
-  "MICROAGENT_MANAGEMENT$DESCRIBE_WHAT_TO_DO": {
-    "en": "Describe what you would like the Microagent to do.",
+  "PLAYBOOK_MANAGEMENT$DESCRIBE_WHAT_TO_DO": {
+    "en": "Describe what you would like the Playbook to do.",
     "ja": "マイクロエージェントにしてほしいことを説明してください。",
     "zh-CN": "请描述您希望微代理执行的操作。",
     "zh-TW": "請描述您希望微代理執行的操作。",
     "ko-KR": "마이크로에이전트가 수행하길 원하는 작업을 설명하세요.",
     "no": "Beskriv hva du vil at mikroagenten skal gjøre.",
-    "it": "Descrivi cosa vorresti che facesse il microagent.",
-    "pt": "Descreva o que você gostaria que o microagente fizesse.",
-    "es": "Describe lo que te gustaría que hiciera el microagente.",
+    "it": "Descrivi cosa vorresti che facesse il playbook.",
+    "pt": "Descreva o que você gostaria que o playbooke fizesse.",
+    "es": "Describe lo que te gustaría que hiciera el playbooke.",
     "ar": "صف ما ترغب أن يفعله الوكيل الصغير.",
-    "fr": "Décrivez ce que vous souhaitez que le microagent fasse.",
+    "fr": "Décrivez ce que vous souhaitez que le playbook fasse.",
     "tr": "Mikro ajanın ne yapmasını istediğinizi açıklayın.",
-    "de": "Beschreiben Sie, was der Microagent tun soll.",
+    "de": "Beschreiben Sie, was der Playbook tun soll.",
     "uk": "Опишіть, що ви хочете, щоб зробив мікроагент."
   },
-  "MICROAGENT_MANAGEMENT$ADD_TRIGGERS": {
-    "en": "Define triggers for the Microagent",
+  "PLAYBOOK_MANAGEMENT$ADD_TRIGGERS": {
+    "en": "Define triggers for the Playbook",
     "ja": "マイクロエージェントのトリガーを定義する",
     "zh-CN": "为微代理定义触发器",
     "zh-TW": "為微代理定義觸發條件",
     "ko-KR": "마이크로에이전트의 트리거 정의",
     "no": "Definer utløsere for mikroagenten",
-    "it": "Definisci i trigger per il microagent",
-    "pt": "Defina gatilhos para o microagente",
-    "es": "Define desencadenantes para el microagente",
+    "it": "Definisci i trigger per il playbook",
+    "pt": "Defina gatilhos para o playbooke",
+    "es": "Define desencadenantes para el playbooke",
     "ar": "حدد المشغلات للوكيل الصغير",
-    "fr": "Définir des déclencheurs pour le microagent",
+    "fr": "Définir des déclencheurs pour le playbook",
     "tr": "Mikro ajan için tetikleyiciler tanımlayın",
-    "de": "Definieren Sie Auslöser für den Microagenten",
+    "de": "Definieren Sie Auslöser für den Playbooken",
     "uk": "Визначте тригери для мікроагента"
   },
-  "MICROAGENT_MANAGEMENT$HELP_TEXT_DESCRIBING_VALID_TRIGGERS": {
-    "en": "Enter a keyword that Forge will use to trigger this microagent (Optional).",
+  "PLAYBOOK_MANAGEMENT$HELP_TEXT_DESCRIBING_VALID_TRIGGERS": {
+    "en": "Enter a keyword that Forge will use to trigger this playbook (Optional).",
     "ja": "Forgeがこのマイクロエージェントを起動するために使用するキーワードを入力してください（任意）。",
     "zh-CN": "输入Forge将用于触发此微代理的关键字（可选）。",
     "zh-TW": "輸入Forge將用於觸發此微代理的關鍵字（可選）。",
     "ko-KR": "Forge가 이 마이크로에이전트를 트리거하는 데 사용할 키워드를 입력하세요(선택 사항).",
     "no": "Skriv inn et nøkkelord som Forge vil bruke for å utløse denne mikroagenten (valgfritt).",
-    "it": "Inserisci una parola chiave che Forge userà per attivare questo microagent (opzionale).",
-    "pt": "Digite uma palavra-chave que o Forge usará para acionar este microagente (Opcional).",
-    "es": "Introduce una palabra clave que Forge usará para activar este microagente (Opcional).",
+    "it": "Inserisci una parola chiave che Forge userà per attivare questo playbook (opzionale).",
+    "pt": "Digite uma palavra-chave que o Forge usará para acionar este playbooke (Opcional).",
+    "es": "Introduce una palabra clave que Forge usará para activar este playbooke (Opcional).",
     "ar": "أدخل كلمة مفتاحية سيستخدمها Forge لتشغيل هذا الوكيل الصغير (اختياري).",
-    "fr": "Entrez un mot-clé qu'Forge utilisera pour déclencher ce microagent (facultatif).",
+    "fr": "Entrez un mot-clé qu'Forge utilisera pour déclencher ce playbook (facultatif).",
     "tr": "Forge'ın bu mikro ajanı tetiklemek için kullanacağı bir anahtar kelime girin (İsteğe bağlı).",
-    "de": "Geben Sie ein Schlüsselwort ein, das Forge verwendet, um diesen Microagenten auszulösen (optional).",
+    "de": "Geben Sie ein Schlüsselwort ein, das Forge verwendet, um diesen Playbooken auszulösen (optional).",
     "uk": "Введіть ключове слово, яке Forge використовуватиме для запуску цього мікроагента (необов'язково)."
   },
   "COMMON$FOR_EXAMPLE": {
@@ -12543,50 +12543,50 @@
     "de": "Dateistruktur lernen",
     "uk": "Вивчити структуру файлів"
   },
-  "MICROAGENT_MANAGEMENT$YOU_DO_NOT_HAVE_USER_LEVEL_MICROAGENTS": {
-    "en": "You do not have user-level microagents",
+  "PLAYBOOK_MANAGEMENT$YOU_DO_NOT_HAVE_USER_LEVEL_PLAYBOOKS": {
+    "en": "You do not have user-level playbooks",
     "ja": "ユーザーレベルのマイクロエージェントがありません",
     "zh-CN": "您没有用户级微代理",
     "zh-TW": "您沒有使用者層級的微代理",
     "ko-KR": "사용자 수준의 마이크로에이전트가 없습니다",
     "no": "Du har ikke mikroagenter på brukernivå",
-    "it": "Non hai microagenti a livello utente",
-    "pt": "Você não possui microagentes de nível de usuário",
-    "es": "No tienes microagentes a nivel de usuario",
+    "it": "Non hai playbooki a livello utente",
+    "pt": "Você não possui playbookes de nível de usuário",
+    "es": "No tienes playbookes a nivel de usuario",
     "ar": "ليس لديك وكلاء دقيقون على مستوى المستخدم",
-    "fr": "Vous n'avez pas de microagents au niveau utilisateur",
+    "fr": "Vous n'avez pas de playbooks au niveau utilisateur",
     "tr": "Kullanıcı düzeyinde mikro ajanınız yok",
     "de": "Sie haben keine Mikroagenten auf Benutzerebene",
     "uk": "У вас немає мікроагентів на рівні користувача"
   },
-  "MICROAGENT_MANAGEMENT$YOU_DO_NOT_HAVE_MICROAGENTS": {
-    "en": "You do not have microagents",
+  "PLAYBOOK_MANAGEMENT$YOU_DO_NOT_HAVE_PLAYBOOKS": {
+    "en": "You do not have playbooks",
     "ja": "マイクロエージェントがありません",
     "zh-CN": "您没有微代理",
     "zh-TW": "您沒有微代理",
     "ko-KR": "마이크로에이전트가 없습니다",
     "no": "Du har ingen mikroagenter",
-    "it": "Non hai microagenti",
-    "pt": "Você não possui microagentes",
-    "es": "No tienes microagentes",
+    "it": "Non hai playbooki",
+    "pt": "Você não possui playbookes",
+    "es": "No tienes playbookes",
     "ar": "ليس لديك وكلاء دقيقون",
-    "fr": "Vous n'avez pas de microagents",
+    "fr": "Vous n'avez pas de playbooks",
     "tr": "Mikro ajanınız yok",
     "de": "Sie haben keine Mikroagenten",
     "uk": "У вас немає мікроагентів"
   },
-  "MICROAGENT_MANAGEMENT$YOU_DO_NOT_HAVE_ORGANIZATION_LEVEL_MICROAGENTS": {
-    "en": "You do not have organization-level microagents",
+  "PLAYBOOK_MANAGEMENT$YOU_DO_NOT_HAVE_ORGANIZATION_LEVEL_PLAYBOOKS": {
+    "en": "You do not have organization-level playbooks",
     "ja": "組織レベルのマイクロエージェントがありません",
     "zh-CN": "您没有组织级微代理",
     "zh-TW": "您沒有組織層級的微代理",
     "ko-KR": "조직 수준의 마이크로에이전트가 없습니다",
     "no": "Du har ikke mikroagenter på organisasjonsnivå",
-    "it": "Non hai microagenti a livello organizzazione",
-    "pt": "Você não possui microagentes de nível organizacional",
-    "es": "No tienes microagentes a nivel de organización",
+    "it": "Non hai playbooki a livello organizzazione",
+    "pt": "Você não possui playbookes de nível organizacional",
+    "es": "No tienes playbookes a nivel de organización",
     "ar": "ليس لديك وكلاء دقيقون على مستوى المؤسسة",
-    "fr": "Vous n'avez pas de microagents au niveau organisation",
+    "fr": "Vous n'avez pas de playbooks au niveau organisation",
     "tr": "Organizasyon düzeyinde mikro ajanınız yok",
     "de": "Sie haben keine Mikroagenten auf Organisationsebene",
     "uk": "У вас немає мікроагентів на рівні організації"
@@ -12687,36 +12687,36 @@
     "de": "Wird bearbeitet",
     "uk": "В процесі виконання"
   },
-  "MICROAGENT_MANAGEMENT$WE_ARE_WORKING_ON_IT": {
-    "en": "We're working on it! Once Forge is done investigating, you'll be able to review its pull request before merging your new microagent.",
+  "PLAYBOOK_MANAGEMENT$WE_ARE_WORKING_ON_IT": {
+    "en": "We're working on it! Once Forge is done investigating, you'll be able to review its pull request before merging your new playbook.",
     "ja": "作業中です！Forgeの調査が完了すると、新しいマイクロエージェントをマージする前にプルリクエストを確認できます。",
     "zh-CN": "我们正在处理！Forge 调查完成后，您将能够在合并新微代理之前审查其拉取请求。",
     "zh-TW": "我們正在處理！Forge 調查完成後，您將能在合併新微代理前審查其拉取請求。",
     "ko-KR": "작업 중입니다! Forge의 조사가 끝나면 새 마이크로에이전트를 병합하기 전에 풀 리퀘스트를 검토할 수 있습니다.",
     "no": "Vi jobber med det! Når Forge er ferdig med å undersøke, kan du gjennomgå pull requesten før du slår sammen din nye mikroagent.",
-    "it": "Ci stiamo lavorando! Una volta che Forge avrà terminato l'analisi, potrai rivedere la pull request prima di unire il tuo nuovo microagent.",
-    "pt": "Estamos trabalhando nisso! Assim que o Forge terminar a investigação, você poderá revisar o pull request antes de mesclar seu novo microagente.",
-    "es": "¡Estamos trabajando en ello! Una vez que Forge termine de investigar, podrás revisar su pull request antes de fusionar tu nuevo microagente.",
+    "it": "Ci stiamo lavorando! Una volta che Forge avrà terminato l'analisi, potrai rivedere la pull request prima di unire il tuo nuovo playbook.",
+    "pt": "Estamos trabalhando nisso! Assim que o Forge terminar a investigação, você poderá revisar o pull request antes de mesclar seu novo playbooke.",
+    "es": "¡Estamos trabajando en ello! Una vez que Forge termine de investigar, podrás revisar su pull request antes de fusionar tu nuevo playbooke.",
     "ar": "نحن نعمل على ذلك! بمجرد أن ينتهي Forge من التحقيق، ستتمكن من مراجعة طلب السحب قبل دمج وكيلك الدقيق الجديد.",
-    "fr": "Nous y travaillons ! Une fois qu'Forge aura terminé l'investigation, vous pourrez examiner sa pull request avant de fusionner votre nouveau microagent.",
+    "fr": "Nous y travaillons ! Une fois qu'Forge aura terminé l'investigation, vous pourrez examiner sa pull request avant de fusionner votre nouveau playbook.",
     "tr": "Üzerinde çalışıyoruz! Forge incelemeyi bitirdiğinde, yeni mikro ajanınızı birleştirmeden önce pull request'i gözden geçirebileceksiniz.",
-    "de": "Wir arbeiten daran! Sobald Forge die Untersuchung abgeschlossen hat, können Sie den Pull Request überprüfen, bevor Sie Ihren neuen Microagenten zusammenführen.",
+    "de": "Wir arbeiten daran! Sobald Forge die Untersuchung abgeschlossen hat, können Sie den Pull Request überprüfen, bevor Sie Ihren neuen Playbooken zusammenführen.",
     "uk": "Ми працюємо над цим! Після завершення розслідування Forge ви зможете переглянути його pull request перед об'єднанням нового мікроагента."
   },
-  "MICROAGENT_MANAGEMENT$YOUR_MICROAGENT_IS_READY": {
-    "en": "Your microagent is ready! Merge the PR in GitHub to start using it.",
+  "PLAYBOOK_MANAGEMENT$YOUR_PLAYBOOK_IS_READY": {
+    "en": "Your playbook is ready! Merge the PR in GitHub to start using it.",
     "ja": "マイクロエージェントの準備ができました！GitHubでPRをマージして使い始めましょう。",
     "zh-CN": "您的微代理已准备就绪！在 GitHub 上合并 PR 即可开始使用。",
     "zh-TW": "您的微代理已準備就緒！在 GitHub 上合併 PR 即可開始使用。",
     "ko-KR": "마이크로에이전트가 준비되었습니다! GitHub에서 PR을 병합하여 사용을 시작하세요.",
     "no": "Din mikroagent er klar! Slå sammen PR-en i GitHub for å begynne å bruke den.",
-    "it": "Il tuo microagente è pronto! Unisci la PR su GitHub per iniziare a usarlo.",
-    "pt": "Seu microagente está pronto! Faça o merge do PR no GitHub para começar a usá-lo.",
-    "es": "¡Tu microagente está listo! Haz merge del PR en GitHub para empezar a usarlo.",
+    "it": "Il tuo playbooke è pronto! Unisci la PR su GitHub per iniziare a usarlo.",
+    "pt": "Seu playbooke está pronto! Faça o merge do PR no GitHub para começar a usá-lo.",
+    "es": "¡Tu playbooke está listo! Haz merge del PR en GitHub para empezar a usarlo.",
     "ar": "وكيلك المصغر جاهز! ادمج طلب السحب في GitHub لبدء استخدامه.",
     "fr": "Votre micro-agent est prêt ! Fusionnez la PR sur GitHub pour commencer à l'utiliser.",
     "tr": "Mikro ajanınız hazır! Kullanmak için GitHub'da PR'ı birleştirin.",
-    "de": "Ihr Microagent ist bereit! Führen Sie den PR in GitHub zusammen, um ihn zu verwenden.",
+    "de": "Ihr Playbook ist bereit! Führen Sie den PR in GitHub zusammen, um ihn zu verwenden.",
     "uk": "Ваш мікроагент готовий! Злийте PR у GitHub, щоб почати ним користуватися."
   },
   "COMMON$REVIEW_PR_IN": {
@@ -12799,7 +12799,7 @@
     "de": "Wird gestartet",
     "uk": "Запуск"
   },
-  "MICROAGENT_MANAGEMENT$ERROR": {
+  "PLAYBOOK_MANAGEMENT$ERROR": {
     "en": "The system has encountered an error. Please try again later.",
     "ja": "システムでエラーが発生しました。後でもう一度お試しください。",
     "zh-CN": "系统遇到错误。请稍后再试。",
@@ -12815,7 +12815,7 @@
     "de": "Das System hat einen Fehler festgestellt. Bitte versuchen Sie es später erneut.",
     "uk": "Система зіткнулася з помилкою. Будь ласка, спробуйте пізніше."
   },
-  "MICROAGENT_MANAGEMENT$CONVERSATION_STOPPED": {
+  "PLAYBOOK_MANAGEMENT$CONVERSATION_STOPPED": {
     "en": "The conversation has been stopped.",
     "ja": "会話が停止されました。",
     "zh-CN": "对话已被停止。",
@@ -12831,7 +12831,7 @@
     "de": "Das Gespräch wurde gestoppt.",
     "uk": "Розмову зупинено."
   },
-  "MICROAGENT_MANAGEMENT$LEARN_THIS_REPO_MODAL_TITLE": {
+  "PLAYBOOK_MANAGEMENT$LEARN_THIS_REPO_MODAL_TITLE": {
     "en": "Learn this repository?",
     "ja": "このリポジトリを学習しますか？",
     "zh-CN": "要学习此存储库吗？",
@@ -12847,7 +12847,7 @@
     "de": "Dieses Repository lernen?",
     "uk": "Вивчити цей репозиторій?"
   },
-  "MICROAGENT_MANAGEMENT$LEARN_THIS_REPO_MODAL_DESCRIPTION": {
+  "PLAYBOOK_MANAGEMENT$LEARN_THIS_REPO_MODAL_DESCRIPTION": {
     "en": "Do you want Forge to launch a new conversation to help you understand this repository?",
     "ja": "Forgeがこのリポジトリを理解するための新しい会話を開始しますか？",
     "zh-CN": "您想让Forge启动一个新对话来帮助您了解此存储库吗？",
@@ -12863,7 +12863,7 @@
     "de": "Möchten Sie, dass Forge eine neue Unterhaltung startet, um Ihnen dieses Repository zu erklären?",
     "uk": "Бажаєте, щоб Forge розпочав нову розмову, щоб допомогти вам зрозуміти цей репозиторій?"
   },
-  "MICROAGENT_MANAGEMENT$WHAT_YOU_WOULD_LIKE_TO_KNOW_ABOUT_THIS_REPO": {
+  "PLAYBOOK_MANAGEMENT$WHAT_YOU_WOULD_LIKE_TO_KNOW_ABOUT_THIS_REPO": {
     "en": "What would you like to know about this repository? (optional)",
     "ja": "このリポジトリについて知りたいことは何ですか？（任意）",
     "zh-CN": "您想了解此存储库的哪些内容？（可选）",
@@ -12879,7 +12879,7 @@
     "de": "Was möchten Sie über dieses Repository wissen? (optional)",
     "uk": "Що ви хотіли б дізнатися про цей репозиторій? (необов'язково)"
   },
-  "MICROAGENT_MANAGEMENT$DESCRIBE_WHAT_TO_KNOW_ABOUT_THIS_REPO": {
+  "PLAYBOOK_MANAGEMENT$DESCRIBE_WHAT_TO_KNOW_ABOUT_THIS_REPO": {
     "en": "Describe what you would like to know about this repository.",
     "ja": "このリポジトリについて知りたいことを説明してください。",
     "zh-CN": "请描述您想了解此存储库的内容。",
@@ -12895,20 +12895,20 @@
     "de": "Beschreiben Sie, was Sie über dieses Repository wissen möchten.",
     "uk": "Опишіть, що ви хотіли б дізнатися про цей репозиторій."
   },
-  "MICROAGENT_MANAGEMENT$UPDATE_MICROAGENT_MODAL_DESCRIPTION": {
-    "en": "Forge will update the microagent based on your instructions.",
+  "PLAYBOOK_MANAGEMENT$UPDATE_PLAYBOOK_MODAL_DESCRIPTION": {
+    "en": "Forge will update the playbook based on your instructions.",
     "ja": "Forgeはあなたの指示に基づいてマイクロエージェントを更新します。",
     "zh-CN": "Forge 将根据您的指示更新微代理。",
     "zh-TW": "Forge 將根據您的指示更新微代理。",
     "ko-KR": "Forge가 귀하의 지시에 따라 마이크로에이전트를 업데이트합니다.",
     "no": "Forge vil oppdatere mikroagenten basert på dine instruksjoner.",
-    "it": "Forge aggiornerà il microagent in base alle tue istruzioni.",
-    "pt": "O Forge atualizará o microagente com base nas suas instruções.",
-    "es": "Forge actualizará el microagente según tus instrucciones.",
+    "it": "Forge aggiornerà il playbook in base alle tue istruzioni.",
+    "pt": "O Forge atualizará o playbooke com base nas suas instruções.",
+    "es": "Forge actualizará el playbooke según tus instrucciones.",
     "ar": "سيقوم Forge بتحديث الوكيل الصغير بناءً على تعليماتك.",
-    "fr": "Forge mettra à jour le microagent selon vos instructions.",
+    "fr": "Forge mettra à jour le playbook selon vos instructions.",
     "tr": "Forge, talimatlarınıza göre mikro ajanı güncelleyecektir.",
-    "de": "Forge aktualisiert den Microagenten basierend auf Ihren Anweisungen.",
+    "de": "Forge aktualisiert den Playbooken basierend auf Ihren Anweisungen.",
     "uk": "Forge оновить мікроагента відповідно до ваших інструкцій."
   },
   "SETTINGS$GIT_USERNAME": {
@@ -13391,20 +13391,20 @@
     "de": "Der API-Schlüssel darf keine Leerzeichen enthalten",
     "uk": "Ключ API не може містити пробіли"
   },
-  "MICROAGENT_MANAGEMENT$ERROR_LOADING_MICROAGENT_CONTENT": {
-    "en": "Error loading microagent content.",
+  "PLAYBOOK_MANAGEMENT$ERROR_LOADING_PLAYBOOK_CONTENT": {
+    "en": "Error loading playbook content.",
     "ja": "マイクロエージェントのコンテンツの読み込み中にエラーが発生しました。",
     "zh-CN": "加载微代理内容时出错。",
     "zh-TW": "載入微代理內容時發生錯誤。",
     "ko-KR": "마이크로에이전트 콘텐츠를 불러오는 중 오류가 발생했습니다.",
     "no": "Feil ved lasting av mikroagent-innhold.",
-    "it": "Errore durante il caricamento del contenuto del microagente.",
-    "pt": "Erro ao carregar o conteúdo do microagente.",
-    "es": "Error al cargar el contenido del microagente.",
+    "it": "Errore durante il caricamento del contenuto del playbooke.",
+    "pt": "Erro ao carregar o conteúdo do playbooke.",
+    "es": "Error al cargar el contenido del playbooke.",
     "ar": "حدث خطأ أثناء تحميل محتوى الوكيل الدقيق.",
-    "fr": "Erreur lors du chargement du contenu du microagent.",
+    "fr": "Erreur lors du chargement du contenu du playbook.",
     "tr": "Mikro ajan içeriği yüklenirken hata oluştu.",
-    "de": "Fehler beim Laden des Microagent-Inhalts.",
+    "de": "Fehler beim Laden des Playbook-Inhalts.",
     "uk": "Помилка під час завантаження вмісту мікроагента."
   },
   "SETTINGS$MCP_SERVER_TYPE_SSE": {
@@ -13871,39 +13871,39 @@
     "de": "A server with this URL already exists for the selected type",
     "uk": "A server with this URL already exists for the selected type"
   },
-  "MICROAGENT_MANAGEMENT$OPENING_PR_TO_CREATE_MICROAGENT": {
-    "en": "Opening a PR to create the microagent for you...",
+  "PLAYBOOK_MANAGEMENT$OPENING_PR_TO_CREATE_PLAYBOOK": {
+    "en": "Opening a PR to create the playbook for you...",
     "ja": "マイクロエージェントを作成するためのプルリクエストを作成しています...",
     "zh-CN": "正在为您创建微代理的拉取请求...",
     "zh-TW": "正在為您建立微代理的拉取請求...",
     "ko-KR": "마이크로에이전트를 생성하기 위한 PR을 열고 있습니다...",
     "no": "Åpner en PR for å opprette mikroagenten for deg...",
-    "it": "Apertura di una PR per creare il microagente per te...",
-    "pt": "Abrindo um PR para criar o microagente para você...",
-    "es": "Abriendo un PR para crear el microagente para ti...",
+    "it": "Apertura di una PR per creare il playbooke per te...",
+    "pt": "Abrindo um PR para criar o playbooke para você...",
+    "es": "Abriendo un PR para crear el playbooke para ti...",
     "ar": "يتم فتح طلب سحب لإنشاء الوكيل الدقيق من أجلك...",
-    "fr": "Ouverture d'une PR pour créer le microagent pour vous...",
+    "fr": "Ouverture d'une PR pour créer le playbook pour vous...",
     "tr": "Sizin için mikro ajanı oluşturmak üzere bir PR açılıyor...",
-    "de": "Es wird ein PR geöffnet, um den Microagent für Sie zu erstellen...",
+    "de": "Es wird ein PR geöffnet, um den Playbook für Sie zu erstellen...",
     "uk": "Відкривається PR для створення мікроагента для вас..."
   },
-  "MICROAGENT_MANAGEMENT$PR_READY_FOR_REVIEW": {
-    "en": "PR is ready for review! The microagent has been created successfully.",
+  "PLAYBOOK_MANAGEMENT$PR_READY_FOR_REVIEW": {
+    "en": "PR is ready for review! The playbook has been created successfully.",
     "ja": "PRのレビューが可能です！マイクロエージェントが正常に作成されました。",
     "zh-CN": "PR已准备好审核！微代理已成功创建。",
     "zh-TW": "PR 已準備好審查！微代理已成功建立。",
     "ko-KR": "PR이 검토를 위해 준비되었습니다! 마이크로에이전트가 성공적으로 생성되었습니다.",
     "no": "PR er klar for gjennomgang! Mikroagenten har blitt opprettet.",
-    "it": "La PR è pronta per la revisione! Il microagente è stato creato con successo.",
-    "pt": "PR pronto para revisão! O microagente foi criado com sucesso.",
-    "es": "¡La PR está lista para revisión! El microagente se ha creado correctamente.",
+    "it": "La PR è pronta per la revisione! Il playbooke è stato creato con successo.",
+    "pt": "PR pronto para revisão! O playbooke foi criado com sucesso.",
+    "es": "¡La PR está lista para revisión! El playbooke se ha creado correctamente.",
     "ar": "طلب السحب جاهز للمراجعة! تم إنشاء الوكيل الدقيق بنجاح.",
-    "fr": "La PR est prête pour révision ! Le microagent a été créé avec succès.",
+    "fr": "La PR est prête pour révision ! Le playbook a été créé avec succès.",
     "tr": "PR incelemeye hazır! Mikro ajan başarıyla oluşturuldu.",
-    "de": "PR ist bereit zur Überprüfung! Der Microagent wurde erfolgreich erstellt.",
+    "de": "PR ist bereit zur Überprüfung! Der Playbook wurde erfolgreich erstellt.",
     "uk": "PR готовий до перегляду! Мікроагента успішно створено."
   },
-  "MICROAGENT_MANAGEMENT$PR_NOT_CREATED": {
+  "PLAYBOOK_MANAGEMENT$PR_NOT_CREATED": {
     "en": "The agent has finished its task but was unable to create a PR.",
     "ja": "エージェントはタスクを完了しましたが、PRを作成できませんでした。",
     "zh-CN": "代理已完成任务，但无法创建 PR。",
@@ -17567,7 +17567,7 @@
     "de": "Seite neu laden",
     "uk": "Перезавантажити сторінку"
   },
-  "MICROAGENTS$TITLE": {
+  "PLAYBOOKS$TITLE": {
     "en": "Repository Guides Management",
     "ja": "リポジトリガイド管理",
     "zh-CN": "仓库指南管理",

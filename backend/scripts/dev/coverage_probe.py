@@ -1,3 +1,3 @@
-import forge.core.logger as L
+import backend.core.logger as L
 
 print(L.__file__)

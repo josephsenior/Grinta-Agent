@@ -80,8 +80,8 @@ function ConversationItem({
         "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-all duration-200 group relative",
         "border border-transparent mb-0.5",
         isActive
-          ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)] border-[var(--border-secondary)] shadow-sm"
-          : "text-[var(--text-tertiary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]",
+          ? "bg-(--bg-tertiary) text-(--text-primary) border-(--border-secondary) shadow-sm"
+          : "text-(--text-tertiary) hover:bg-(--bg-secondary) hover:text-(--text-secondary)",
       )}
       title={title}
     >
@@ -90,8 +90,8 @@ function ConversationItem({
           className={cn(
             "w-3.5 h-3.5 shrink-0 transition-colors",
             isActive
-              ? "text-[var(--text-accent)]"
-              : "text-[var(--text-tertiary)] group-hover:text-[var(--text-accent)]",
+              ? "text-(--text-accent)"
+              : "text-(--text-tertiary) group-hover:text-(--text-accent)",
           )}
         />
         <span className="truncate flex-1 font-medium">{title}</span>
@@ -102,7 +102,7 @@ function ConversationItem({
         )}
       </div>
       {isActive && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-[var(--text-accent)] shadow-[0_0_8px_var(--text-accent)]" />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-(--text-accent) shadow-[0_0_8px_var(--text-accent)]" />
       )}
     </button>
   );
@@ -177,9 +177,9 @@ export function ConversationsSidebar() {
   );
 
   return (
-    <div className="h-full flex flex-col bg-[var(--bg-elevated)] border-r border-[var(--border-primary)]">
+    <div className="h-full flex flex-col bg-(--bg-elevated) border-r border-(--border-primary)">
       {/* Modern Header */}
-      <div className="px-3 py-2.5 border-b border-[var(--border-primary)] flex items-center gap-2 shrink-0">
+      <div className="px-3 py-2.5 border-b border-(--border-primary) flex items-center gap-2 shrink-0">
         {showSearch ? (
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)]" />
@@ -276,7 +276,7 @@ export function ConversationsSidebar() {
               type="button"
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="w-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] rounded-lg disabled:opacity-50 transition-all duration-200 border border-[var(--border-secondary)]"
+              className="w-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)] rounded-lg disabled:opacity-50 transition-all duration-200 border border-(--border-secondary)"
             >
               {isFetchingNextPage ? t(I18nKey.HOME$LOADING) : "Load more"}
             </button>

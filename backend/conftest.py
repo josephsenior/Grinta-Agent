@@ -8,15 +8,13 @@ import importlib
 
 def _sanitize_sys_path():
     backend_root = os.path.abspath(os.path.dirname(__file__))
-    # Put backend_root at the front so 'forge' is imported from there
-    if backend_root in sys.path:
-        sys.path.remove(backend_root)
-    sys.path.insert(0, backend_root)
-    
-    # Also ensure the parent directory is available if needed, but after backend_root
+    # We must NOT put backend_root at index 0, because it contains a folder named 'mcp'
+    # which shadows the official 'mcp' Python library used by fastmcp.
+    # Instead, we ensure the project root is in path, so we can use 'backend.mcp'.
     project_root = os.path.dirname(backend_root)
-    if project_root not in sys.path:
-        sys.path.append(project_root)
+    if project_root in sys.path:
+        sys.path.remove(project_root)
+    sys.path.insert(0, project_root)
     
     _preload_pydantic_root_model()
     _prefer_installed_mcp()
@@ -49,23 +47,6 @@ def _restrict_mcp_path(module: object) -> None:
 
 
 _sanitize_sys_path()
-try:
-    # Diagnostic: dump sanitized sys.path for pytest collection debugging.
-    with open(os.path.join(os.path.dirname(__file__), "tmp_sys_path_after_sanitize.txt"), "w", encoding="utf-8") as f:
-        for p in sys.path:
-            f.write(p + "\n")
-except Exception:
-    pass
-try:
-    # Diagnostic: dump currently loaded `forge` modules (if any) to help
-    # diagnose import shadowing during pytest collection.
-    with open(os.path.join(os.path.dirname(__file__), "tmp_forge_sysmodules_initial.txt"), "w", encoding="utf-8") as f:
-        for k in sorted(sys.modules.keys()):
-            if k.startswith("forge"):
-                mod = sys.modules.get(k)
-                f.write(f"{k}: {getattr(mod, '__file__', None)}\n")
-except Exception:
-    pass
 
 
 import asyncio
@@ -145,7 +126,7 @@ def _clear_forge_modules() -> None:
         "forge",
         "resolver",
         "integrations",
-        "agenthub",
+        "engines",
     )
     try:
         for name in list(sys.modules.keys()):
@@ -279,6 +260,4 @@ __all__ = [
     "pytest_pyfunc_call",
     "require_pkg",
     "use_repo_root_cwd",
-    "stub_win32_output_on_windows",
-    "set_dummy_llm_env",
 ]

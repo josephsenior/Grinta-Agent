@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 
-from forge.integrations.protocols.http_client import HTTPClient
-from forge.integrations.service_types import (
+from backend.integrations.protocols.http_client import HTTPClient
+from backend.integrations.service_types import (
     BaseGitService,
     RequestMethod,
     UnknownException,

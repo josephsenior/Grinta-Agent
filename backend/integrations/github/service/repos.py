@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from forge.core.logger import forge_logger as logger
-from forge.integrations.github.service.base import GitHubMixinBase
-from forge.integrations.service_types import OwnerType, ProviderType, Repository
-from forge.server.types import AppMode
+from backend.core.constants import MAX_GITHUB_REPOS
+from backend.core.logger import forge_logger as logger
+from backend.integrations.github.service.base import GitHubMixinBase
+from backend.integrations.service_types import OwnerType, ProviderType, Repository
+from backend.server.types import AppMode
 
 
 class GitHubReposMixin(GitHubMixinBase):
@@ -131,8 +132,8 @@ class GitHubReposMixin(GitHubMixinBase):
     async def get_all_repositories(
         self, sort: str, app_mode: AppMode
     ) -> list[Repository]:
-        """Collect up to 1000 repositories, aggregating across installations when running as SaaS."""
-        MAX_REPOS = 1000
+        """Collect repositories, aggregating across installations when running as SaaS."""
+        MAX_REPOS = MAX_GITHUB_REPOS
         PER_PAGE = 100
         all_repos: list[dict] = []
         if app_mode == AppMode.SAAS:

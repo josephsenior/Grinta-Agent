@@ -14,43 +14,44 @@ from uuid import uuid4
 
 from termcolor import colored
 
-import forge
-from forge.core.config import AgentConfig, ForgeConfig, SandboxConfig
-from forge.core.config.utils import load_FORGE_config
-from forge.core.logger import forge_logger as logger
-from forge.core.main import create_runtime, run_controller
-from forge.events.action import CmdRunAction, MessageAction
-from forge.events.observation import (
+import backend
+from backend.core.config import AgentConfig, ForgeConfig, SandboxConfig
+from backend.core.config.utils import load_FORGE_config
+from backend.core.logger import forge_logger as logger
+from backend.core.main import create_runtime, run_controller
+from backend.events.action import CmdRunAction, MessageAction
+from backend.events.observation import (
     CmdOutputObservation,
     ErrorObservation,
     Observation,
 )
-from forge.events.stream import EventStreamSubscriber
-from forge.integrations.service_types import ProviderType
-from forge.llm.llm_registry import LLMRegistry
-from forge.resolver.issue_handler_factory import IssueHandlerFactory
-from forge.resolver.resolver_output import ResolverOutput
-from forge.resolver.utils import (
+from backend.events.stream import EventStreamSubscriber
+from backend.integrations.service_types import ProviderType
+from backend.models.llm_registry import LLMRegistry
+from backend.resolver.issue_handler_factory import IssueHandlerFactory
+from backend.resolver.resolver_output import ResolverOutput
+from backend.resolver.utils import (
     codeact_user_response,
     get_unique_uid,
     identify_token,
     reset_logger_for_multiprocessing,
 )
-from forge.utils.async_utils import GENERAL_TIMEOUT, call_async_from_sync
+from backend.core.constants import GENERAL_TIMEOUT
+from backend.utils.async_utils import call_async_from_sync
 
 if TYPE_CHECKING:
     from argparse import Namespace
 
-    from forge.controller.state.state import State
-    from forge.events.event import Event
-    from forge.resolver.interfaces.issue import Issue
-    from forge.resolver.interfaces.issue_definitions import (
+    from backend.controller.state.state import State
+    from backend.events.event import Event
+    from backend.resolver.interfaces.issue import Issue
+    from backend.resolver.interfaces.issue_definitions import (
         ServiceContextIssue,
         ServiceContextPR,
     )
-    from forge.runtime.base import Runtime
+    from backend.runtime.base import Runtime
 
-AGENT_CLASS = "CodeActAgent"
+AGENT_CLASS = "Orchestrator"
 
 
 class IssueResolver:
@@ -260,11 +261,11 @@ class IssueResolver:
         runtime: str | None = None,
     ) -> ForgeConfig:
         """Mutate ForgeConfig with runtime/sandbox defaults appropriate for resolver."""
-        config.default_agent = "CodeActAgent"
+        config.default_agent = "Orchestrator"
         config.runtime = runtime or config.runtime or "local"
         config.max_budget_per_task = 4
         config.max_iterations = max_iterations
-        config.agents = {"CodeActAgent": AgentConfig(disabled_microagents=["github"])}
+        config.agents = {"Orchestrator": AgentConfig(disabled_playbooks=["github"])}
         cls.update_sandbox_config(config)
         return config
 
@@ -849,7 +850,7 @@ class IssueResolver:
             output = await self.process_issue(
                 issue, base_commit, self.issue_handler, reset_logger
             )
-            from forge.core.pydantic_compat import model_dump_json
+            from backend.core.pydantic_compat import model_dump_json
 
             output_fp.write(model_dump_json(output) + "\n")
             output_fp.flush()

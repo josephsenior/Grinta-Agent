@@ -11,7 +11,7 @@ import {
   markAllAsRead,
   removeNotification,
   type Notification,
-} from "#/store/notifications-slice";
+} from "#/state/notifications-slice";
 
 export function NotificationsCenter() {
   const dispatch = useDispatch();

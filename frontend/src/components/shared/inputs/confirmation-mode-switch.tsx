@@ -1,7 +1,6 @@
-import { Switch } from "@heroui/react";
+import { Switch } from "#/components/ui/switch";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
-import { cn } from "#/utils/utils";
 
 interface ConfirmationModeSwitchProps {
   isDisabled: boolean;
@@ -15,23 +14,15 @@ export function ConfirmationModeSwitch({
   const { t } = useTranslation();
 
   return (
-    <Switch
-      isDisabled={isDisabled}
-      name="confirmation-mode"
-      defaultSelected={defaultSelected}
-      classNames={{
-        thumb: cn(
-          "bg-foreground-tertiary w-3 h-3",
-          "group-data-[selected=true]:bg-white",
-        ),
-        wrapper: cn(
-          "border border-white/10 bg-black/60 px-[6px] w-12 h-6 rounded-xl",
-          "group-data-[selected=true]:border-white/20 group-data-[selected=true]:bg-white/20",
-        ),
-        label: "text-foreground text-xs",
-      }}
-    >
-      {t(I18nKey.SETTINGS_FORM$ENABLE_CONFIRMATION_MODE_LABEL)}
-    </Switch>
+    <div className="flex items-center gap-2">
+      <Switch
+        disabled={isDisabled}
+        name="confirmation-mode"
+        defaultChecked={defaultSelected}
+      />
+      <label className="text-foreground text-xs">
+        {t(I18nKey.SETTINGS_FORM$ENABLE_CONFIRMATION_MODE_LABEL)}
+      </label>
+    </div>
   );
 }

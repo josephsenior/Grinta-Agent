@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { MessageCircle, Menu, PanelLeft, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useSidebar } from "#/contexts/sidebar-context";
+import { useSidebar } from "#/context/sidebar-context";
 import { useScrollY } from "#/hooks/use-scroll-reveal";
 import { cn } from "#/utils/utils";
 import { useHeaderHandlers } from "./Header/use-header-handlers";
 import { useHeaderNavigation } from "./Header/use-header-navigation";
 import { usePlaywrightDetection } from "./Header/use-playwright-detection";
 import { NotificationsCenter } from "#/components/features/notifications/notifications-center";
-import { SettingsDrawer } from "#/components/settings/SettingsDrawer";
+import { SettingsDrawer } from "#/components/features/settings/settings-drawer";
 // HelpCenter moved to sidebar - removed from header
 // Use public logo instead of bundled asset
 const logo = "/forge-logo.png";

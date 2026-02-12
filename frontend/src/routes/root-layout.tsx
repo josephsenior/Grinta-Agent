@@ -21,11 +21,11 @@ import { ToastProvider } from "#/components/shared/notifications/toast";
 import { RoutePreloader } from "#/utils/route-preloader";
 import { injectCriticalCSS } from "#/utils/critical-css";
 import { Button } from "#/components/ui/button";
-import { SkipLink } from "#/components/layout/SkipLink";
-import { SidebarProvider } from "#/contexts/sidebar-context";
+import { SkipLink } from "#/components/layout/skip-link";
+import { SidebarProvider } from "#/context/sidebar-context";
 
 const DesktopLayout = React.lazy(() =>
-  import("#/components/layout/DesktopLayout").then((m) => ({
+  import("#/components/layout/desktop-layout").then((m) => ({
     default: m.DesktopLayout,
   })),
 );
@@ -44,19 +44,19 @@ export function ErrorBoundary() {
 
     // Handle other HTTP errors
     return (
-      <div className="relative min-h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
-        <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
+      <div className="relative min-h-screen overflow-hidden bg-(--bg-primary) text-(--text-primary)">
+        <div className="relative z-1 flex min-h-screen flex-col items-center justify-center px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mb-8">
-              <h1 className="text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600">
+              <h1 className="text-9xl font-bold text-transparent bg-clip-text bg-linear-to-r from-brand-500 via-accent-500 to-brand-600">
                 {error.status}
               </h1>
             </div>
             <div className="mb-8 space-y-4">
-              <h2 className="text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
+              <h2 className="text-3xl font-semibold text-(--text-primary) sm:text-4xl">
                 {error.statusText || "Something went wrong"}
               </h2>
-              <p className="text-lg text-[var(--text-tertiary)]">
+              <p className="text-lg text-(--text-tertiary)">
                 {error.data instanceof Object
                   ? JSON.stringify(error.data)
                   : error.data || "An error occurred while loading this page."}
@@ -85,19 +85,19 @@ export function ErrorBoundary() {
 
   if (error instanceof Error) {
     return (
-      <div className="relative min-h-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
-        <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
+      <div className="relative min-h-screen overflow-hidden bg-(--bg-primary) text-(--text-primary)">
+        <div className="relative z-1 flex min-h-screen flex-col items-center justify-center px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mb-8">
-              <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600">
+              <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-linear-to-r from-brand-500 via-accent-500 to-brand-600">
                 {t("error.title", "Error")}
               </h1>
             </div>
             <div className="mb-8 space-y-4">
-              <h2 className="text-3xl font-semibold text-[var(--text-primary)] sm:text-4xl">
+              <h2 className="text-3xl font-semibold text-(--text-primary) sm:text-4xl">
                 {t(I18nKey.ERROR$GENERIC)}
               </h2>
-              <p className="text-lg text-[var(--text-tertiary)]">
+              <p className="text-lg text-(--text-tertiary)">
                 {error.message || "An unexpected error occurred."}
               </p>
             </div>
@@ -124,24 +124,22 @@ export function ErrorBoundary() {
 
   return (
     <div
-      className="relative min-h-screen overflow-hidden text-foreground"
-      style={{ backgroundColor: "var(--bg-primary)" }}
+      className="relative min-h-screen overflow-hidden text-foreground bg-[var(--bg-primary)]"
     >
-      <div className="relative z-[1] flex min-h-screen flex-col items-center justify-center px-6 py-20">
+      <div className="relative z-1 flex min-h-screen flex-col items-center justify-center px-6 py-20">
         <div className="mx-auto max-w-2xl text-center">
           <div className="mb-8">
-            <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-accent-500 to-brand-600">
+            <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-linear-to-r from-brand-500 via-accent-500 to-brand-600">
               {t("error.title", "Error")}
             </h1>
           </div>
           <div className="mb-8 space-y-4">
             <h2
-              className="text-3xl font-semibold sm:text-4xl"
-              style={{ color: "var(--text-primary)" }}
+              className="text-3xl font-semibold sm:text-4xl text-[var(--text-primary)]"
             >
               {t(I18nKey.ERROR$UNKNOWN)}
             </h2>
-            <p className="text-lg" style={{ color: "var(--text-secondary)" }}>
+            <p className="text-lg text-[var(--text-secondary)]">
               {t(
                 "error.unknownError",
                 "An unknown error occurred. Please try again.",
@@ -273,7 +271,7 @@ export default function MainApp() {
         <SidebarProvider>
           <div
             data-testid="root-layout"
-            className="min-h-screen w-full bg-[var(--bg-primary)] font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right"
+            className="min-h-screen w-full bg-(--bg-primary) font-sans safe-area-top safe-area-bottom safe-area-left safe-area-right"
           >
             <SkipLink />
       <DesktopLayout>

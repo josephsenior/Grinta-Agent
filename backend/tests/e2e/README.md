@@ -151,7 +151,7 @@ A simple test (`test_simple_browser_navigation`) that just navigates to the Forg
 
 ### Local Runtime Test
 
-A separate test (`test_headless_mode_with_dummy_agent_no_browser` in `test_local_runtime.py`) that tests the local runtime with a dummy agent in headless mode.
+A separate test (`test_headless_mode_with_echo_no_browser` in `test_local_runtime.py`) that tests the local runtime with a dummy agent in headless mode.
 
 ## Troubleshooting
 

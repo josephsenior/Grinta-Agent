@@ -1,0 +1,149 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Iterable
+
+from backend.core.logger import forge_logger as logger
+from backend.core.message import Message, TextContent
+from backend.events.action import MessageAction
+from backend.memory.condenser import Condenser
+from backend.memory.condenser.condenser import Condensation
+from backend.memory.conversation_memory import ConversationMemory
+from backend.memory.view import View
+
+if TYPE_CHECKING:
+    from backend.controller.state.state import State
+    from backend.events.action import Action
+    from backend.events.event import Event
+    from backend.models.llm_registry import LLMRegistry
+
+    from backend.utils.prompt import PromptManager
+    from backend.core.config import AgentConfig
+
+
+@dataclass
+class CondensedHistory:
+    events: list["Event"]
+    pending_action: "Action | None"
+
+
+class CodeActMemoryManager:
+    """Owns conversation memory and condensation."""
+
+    def __init__(
+        self,
+        config: "AgentConfig",
+        llm_registry: "LLMRegistry",
+    ) -> None:
+        self._config = config
+        self._llm_registry = llm_registry
+        self.conversation_memory: ConversationMemory | None = None
+        self.condenser: Condenser | None = None
+
+    def initialize(self, prompt_manager: "PromptManager") -> None:
+        """Initialize conversation memory with prompt manager."""
+        self.conversation_memory = ConversationMemory(self._config, prompt_manager)
+        # Initialize condenser from config if available
+        condenser_config = getattr(self._config, "condenser", None)
+        self._init_condenser(condenser_config)
+
+    def _init_condenser(self, condenser_config) -> None:
+        """Initialize the condenser from config."""
+        if condenser_config is None:
+            self.condenser = None
+            return
+
+        try:
+            self.condenser = Condenser.from_config(
+                condenser_config,
+                self._llm_registry,
+            )
+            logger.debug("Using condenser: %s", type(self.condenser))
+        except Exception as exc:  # pragma: no cover - condensation optional
+            logger.warning("Failed to initialize condenser: %s", exc)
+            self.condenser = None
+
+    # --------------------------------------------------------------------- #
+    # History utilities
+    # --------------------------------------------------------------------- #
+    def condense_history(self, state: "State") -> CondensedHistory:
+        history = getattr(state, "history", [])
+        if not self.condenser:
+            return CondensedHistory(list(history), None)
+
+        condensation_result = self.condenser.condensed_history(state)
+        if isinstance(condensation_result, View):
+            return CondensedHistory(condensation_result.events, None)
+        return CondensedHistory([], condensation_result.action)
+
+    def get_initial_user_message(self, events: Iterable["Event"]) -> MessageAction:
+        from backend.events.event import EventSource
+        from backend.core.schemas import ActionType
+
+        for event in events:
+            try:
+                source = getattr(event, "source", None)
+                if source != EventSource.USER:
+                    continue
+
+                if isinstance(event, MessageAction):
+                    return event
+
+                if getattr(event, "action", None) == ActionType.MESSAGE and hasattr(
+                    event, "content"
+                ):
+                    cloned = MessageAction(
+                        content=str(getattr(event, "content", "")),
+                        file_urls=getattr(event, "file_urls", None),
+                        image_urls=getattr(event, "image_urls", None),
+                        wait_for_response=bool(
+                            getattr(event, "wait_for_response", False)
+                        ),
+                    )
+                    cloned.source = source
+                    if hasattr(event, "id"):
+                        cloned.id = getattr(event, "id")
+                    if hasattr(event, "timestamp"):
+                        cloned.timestamp = getattr(event, "timestamp")
+                    return cloned
+            except Exception:
+                continue
+        raise ValueError("Initial user message not found")
+
+    def build_messages(
+        self,
+        condensed_history: Iterable["Event"],
+        initial_user_message: MessageAction,
+        llm_config,
+    ) -> list[Message]:
+        if not self.conversation_memory:
+            raise RuntimeError("Conversation memory is not initialized")
+
+        events = list(condensed_history)
+        messages = self.conversation_memory.process_events(
+            condensed_history=events,
+            initial_user_action=initial_user_message,
+            max_message_chars=getattr(llm_config, "max_message_chars", None),
+            vision_is_active=getattr(llm_config, "vision_is_active", False),
+        )
+
+        if not messages:
+            return messages
+
+        first_message = messages[0]
+        for item in first_message.content:
+            if isinstance(item, TextContent):
+                item.cache_prompt = True
+                break
+
+        for message in reversed(messages):
+            if message.role == "user":
+                for item in message.content:
+                    if isinstance(item, TextContent):
+                        item.cache_prompt = True
+                        break
+                break
+
+        return messages
+
+

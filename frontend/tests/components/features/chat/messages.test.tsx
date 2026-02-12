@@ -88,7 +88,7 @@ describe("Messages", () => {
     expect(screen.getByText("Hello, Assistant!")).toBeInTheDocument();
   });
 
-  it("should render a launch to microagent action button on chat messages only if it is a user message", () => {
+  it("should render a launch to playbook action button on chat messages only if it is a user message", () => {
     const getConversationSpy = vi.spyOn(Forge, "getConversation");
     const mockConversation: Conversation = {
       conversation_id: "123",

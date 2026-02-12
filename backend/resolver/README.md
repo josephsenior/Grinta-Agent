@@ -168,7 +168,7 @@ python -m Forge.resolver.send_pull_request --issue-number ISSUE_NUMBER --usernam
 
 ## Providing Custom Instructions
 
-You can customize how the AI agent approaches issue resolution by adding a repository microagent file at `.Forge/microagents/repo.md` in your repository. This file's contents will be automatically loaded in the prompt when working with your repository. For more information about repository microagents, see [Repository Instructions](https://github.com/Forge/Forge/tree/main/microagents#2-repository-instructions-private).
+You can customize how the AI agent approaches issue resolution by adding a repository playbook file at `.Forge/playbooks/repo.md` in your repository. This file's contents will be automatically loaded in the prompt when working with your repository. For more information about repository playbooks, see [Repository Instructions](https://github.com/Forge/Forge/tree/main/playbooks#2-repository-instructions-private).
 
 ## Troubleshooting
 

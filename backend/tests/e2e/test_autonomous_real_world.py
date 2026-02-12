@@ -16,10 +16,10 @@ from pathlib import Path
 
 import pytest
 
-from forge.core.config import ForgeConfig
-from forge.core.config.llm_config import LLMConfig
-from forge.core.config.agent_config import AgentConfig
-from forge.security.safety_config import SafetyConfig
+from backend.core.config import ForgeConfig
+from backend.core.config.llm_config import LLMConfig
+from backend.core.config.agent_config import AgentConfig
+from backend.security.safety_config import SafetyConfig
 
 
 @pytest.fixture
@@ -74,10 +74,10 @@ class TestRealWorldAutonomousScenarios:
     @pytest.mark.e2e
     async def test_build_simple_todo_app(self, safety_enabled_config, temp_workspace):
         """Test building a simple TODO app from scratch."""
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
-        from forge.events.observation import AgentStateChangedObservation
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
+        from backend.events.observation import AgentStateChangedObservation
 
         # Create runtime and agent
         runtime = await create_runtime(
@@ -132,8 +132,8 @@ class TestRealWorldAutonomousScenarios:
 
             # Verify no safety violations
             audit_logs = (
-                controller.audit_logger.get_recent_entries(limit=100)
-                if hasattr(controller, "audit_logger")
+                controller.telemetry_logger.get_recent_entries(limit=100)
+                if hasattr(controller, "telemetry_logger")
                 else []
             )
             blocked_actions = [
@@ -160,10 +160,10 @@ class TestRealWorldAutonomousScenarios:
         self, safety_enabled_config, temp_workspace
     ):
         """Test that dangerous commands are blocked by safety validator."""
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction, CmdRunAction
-        from forge.events.observation import ErrorObservation
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction, CmdRunAction
+        from backend.events.observation import ErrorObservation
 
         runtime = await create_runtime(
             safety_enabled_config, workspace_base=str(temp_workspace)
@@ -208,9 +208,9 @@ class TestRealWorldAutonomousScenarios:
         self, safety_enabled_config, temp_workspace
     ):
         """Test that agent recovers from errors and retries intelligently."""
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         runtime = await create_runtime(
             safety_enabled_config, workspace_base=str(temp_workspace)
@@ -267,9 +267,9 @@ class TestRealWorldAutonomousScenarios:
         self, safety_enabled_config, temp_workspace
     ):
         """Test that circuit breaker stops execution after too many errors."""
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         # Lower error threshold for testing
         safety_enabled_config.agent.max_consecutive_errors = 3
@@ -319,9 +319,9 @@ class TestRealWorldAutonomousScenarios:
         self, safety_enabled_config, temp_workspace
     ):
         """Test building a calculator with automated tests."""
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         runtime = await create_runtime(
             safety_enabled_config, workspace_base=str(temp_workspace)
@@ -381,9 +381,9 @@ class TestRealWorldAutonomousScenarios:
         self, safety_enabled_config, temp_workspace
     ):
         """Test that task validator prevents agent from finishing without completing task."""
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction, AgentFinishAction
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction, PlaybookFinishAction
 
         runtime = await create_runtime(
             safety_enabled_config, workspace_base=str(temp_workspace)
@@ -416,7 +416,7 @@ class TestRealWorldAutonomousScenarios:
         (temp_workspace / "file2.txt").write_text("World")
 
         # Try to finish
-        finish_action = AgentFinishAction()
+        finish_action = PlaybookFinishAction()
 
         try:
             # This should be rejected by task validator
@@ -438,9 +438,9 @@ class TestRealWorldAutonomousScenarios:
         self, safety_enabled_config, temp_workspace
     ):
         """Test that audit logger captures all agent actions."""
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         runtime = await create_runtime(
             safety_enabled_config, workspace_base=str(temp_workspace)
@@ -464,8 +464,8 @@ class TestRealWorldAutonomousScenarios:
             state = await controller.run()
 
             # Check audit logs
-            if hasattr(controller, "audit_logger"):
-                audit_logs = controller.audit_logger.get_recent_entries(limit=100)
+            if hasattr(controller, "telemetry_logger"):
+                audit_logs = controller.telemetry_logger.get_recent_entries(limit=100)
 
                 assert len(audit_logs) > 0, "Should have audit log entries"
 

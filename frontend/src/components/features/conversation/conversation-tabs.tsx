@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
-import { TbFileCode, TbTerminal2, TbGlobe } from "react-icons/tb";
+import { FileCode, Terminal, Globe } from "lucide-react";
 import { I18nKey } from "#/i18n/declaration";
 import { TabContent } from "#/components/layout/tab-content";
 import { useConversationId } from "#/hooks/use-conversation-id";
@@ -51,19 +51,19 @@ export function ConversationTabs() {
         <TabButton
           to=""
           basePath={basePath}
-          icon={<TbFileCode className="w-4 h-4" />}
+          icon={<FileCode className="w-4 h-4" />}
           label="Workspace"
         />
         <TabButton
           to="terminal"
           basePath={basePath}
-          icon={<TbTerminal2 className="w-4 h-4" />}
+          icon={<Terminal className="w-4 h-4" />}
           label={t(I18nKey.WORKSPACE$TERMINAL_TAB_LABEL)}
         />
         <TabButton
           to="browser"
           basePath={basePath}
-          icon={<TbGlobe className="w-4 h-4" />}
+          icon={<Globe className="w-4 h-4" />}
           label="Browser"
         />
       </div>

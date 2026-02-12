@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import posthog from "posthog-js";
+import posthog from "#/utils/posthog";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import Forge from "#/api/forge";
 import { PostSettings, PostApiSettings } from "#/types/settings";

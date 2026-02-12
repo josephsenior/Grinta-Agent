@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from forge.core.logger import forge_logger as logger
-from forge.integrations.github.service.base import GitHubMixinBase
-from forge.integrations.service_types import RequestMethod
+from backend.core.logger import forge_logger as logger
+from backend.integrations.github.service.base import GitHubMixinBase
+from backend.integrations.service_types import RequestMethod
 
 
 class GitHubPRsMixin(GitHubMixinBase):

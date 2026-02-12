@@ -31,7 +31,7 @@ def main():
     all_found = True
     for endpoint in NEW_ENDPOINTS:
         # Check if router is imported
-        import_pattern = f"from forge.server.routes.{endpoint} import"
+        import_pattern = f"from backend.server.routes.{endpoint} import"
         router_pattern = f"{endpoint}_router"
         include_pattern = f"app.include_router({endpoint}_router"
         tags_pattern = f'tags=["v1", "{endpoint}"]'

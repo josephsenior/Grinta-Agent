@@ -7,7 +7,7 @@ describe("Model name case preservation", () => {
     const formData = new FormData();
     formData.set("llm-provider-input", "SambaNova");
     formData.set("llm-model-input", "Meta-Llama-3.1-8B-Instruct");
-    formData.set("agent", "CodeActAgent");
+    formData.set("agent", "Orchestrator");
     formData.set("language", "en");
 
     const settings = extractSettings(formData);
@@ -20,7 +20,7 @@ describe("Model name case preservation", () => {
     const formData = new FormData();
     formData.set("llm-provider-input", "openai");
     formData.set("llm-model-input", "gpt-4o");
-    formData.set("agent", "CodeActAgent");
+    formData.set("agent", "Orchestrator");
     formData.set("language", "en");
 
     const settings = extractSettings(formData);
@@ -31,7 +31,7 @@ describe("Model name case preservation", () => {
     const formData = new FormData();
     formData.set("llm-provider-input", "anthropic");
     formData.set("llm-model-input", "claude-sonnet-4-20250514");
-    formData.set("agent", "CodeActAgent");
+    formData.set("agent", "Orchestrator");
     formData.set("language", "en");
 
     const settings = extractSettings(formData);
@@ -42,7 +42,7 @@ describe("Model name case preservation", () => {
     const formData = new FormData();
     formData.set("llm-provider-input", "SambaNova");
     formData.set("llm-model-input", "Meta-Llama-3.1-8B-Instruct");
-    formData.set("agent", "CodeActAgent");
+    formData.set("agent", "Orchestrator");
     formData.set("language", "en");
 
     const settings = extractSettings(formData);

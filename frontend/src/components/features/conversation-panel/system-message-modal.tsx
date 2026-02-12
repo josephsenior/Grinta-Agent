@@ -6,7 +6,7 @@ import { BaseModalTitle } from "#/components/shared/modals/confirmation-modals/b
 import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";
 import { ModalBody } from "#/components/shared/modals/modal-body";
 import { cn } from "#/utils/utils";
-import { JSON_VIEW_THEME } from "#/utils/constants";
+import { JSON_VIEW_THEME } from "#/constants/app";
 
 interface SystemMessageModalProps {
   isOpen: boolean;

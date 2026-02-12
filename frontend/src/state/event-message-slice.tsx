@@ -1,5 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+/** Maximum submitted event IDs retained (auto-evict oldest). */
+const MAX_SUBMITTED_EVENT_IDS = 500;
+
 export const eventMessageSlice = createSlice({
   name: "eventMessage",
   initialState: {
@@ -8,6 +11,11 @@ export const eventMessageSlice = createSlice({
   reducers: {
     addSubmittedEventId: (state, action) => {
       state.submittedEventIds.push(action.payload);
+      if (state.submittedEventIds.length > MAX_SUBMITTED_EVENT_IDS) {
+        state.submittedEventIds = state.submittedEventIds.slice(
+          -MAX_SUBMITTED_EVENT_IDS,
+        );
+      }
     },
     removeSubmittedEventId: (state, action) => {
       state.submittedEventIds = state.submittedEventIds.filter(

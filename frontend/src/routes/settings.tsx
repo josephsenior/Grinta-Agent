@@ -62,8 +62,8 @@ function SettingsSidebarLink({
           "transition-all duration-200",
           collapsed && "justify-center",
           isActive
-            ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
-            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]",
+            ? "bg-(--bg-tertiary) text-(--text-primary)"
+            : "text-(--text-secondary) hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]",
         )
       }
     >

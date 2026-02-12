@@ -35,7 +35,7 @@ Write-Host "   Backend will be available at: http://localhost:3000" -ForegroundC
 $backendWindow = Start-Process powershell -ArgumentList @(
     "-NoExit",
     "-Command",
-    "`$env:Path += ';$env:APPDATA\Python\Scripts'; cd '$PSScriptRoot'; Write-Host '🚀 Backend Server' -ForegroundColor Green; Write-Host 'Press Ctrl+C to stop' -ForegroundColor Yellow; poetry run python -m uvicorn forge.server.listen:app --host 127.0.0.1 --port 3000 --reload"
+    "`$env:Path += ';$env:APPDATA\Python\Scripts'; cd '$PSScriptRoot'; Write-Host '🚀 Backend Server' -ForegroundColor Green; Write-Host 'Press Ctrl+C to stop' -ForegroundColor Yellow; poetry run forge serve"
 ) -WindowStyle Normal -PassThru
 
 # Wait for backend to start

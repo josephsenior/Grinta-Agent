@@ -1,4 +1,4 @@
-import { IoIosRefresh } from "react-icons/io";
+import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { IconButton } from "./icon-button";
 import { I18nKey } from "#/i18n/declaration";
@@ -13,7 +13,7 @@ export function RefreshIconButton({ onClick }: RefreshIconButtonProps) {
   return (
     <IconButton
       icon={
-        <IoIosRefresh
+        <RefreshCw
           size={16}
           className="text-foreground-secondary hover:text-foreground transition"
         />

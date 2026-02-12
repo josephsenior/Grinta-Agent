@@ -6,7 +6,7 @@ import type { IncomingMessage, ServerResponse } from "http";
 import path from "path";
 import viteTsconfigPaths from "vite-tsconfig-paths";
 import svgr from "vite-plugin-svgr";
-import reactRouterPlugin from "./scripts/react-router-plugin-wrapper.mjs";
+// import reactRouterPlugin from "./scripts/react-router-plugin-wrapper.mjs";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
@@ -29,8 +29,8 @@ export default defineConfig(({ mode }) => {
   return {
     build: {
       // Production optimizations
-      sourcemap: false,
-      target: 'es2015',
+      sourcemap: 'hidden',  // Generate hidden source maps for Sentry debugging
+      target: 'es2020',  // Modern target for smaller bundles
       minify: 'esbuild',
       cssCodeSplit: true,
       reportCompressedSize: false,
@@ -91,9 +91,11 @@ export default defineConfig(({ mode }) => {
         "#": path.resolve(process.cwd(), "src"),
         "#/": path.resolve(process.cwd(), "src") + "/",
       },
+      // CRITICAL: Deduplicate React to prevent "Invalid hook call" errors
+      dedupe: ["react", "react-dom"],
     },
     plugins: [
-      reactRouterPlugin,
+      // reactRouterPlugin,
       viteTsconfigPaths(),
       svgr(),
       tailwindcss(),

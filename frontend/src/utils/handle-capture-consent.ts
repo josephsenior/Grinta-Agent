@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import posthog from "#/utils/posthog";
 
 /**
  * Handle user consent for tracking

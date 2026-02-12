@@ -1,4 +1,4 @@
-import { FaPencil, FaTrash } from "react-icons/fa6";
+import { Pencil, Trash2 } from "lucide-react";
 
 export function SecretListItemSkeleton() {
   return (
@@ -53,7 +53,7 @@ export function SecretListItem({
           aria-label={`Edit ${title}`}
           className="cursor-pointer"
         >
-          <FaPencil size={16} />
+          <Pencil size={16} />
         </button>
         <button
           data-testid="delete-secret-button"
@@ -62,7 +62,7 @@ export function SecretListItem({
           aria-label={`Delete ${title}`}
           className="cursor-pointer"
         >
-          <FaTrash size={16} />
+          <Trash2 size={16} />
         </button>
       </td>
     </tr>

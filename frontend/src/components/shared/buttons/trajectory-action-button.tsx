@@ -1,4 +1,4 @@
-import { Tooltip } from "@heroui/react";
+import { Tooltip } from "#/components/ui/tooltip";
 
 interface TrajectoryActionButtonProps {
   testId?: string;

@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import SecretStr
 
-from forge.core.logger import forge_logger as logger
-from forge.integrations.service_types import (
+from backend.core.logger import forge_logger as logger
+from backend.integrations.service_types import (
     AuthenticationError,
     RateLimitError,
     RequestMethod,

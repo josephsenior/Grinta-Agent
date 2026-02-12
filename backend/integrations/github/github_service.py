@@ -5,20 +5,20 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from forge.integrations.github.service import (
+from backend.integrations.github.service import (
     GitHubBranchesMixin,
     GitHubFeaturesMixin,
     GitHubPRsMixin,
     GitHubReposMixin,
     GitHubResolverMixin,
 )
-from forge.integrations.service_types import (
+from backend.integrations.service_types import (
     BaseGitService,
     GitService,
     InstallationsService,
     ProviderType,
 )
-from forge.utils.import_utils import get_impl
+from backend.utils.import_utils import get_impl
 
 if TYPE_CHECKING:
     from pydantic import SecretStr
@@ -76,6 +76,6 @@ class GitHubService(
 
 github_service_cls = os.environ.get(
     "FORGE_GITHUB_SERVICE_CLS",
-    "forge.integrations.github.github_service.GitHubService",
+    "backend.integrations.github.github_service.GitHubService",
 )
 GithubServiceImpl = get_impl(GitHubService, github_service_cls)

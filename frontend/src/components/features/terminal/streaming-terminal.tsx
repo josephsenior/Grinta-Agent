@@ -13,7 +13,7 @@ import {
   selectIsStreaming,
   selectStreamingEnabled,
   selectStreamContent,
-} from "#/store/streaming-slice";
+} from "#/state/streaming-slice";
 
 interface StreamingTerminalProps {
   eventId?: string;
@@ -138,18 +138,18 @@ function StreamingTerminalHeader({
   isCopied: boolean;
 }) {
   return (
-    <div className="terminal-header flex items-center justify-between px-3 py-2 bg-[var(--bg-elevated)] border-b border-[var(--border-primary)]">
+    <div className="terminal-header flex items-center justify-between px-3 py-2 bg-(--bg-elevated) border-b border-(--border-primary)">
       <div className="flex items-center gap-2">
-        <TerminalIcon className="w-3.5 h-3.5 text-[var(--text-success)]" />
-        <span className="ml-2 text-xs text-[var(--text-primary)]">
+        <TerminalIcon className="w-3.5 h-3.5 text-(--text-success)" />
+        <span className="ml-2 text-xs text-(--text-primary)">
           Terminal Output
         </span>
         {command && (
           <>
-            <span className="text-[var(--text-success)] font-mono text-xs">
+            <span className="text-(--text-success) font-mono text-xs">
               $
             </span>
-            <code className="text-xs text-[var(--text-tertiary)] font-mono truncate max-w-[300px]">
+            <code className="text-xs text-(--text-tertiary) font-mono truncate max-w-[300px]">
               {command}
             </code>
           </>
@@ -160,7 +160,7 @@ function StreamingTerminalHeader({
           </span>
         )}
         {lineCount > 0 && (
-          <span className="text-[10px] text-[var(--text-tertiary)] ml-2">
+          <span className="text-[10px] text-(--text-tertiary) ml-2">
             {lineCount} {lineCount === 1 ? "line" : "lines"}
           </span>
         )}
@@ -171,7 +171,7 @@ function StreamingTerminalHeader({
           <button
             type="button"
             onClick={onToggleExpand}
-            className="px-2 py-0.5 text-[10px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] rounded transition-colors"
+            className="px-2 py-0.5 text-[10px] text-(--text-tertiary) hover:text-(--text-primary) rounded transition-colors"
             title={isExpanded ? "Collapse" : "Expand"}
           >
             {isExpanded ? "Collapse" : "Expand"}
@@ -181,18 +181,18 @@ function StreamingTerminalHeader({
         <button
           type="button"
           onClick={onCopy}
-          className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded transition-colors hover:bg-[var(--bg-tertiary)]"
+          className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded transition-colors hover:bg-(--bg-tertiary)"
           title="Copy output"
         >
           {isCopied ? (
             <>
-              <Check className="w-3 h-3 text-[var(--text-success)]" />
-              <span className="text-[var(--text-success)]">Copied</span>
+              <Check className="w-3 h-3 text-(--text-success)" />
+              <span className="text-(--text-success)">Copied</span>
             </>
           ) : (
             <>
-              <Copy className="w-3 h-3 text-[var(--text-tertiary)]" />
-              <span className="text-[var(--text-tertiary)]">Copy</span>
+              <Copy className="w-3 h-3 text-(--text-tertiary)" />
+              <span className="text-(--text-tertiary)">Copy</span>
             </>
           )}
         </button>
@@ -215,17 +215,15 @@ function StreamingTerminalContent({
   return (
     <div
       ref={contentRef}
-      className="terminal-content px-3 py-2 overflow-y-auto font-mono text-xs leading-relaxed"
+      className="terminal-content px-3 py-2 overflow-y-auto font-mono text-xs leading-relaxed [scrollbar-gutter:stable] transition-[max-height] duration-200 ease-in-out"
       style={{
         maxHeight,
-        scrollbarGutter: "stable",
-        transition: "max-height 0.2s ease-in-out",
       }}
     >
-      <pre className="whitespace-pre-wrap text-[var(--text-primary)]">
+      <pre className="whitespace-pre-wrap text-(--text-primary)">
         {displayedContent}
         {isStreaming && (
-          <span className="inline-block w-1.5 h-3 bg-[var(--text-success)] ml-1 animate-pulse" />
+          <span className="inline-block w-1.5 h-3 bg-(--text-success) ml-1 animate-pulse" />
         )}
       </pre>
     </div>
@@ -254,7 +252,7 @@ export function StreamingTerminal({
     <div
       ref={controller.terminalRef}
       role="region"
-      className={`streaming-terminal rounded-lg overflow-hidden border border-[var(--border-primary)] bg-[var(--bg-primary)] my-2 w-full ${controller.isStreaming ? "streaming" : ""} ${className ?? ""}`}
+      className={`streaming-terminal rounded-lg overflow-hidden border border-(--border-primary) bg-(--bg-primary) my-2 w-full ${controller.isStreaming ? "streaming" : ""} ${className ?? ""}`}
     >
       <StreamingTerminalHeader
         command={command}

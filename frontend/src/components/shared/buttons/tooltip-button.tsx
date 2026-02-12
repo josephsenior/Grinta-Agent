@@ -1,4 +1,4 @@
-import { Tooltip, TooltipProps } from "@heroui/react";
+import { Tooltip, type TooltipProps, type TooltipPlacement } from "#/components/ui/tooltip";
 import React, { ReactNode, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "#/utils/utils";
@@ -14,7 +14,7 @@ export interface TooltipButtonProps {
   className?: React.HTMLAttributes<HTMLButtonElement>["className"];
   tooltipClassName?: React.HTMLAttributes<HTMLDivElement>["className"];
   disabled?: boolean;
-  placement?: TooltipProps["placement"];
+  placement?: TooltipPlacement;
 }
 
 export function TooltipButton({

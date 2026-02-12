@@ -4,18 +4,18 @@ import os
 import sys
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from forge.agenthub.readonly_agent.function_calling import (
+from backend.engines.auditor.function_calling import (
     glob_to_cmdrun,
     grep_to_cmdrun,
 )
-from forge.core.logger import forge_logger as logger
-from forge.events.action import CmdRunAction
-from forge.events.observation import CmdOutputObservation, ErrorObservation
+from backend.core.logger import forge_logger as logger
+from backend.events.action import CmdRunAction
+from backend.events.observation import CmdOutputObservation, ErrorObservation
 
 pytestmark = [
     pytest.mark.skipif(
         os.environ.get("TEST_RUNTIME") == "cli",
-        reason="CLIRuntime: ReadOnlyAgent's GrepTool/GlobTool tests require `rg` (ripgrep), which may not be installed.",
+        reason="CLIRuntime: Auditor's GrepTool/GlobTool tests require `rg` (ripgrep), which may not be installed.",
     ),
     pytest.mark.skipif(
         sys.platform == "win32",

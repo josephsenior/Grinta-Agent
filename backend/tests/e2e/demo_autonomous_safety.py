@@ -15,10 +15,10 @@ import os
 import tempfile
 from pathlib import Path
 
-from forge.core.config import ForgeConfig
-from forge.core.config.agent_config import AgentConfig
-from forge.core.config.llm_config import LLMConfig
-from forge.security.safety_config import SafetyConfig
+from backend.core.config import ForgeConfig
+from backend.core.config.agent_config import AgentConfig
+from backend.core.config.llm_config import LLMConfig
+from backend.security.safety_config import SafetyConfig
 
 
 async def demo_safety_validation():
@@ -27,8 +27,8 @@ async def demo_safety_validation():
     print("DEMO 1: Safety Validator Blocks Dangerous Commands")
     print("=" * 80 + "\n")
 
-    from forge.controller.safety_validator import SafetyValidator, ExecutionContext
-    from forge.events.action import CmdRunAction
+    from backend.controller.safety_validator import SafetyValidator, ExecutionContext
+    from backend.events.action import CmdRunAction
 
     # Create safety validator
     config = SafetyConfig(
@@ -81,9 +81,9 @@ async def demo_simple_task():
         print("   Set your API key to run autonomous tasks")
         return
 
-    from forge.controller.agent_controller import AgentController
-    from forge.core.setup import create_agent, create_runtime
-    from forge.events.action import MessageAction
+    from backend.controller.agent_controller import AgentController
+    from backend.core.setup import create_agent, create_runtime
+    from backend.events.action import MessageAction
 
     # Create config with safety enabled
     config = ForgeConfig()
@@ -162,7 +162,7 @@ async def demo_error_recovery():
     print("DEMO 3: Error Recovery and Retry Logic")
     print("=" * 80 + "\n")
 
-    from forge.controller.error_recovery import ErrorRecoveryStrategy
+    from backend.controller.error_recovery import ErrorRecoveryStrategy
 
     # Test error classification
     test_errors = [

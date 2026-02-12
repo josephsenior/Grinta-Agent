@@ -2,8 +2,8 @@ import React from "react";
 import { Clock3 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import ClientTimeDelta from "#/components/shared/ClientTimeDelta";
-import ClientNumber from "#/components/shared/ClientNumber";
+import ClientTimeDelta from "#/components/shared/client-time-delta";
+import ClientNumber from "#/components/shared/client-number";
 import { ConversationRepoLink } from "./conversation-repo-link";
 import { ConversationStateIndicator } from "./conversation-state-indicator";
 import { EllipsisButton } from "./ellipsis-button";
@@ -505,8 +505,7 @@ type ConversationCardMenuConfig = {
 function CardActiveIndicator() {
   return (
     <span
-      className="w-3 h-3 rounded-full flex-shrink-0 animate-pulse bg-gradient-to-r from-brand-500 to-accent-500"
-      style={{ boxShadow: "0 0 8px 3px rgba(59, 130, 246, 0.4)" }}
+      className="w-3 h-3 rounded-full flex-shrink-0 animate-pulse bg-gradient-to-r from-brand-500 to-accent-500 shadow-[0_0_8px_3px_rgba(59,130,246,0.4)]"
     />
   );
 }

@@ -63,7 +63,7 @@ Renders the conversation messages with turn-based grouping.
 
 - Message rendering
 - Turn grouping
-- Microagent status
+- Playbook status
 - Event filtering
 
 **Props:**

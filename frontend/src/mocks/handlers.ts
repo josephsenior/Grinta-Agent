@@ -115,7 +115,7 @@ const ForgeHandlers = [
   ),
 
   http.get("/api/options/agents", async () =>
-    HttpResponse.json(["CodeActAgent", "CoActAgent"]),
+    HttpResponse.json(["Orchestrator", "CoActAgent"]),
   ),
 
   http.get("/api/options/security-analyzers", async () =>

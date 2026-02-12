@@ -180,46 +180,46 @@ export const constructPullRequestUrl = (
 };
 
 /**
- * Construct the microagent URL for different providers
+ * Construct the playbook URL for different providers
  * @param gitProvider The git provider
  * @param repositoryName The repository name in format "owner/repo"
- * @param microagentPath The path to the microagent in the repository
- * @returns The URL to the microagent file in the Git provider
+ * @param playbookPath The path to the playbook in the repository
+ * @returns The URL to the playbook file in the Git provider
  *
  * @example
- * constructMicroagentUrl("github", "owner/repo", ".Forge/microagents/tell-me-a-joke.md")
- * // "https://github.com/owner/repo/blob/main/.Forge/microagents/tell-me-a-joke.md"
+ * constructPlaybookUrl("github", "owner/repo", ".Forge/playbooks/tell-me-a-joke.md")
+ * // "https://github.com/owner/repo/blob/main/.Forge/playbooks/tell-me-a-joke.md"
  */
-export const constructMicroagentUrl = (
+export const constructPlaybookUrl = (
   gitProvider: Provider,
   repositoryName: string,
-  microagentPath: string,
+  playbookPath: string,
 ): string => {
   const baseUrl = getGitProviderBaseUrl(gitProvider);
 
   switch (gitProvider) {
     case "github":
-      return `${baseUrl}/${repositoryName}/blob/main/${microagentPath}`;
+      return `${baseUrl}/${repositoryName}/blob/main/${playbookPath}`;
     default:
       return "";
   }
 };
 
 /**
- * Extract repository owner, repo name, and file path from repository and microagent data
+ * Extract repository owner, repo name, and file path from repository and playbook data
  * @param selectedRepository The selected repository object with full_name property
- * @param microagent The microagent object with path property
+ * @param playbook The playbook object with path property
  * @returns Object containing owner, repo, and filePath
  *
  * @example
- * const { owner, repo, filePath } = extractRepositoryInfo(selectedRepository, microagent);
+ * const { owner, repo, filePath } = extractRepositoryInfo(selectedRepository, playbook);
  */
 export const extractRepositoryInfo = (
   selectedRepository: { full_name?: string } | null | undefined,
-  microagent: { path?: string } | null | undefined,
+  playbook: { path?: string } | null | undefined,
 ) => {
   const [owner, repo] = selectedRepository?.full_name?.split("/") || [];
-  const filePath = microagent?.path || "";
+  const filePath = playbook?.path || "";
 
   return { owner, repo, filePath };
 };
@@ -238,7 +238,7 @@ export const getRepoMdCreatePrompt = (
   const pr = getPR(false);
   const prShort = getPRShort(false);
 
-  return `Please explore this repository. Create the file .Forge/microagents/repo.md with:
+  return `Please explore this repository. Create the file .Forge/playbooks/repo.md with:
             ${
               query
                 ? `- ${query}`

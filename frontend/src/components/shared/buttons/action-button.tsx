@@ -1,4 +1,4 @@
-import { Tooltip } from "@heroui/react";
+import { Tooltip } from "#/components/ui/tooltip";
 import { AgentState } from "#/types/agent-state";
 
 interface ActionButtonProps {

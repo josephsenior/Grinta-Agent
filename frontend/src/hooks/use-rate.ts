@@ -7,50 +7,43 @@ interface UseRateProps {
 const DEFAULT_CONFIG: UseRateProps = { threshold: 1000 };
 
 export const useRate = (config = DEFAULT_CONFIG) => {
-  const [items, setItems] = React.useState<number[]>([]);
+  // Circular buffer: only the last 2 entries are ever needed for rate calc.
+  const bufferRef = React.useRef<[number | null, number | null]>([null, null]);
   const [rate, setRate] = React.useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = React.useState<number | null>(null);
   const [isUnderThreshold, setIsUnderThreshold] = React.useState(true);
 
   /**
-   * Record an entry in order to calculate the rate
-   * @param entry Entry to record
+   * Record an entry in order to calculate the rate.
+   * Internally keeps only the last 2 timestamps (constant memory).
+   * @param entry Timestamp to record
    *
    * @example
-   * record(new Date().getTime());
+   * record(Date.now());
    */
-  const record = (entry: number) => {
-    setItems((prev) => [...prev, entry]);
-    setLastUpdated(new Date().getTime());
-  };
+  const record = React.useCallback(
+    (entry: number) => {
+      const buf = bufferRef.current;
+      // Shift: previous "current" becomes "previous", new entry becomes "current"
+      buf[0] = buf[1];
+      buf[1] = entry;
+      setLastUpdated(entry);
 
-  /**
-   * Update the rate based on the last two entries (if available)
-   */
-  const updateRate = () => {
-    if (items.length > 1) {
-      const newRate = items[items.length - 1] - items[items.length - 2];
-      setRate(newRate);
-
-      if (newRate <= config.threshold) {
-        setIsUnderThreshold(true);
-      } else {
-        setIsUnderThreshold(false);
+      if (buf[0] !== null && buf[1] !== null) {
+        const newRate = buf[1] - buf[0];
+        setRate(newRate);
+        setIsUnderThreshold(newRate <= config.threshold);
       }
-    }
-  };
+    },
+    [config.threshold],
+  );
 
   React.useEffect(() => {
-    updateRate();
-  }, [items]);
-
-  React.useEffect(() => {
-    // Set up an interval to check if the time since the last update exceeds the threshold
-    // If it does, set isUnderThreshold to false, otherwise set it to true
-    // This ensures that the component can react to periods of inactivity
+    // Interval to detect inactivity: if time since last update
+    // exceeds threshold, mark as not under threshold.
     const intervalId = setInterval(() => {
       if (lastUpdated !== null) {
-        const timeSinceLastUpdate = new Date().getTime() - lastUpdated;
+        const timeSinceLastUpdate = Date.now() - lastUpdated;
         setIsUnderThreshold(timeSinceLastUpdate <= config.threshold);
       } else {
         setIsUnderThreshold(false);
@@ -61,7 +54,6 @@ export const useRate = (config = DEFAULT_CONFIG) => {
   }, [lastUpdated, config.threshold]);
 
   return {
-    items,
     rate,
     lastUpdated,
     isUnderThreshold,

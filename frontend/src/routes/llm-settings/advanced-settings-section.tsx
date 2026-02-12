@@ -8,6 +8,7 @@ import { KeyStatusIcon } from "#/components/features/settings/key-status-icon";
 import { AdvancedLLMConfig } from "#/components/features/settings/advanced-llm-config";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { I18nKey } from "#/i18n/declaration";
+import { DOCUMENTATION_URL } from "#/constants/app";
 import type { Settings } from "#/types/settings";
 
 export interface AdvancedSettingsSectionProps {
@@ -92,7 +93,7 @@ export function AdvancedSettingsSection({
         testId="llm-api-key-help-anchor-advanced"
         text={t(I18nKey.SETTINGS$DONT_KNOW_API_KEY)}
         linkText={t(I18nKey.SETTINGS$CLICK_FOR_INSTRUCTIONS)}
-        href="https://docs.forge.dev/usage/local-setup#getting-an-api-key"
+        href={DOCUMENTATION_URL.LOCAL_SETUP_API_KEY}
       />
 
       <SettingsInput
@@ -103,7 +104,7 @@ export function AdvancedSettingsSection({
         value={agentValue}
         className="w-full sm:max-w-xs md:max-w-sm lg:max-w-[680px]"
         onChange={onAgentChange}
-        placeholder="CodeActAgent"
+        placeholder="Orchestrator"
       />
       <div className="flex flex-wrap gap-2 text-xs text-foreground-tertiary">
         {agentOptions.map((option) => (

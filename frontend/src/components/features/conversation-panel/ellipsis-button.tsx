@@ -1,4 +1,4 @@
-import { FaEllipsisV } from "react-icons/fa";
+import { MoreVertical } from "lucide-react";
 
 interface EllipsisButtonProps {
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -12,7 +12,7 @@ export function EllipsisButton({ onClick }: EllipsisButtonProps) {
       onClick={onClick}
       className="cursor-pointer"
     >
-      <FaEllipsisV fill="#a3a3a3" />
+      <MoreVertical color="#a3a3a3" />
     </button>
   );
 }

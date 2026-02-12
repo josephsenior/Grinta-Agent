@@ -11,12 +11,12 @@ from typing import TYPE_CHECKING, Any, Protocol
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, Field, SecretStr, field_validator
 
-from forge.core.logger import forge_logger as logger
-from forge.microagent.microagent import BaseMicroagent
-from forge.microagent.types import MicroagentContentResponse, MicroagentResponse
+from backend.core.logger import forge_logger as logger
+from backend.instruction.playbook import BasePlaybook
+from backend.instruction.types import PlaybookContentResponse, PlaybookResponse
 
 if TYPE_CHECKING:
-    from forge.server.types import AppMode
+    from backend.server.types import AppMode
 
 
 class TokenResponse(BaseModel):
@@ -32,7 +32,7 @@ class TokenResponse(BaseModel):
     @classmethod
     def validate_token(cls, v: str) -> str:
         """Validate token is non-empty."""
-        from forge.core.security.type_safety import validate_non_empty_string
+        from backend.core.type_safety.type_safety import validate_non_empty_string
         return validate_non_empty_string(v, name="token")
 
 
@@ -51,7 +51,7 @@ class TaskType(str, Enum):
     UNRESOLVED_COMMENTS = "UNRESOLVED_COMMENTS"
     OPEN_ISSUE = "OPEN_ISSUE"
     OPEN_PR = "OPEN_PR"
-    CREATE_MICROAGENT = "CREATE_MICROAGENT"
+    CREATE_PLAYBOOK = "CREATE_PLAYBOOK"
 
 
 class OwnerType(str, Enum):
@@ -92,7 +92,7 @@ class SuggestedTask(BaseModel):
     @classmethod
     def validate_required_strings(cls, v: str) -> str:
         """Validate required string fields are non-empty."""
-        from forge.core.security.type_safety import validate_non_empty_string
+        from backend.core.type_safety.type_safety import validate_non_empty_string
         return validate_non_empty_string(v, name="field")
 
     def get_provider_terms(self) -> dict:
@@ -135,7 +135,7 @@ class SuggestedTask(BaseModel):
         repo = self.repo
         # nosec B701 - Template rendering for prompts (not HTML), autoescape enabled
         env = Environment(
-            loader=FileSystemLoader("Forge/integrations/templates/suggested_task"),
+            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "templates", "suggested_task")),
             autoescape=True,
         )
         template = None
@@ -154,8 +154,8 @@ class SuggestedTask(BaseModel):
         return template.render(issue_number=issue_number, repo=repo, **terms)
 
 
-class CreateMicroagent(BaseModel):
-    """Model for creating a new microagent."""
+class CreatePlaybook(BaseModel):
+    """Model for creating a new playbook."""
 
     repo: str = Field(
         ...,
@@ -168,14 +168,14 @@ class CreateMicroagent(BaseModel):
     )
     title: str | None = Field(
         default=None,
-        description="Optional title for the microagent"
+        description="Optional title for the playbook"
     )
 
     @field_validator("repo")
     @classmethod
     def validate_repo(cls, v: str) -> str:
         """Validate repository name is non-empty."""
-        from forge.core.security.type_safety import validate_non_empty_string
+        from backend.core.type_safety.type_safety import validate_non_empty_string
         return validate_non_empty_string(v, name="repo")
 
     @field_validator("title")
@@ -183,7 +183,7 @@ class CreateMicroagent(BaseModel):
     def validate_title(cls, v: str | None) -> str | None:
         """Validate title is non-empty if provided."""
         if v is not None:
-            from forge.core.security.type_safety import validate_non_empty_string
+            from backend.core.type_safety.type_safety import validate_non_empty_string
             return validate_non_empty_string(v, name="title")
         return v
 
@@ -223,14 +223,14 @@ class User(BaseModel):
     @classmethod
     def validate_required_strings(cls, v: str) -> str:
         """Validate required string fields are non-empty."""
-        from forge.core.security.type_safety import validate_non_empty_string
+        from backend.core.type_safety.type_safety import validate_non_empty_string
         return validate_non_empty_string(v, name="field")
 
     @field_validator("avatar_url")
     @classmethod
     def validate_avatar_url(cls, v: str) -> str:
         """Validate avatar URL format."""
-        from forge.core.security.type_safety import validate_non_empty_string
+        from backend.core.type_safety.type_safety import validate_non_empty_string
         validated = validate_non_empty_string(v, name="avatar_url")
         # Basic URL format check
         if not validated.startswith(("http://", "https://")):
@@ -263,7 +263,7 @@ class Branch(BaseModel):
     @classmethod
     def validate_required_strings(cls, v: str) -> str:
         """Validate required string fields are non-empty."""
-        from forge.core.security.type_safety import validate_non_empty_string
+        from backend.core.type_safety.type_safety import validate_non_empty_string
         return validate_non_empty_string(v, name="field")
 
 
@@ -342,7 +342,7 @@ class Repository(BaseModel):
     @classmethod
     def validate_required_strings(cls, v: str) -> str:
         """Validate required string fields are non-empty."""
-        from forge.core.security.type_safety import validate_non_empty_string
+        from backend.core.type_safety.type_safety import validate_non_empty_string
         return validate_non_empty_string(v, name="field")
 
 
@@ -380,7 +380,7 @@ class Comment(BaseModel):
     @classmethod
     def validate_required_strings(cls, v: str) -> str:
         """Validate required string fields are non-empty."""
-        from forge.core.security.type_safety import validate_non_empty_string
+        from backend.core.type_safety.type_safety import validate_non_empty_string
         return validate_non_empty_string(v, name="field")
 
 
@@ -400,8 +400,8 @@ class ResourceNotFoundError(ValueError):
     """Raised when a requested resource (file, directory, etc.) is not found."""
 
 
-class MicroagentParseError(ValueError):
-    """Raised when there is an error parsing a microagent file."""
+class PlaybookParseError(ValueError):
+    """Raised when there is an error parsing a playbook file."""
 
 
 class RequestMethod(Enum):
@@ -434,22 +434,22 @@ class BaseGitService(ABC):
         ...
 
     @abstractmethod
-    async def _get_microagents_directory_url(
+    async def _get_playbooks_directory_url(
         self,
         repository: str,
-        microagents_path: str,
+        playbooks_path: str,
     ) -> str:
-        """Get the URL for checking microagents directory."""
+        """Get the URL for checking playbooks directory."""
         ...
 
     @abstractmethod
-    def _get_microagents_directory_params(self, microagents_path: str) -> dict | None:
-        """Get parameters for the microagents directory request. Return None if no parameters needed."""
+    def _get_playbooks_directory_params(self, playbooks_path: str) -> dict | None:
+        """Get parameters for the playbooks directory request. Return None if no parameters needed."""
         ...
 
     @abstractmethod
-    def _is_valid_microagent_file(self, item: dict) -> bool:
-        """Check if an item represents a valid microagent file."""
+    def _is_valid_playbook_file(self, item: dict) -> bool:
+        """Check if an item represents a valid playbook file."""
         ...
 
     @abstractmethod
@@ -458,62 +458,62 @@ class BaseGitService(ABC):
         ...
 
     @abstractmethod
-    def _get_file_path_from_item(self, item: dict, microagents_path: str) -> str:
+    def _get_file_path_from_item(self, item: dict, playbooks_path: str) -> str:
         """Extract file path from directory item."""
         ...
 
-    def _determine_microagents_path(self, repository_name: str) -> str:
-        """Determine the microagents directory path based on repository name."""
+    def _determine_playbooks_path(self, repository_name: str) -> str:
+        """Determine the playbooks directory path based on repository name."""
         actual_repo_name = repository_name.split("/")[-1]
         if actual_repo_name == ".Forge":
-            return "microagents"
-        return ".Forge/microagents"
+            return "playbooks"
+        return ".Forge/playbooks"
 
-    def _create_microagent_response(
+    def _create_playbook_response(
         self,
         file_name: str,
         path: str,
-    ) -> MicroagentResponse:
-        """Create a microagent response from basic file information."""
+    ) -> PlaybookResponse:
+        """Create a playbook response from basic file information."""
         name = file_name.replace(".md", "").replace(".cursorrules", "cursorrules")
-        return MicroagentResponse(name=name, path=path, created_at=datetime.now())
+        return PlaybookResponse(name=name, path=path, created_at=datetime.now())
 
-    def _parse_microagent_content(
+    def _parse_playbook_content(
         self,
         content: str,
         file_path: str,
-    ) -> MicroagentContentResponse:
-        """Parse microagent content and extract triggers using BaseMicroagent.load.
+    ) -> PlaybookContentResponse:
+        """Parse playbook content and extract triggers using BasePlaybook.load.
 
         Args:
-            content: Raw microagent file content
-            file_path: Path to the file (used for microagent loading)
+            content: Raw playbook file content
+            file_path: Path to the file (used for playbook loading)
 
         Returns:
-            MicroagentContentResponse with parsed content and triggers
+            PlaybookContentResponse with parsed content and triggers
 
         Raises:
-            MicroagentParseError: If the microagent file cannot be parsed
+            PlaybookParseError: If the playbook file cannot be parsed
 
         """
         try:
             temp_path = Path(file_path)
-            microagent = BaseMicroagent.load(path=temp_path, file_content=content)
-            triggers = microagent.metadata.triggers
-            return MicroagentContentResponse(
-                content=microagent.content,
+            playbook = BasePlaybook.load(path=temp_path, file_content=content)
+            triggers = playbook.metadata.triggers
+            return PlaybookContentResponse(
+                content=playbook.content,
                 path=file_path,
                 triggers=triggers,
                 git_provider=self.provider,
             )
         except Exception as e:
             logger.error(
-                "Error parsing microagent content for %s: %s",
+                "Error parsing playbook content for %s: %s",
                 file_path,
                 str(e),
             )
-            msg = f"Failed to parse microagent file {file_path}: {e!s}"
-            raise MicroagentParseError(
+            msg = f"Failed to parse playbook file {file_path}: {e!s}"
+            raise PlaybookParseError(
                 msg,
             ) from e
 
@@ -534,48 +534,48 @@ class BaseGitService(ABC):
     async def _check_cursorrules_file(
         self,
         repository: str,
-    ) -> MicroagentResponse | None:
-        """Check for .cursorrules file in the repository and return microagent response if found.
+    ) -> PlaybookResponse | None:
+        """Check for .cursorrules file in the repository and return playbook response if found.
 
         Args:
             repository: Repository name in format specific to the provider
 
         Returns:
-            MicroagentResponse for .cursorrules file if found, None otherwise
+            PlaybookResponse for .cursorrules file if found, None otherwise
 
         """
         try:
             cursorrules_content = await self._fetch_cursorrules_content(repository)
             if cursorrules_content:
-                return self._create_microagent_response(".cursorrules", ".cursorrules")
+                return self._create_playbook_response(".cursorrules", ".cursorrules")
         except ResourceNotFoundError:
             logger.debug("No .cursorrules file found in %s", repository)
         except Exception as e:
             logger.warning("Error checking .cursorrules file in %s: %s", repository, e)
         return None
 
-    async def _process_microagents_directory(
+    async def _process_playbooks_directory(
         self,
         repository: str,
-        microagents_path: str,
-    ) -> list[MicroagentResponse]:
-        """Process microagents directory and return list of microagent responses.
+        playbooks_path: str,
+    ) -> list[PlaybookResponse]:
+        """Process playbooks directory and return list of playbook responses.
 
         Args:
             repository: Repository name in format specific to the provider
-            microagents_path: Path to the microagents directory
+            playbooks_path: Path to the playbooks directory
 
         Returns:
-            List of MicroagentResponse objects found in the directory
+            List of PlaybookResponse objects found in the directory
 
         """
-        microagents = []
+        playbooks = []
         try:
-            directory_url = await self._get_microagents_directory_url(
+            directory_url = await self._get_playbooks_directory_url(
                 repository,
-                microagents_path,
+                playbooks_path,
             )
-            directory_params = self._get_microagents_directory_params(microagents_path)
+            directory_params = self._get_playbooks_directory_params(playbooks_path)
             response, _ = await self._make_request(directory_url, directory_params)
             items = response
             if isinstance(response, dict) and "values" in response:
@@ -583,53 +583,53 @@ class BaseGitService(ABC):
             elif isinstance(response, dict) and "nodes" in response:
                 items = response["nodes"]
             for item in items:
-                if self._is_valid_microagent_file(item):
+                if self._is_valid_playbook_file(item):
                     try:
                         file_name = self._get_file_name_from_item(item)
                         file_path = self._get_file_path_from_item(
                             item,
-                            microagents_path,
+                            playbooks_path,
                         )
-                        microagents.append(
-                            self._create_microagent_response(file_name, file_path),
+                        playbooks.append(
+                            self._create_playbook_response(file_name, file_path),
                         )
                     except Exception as e:
                         logger.warning(
-                            "Error processing microagent %s: %s",
+                            "Error processing playbook %s: %s",
                             item.get("name", "unknown"),
                             str(e),
                         )
         except ResourceNotFoundError:
             logger.info(
-                "No microagents directory found in %s at %s",
+                "No playbooks directory found in %s at %s",
                 repository,
-                microagents_path,
+                playbooks_path,
             )
         except Exception as e:
-            logger.warning("Error fetching microagents directory: %s", str(e))
-        return microagents
+            logger.warning("Error fetching playbooks directory: %s", str(e))
+        return playbooks
 
-    async def get_microagents(self, repository: str) -> list[MicroagentResponse]:
-        """Generic implementation of get_microagents that works across all providers.
+    async def get_playbooks(self, repository: str) -> list[PlaybookResponse]:
+        """Generic implementation of get_playbooks that works across all providers.
 
         Args:
             repository: Repository name in format specific to the provider
 
         Returns:
-            List of microagents found in the repository (without content for performance)
+            List of playbooks found in the repository (without content for performance)
 
         """
-        microagents_path = self._determine_microagents_path(repository)
-        microagents = []
-        cursorrules_microagent = await self._check_cursorrules_file(repository)
-        if cursorrules_microagent:
-            microagents.append(cursorrules_microagent)
-        directory_microagents = await self._process_microagents_directory(
+        playbooks_path = self._determine_playbooks_path(repository)
+        playbooks = []
+        cursorrules_playbook = await self._check_cursorrules_file(repository)
+        if cursorrules_playbook:
+            playbooks.append(cursorrules_playbook)
+        directory_playbooks = await self._process_playbooks_directory(
             repository,
-            microagents_path,
+            playbooks_path,
         )
-        microagents.extend(directory_microagents)
-        return microagents
+        playbooks.extend(directory_playbooks)
+        return playbooks
 
     def _truncate_comment(
         self,
@@ -732,19 +732,19 @@ class GitService(Protocol):
     ) -> list[Branch]:
         """Search for branches within a repository."""
 
-    async def get_microagents(self, repository: str) -> list[MicroagentResponse]:
-        """Get microagents from a repository."""
+    async def get_playbooks(self, repository: str) -> list[PlaybookResponse]:
+        """Get playbooks from a repository."""
         ...
 
-    async def get_microagent_content(
+    async def get_playbook_content(
         self,
         repository: str,
         file_path: str,
-    ) -> MicroagentContentResponse:
-        """Get content of a specific microagent file.
+    ) -> PlaybookContentResponse:
+        """Get content of a specific playbook file.
 
         Returns:
-            MicroagentContentResponse with parsed content and triggers
+            PlaybookContentResponse with parsed content and triggers
 
         """
         ...

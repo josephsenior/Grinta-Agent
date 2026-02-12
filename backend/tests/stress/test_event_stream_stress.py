@@ -4,9 +4,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from forge.events import EventSource, EventStream
-from forge.events.observation import NullObservation
-from forge.storage import get_file_store
+from backend.events import EventSource, EventStream
+from backend.events.observation import NullObservation
+from backend.storage import get_file_store
 
 
 pytestmark = pytest.mark.stress

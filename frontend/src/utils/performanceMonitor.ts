@@ -3,6 +3,7 @@ export class PerformanceMonitor {
   private static instance: PerformanceMonitor;
 
   private metrics: Record<string, number> = {};
+  private observers: PerformanceObserver[] = [];
 
   static getInstance(): PerformanceMonitor {
     if (!PerformanceMonitor.instance) {
@@ -11,28 +12,38 @@ export class PerformanceMonitor {
     return PerformanceMonitor.instance;
   }
 
+  // Cleanup all observers
+  disconnect() {
+    this.observers.forEach((observer) => observer.disconnect());
+    this.observers = [];
+  }
+
   // Measure Core Web Vitals
   measureCoreWebVitals() {
     // First Contentful Paint
-    new PerformanceObserver((list) => {
+    const fcpObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (entry.name === "first-contentful-paint") {
           this.metrics.fcp = entry.startTime;
           // Performance metric captured: FCP
         }
       }
-    }).observe({ entryTypes: ["paint"] });
+    });
+    fcpObserver.observe({ entryTypes: ["paint"] });
+    this.observers.push(fcpObserver);
 
     // Largest Contentful Paint
-    new PerformanceObserver((list) => {
+    const lcpObserver = new PerformanceObserver((list) => {
       const entries = list.getEntries();
       const lastEntry = entries[entries.length - 1];
       this.metrics.lcp = lastEntry.startTime;
       // Performance metric captured: LCP
-    }).observe({ entryTypes: ["largest-contentful-paint"] });
+    });
+    lcpObserver.observe({ entryTypes: ["largest-contentful-paint"] });
+    this.observers.push(lcpObserver);
 
     // Cumulative Layout Shift
-    new PerformanceObserver((list) => {
+    const clsObserver = new PerformanceObserver((list) => {
       let clsValue = 0;
       for (const entry of list.getEntries()) {
         // LayoutShiftEntry has hadRecentInput and value fields
@@ -46,10 +57,12 @@ export class PerformanceMonitor {
       }
       this.metrics.cls = clsValue;
       // Performance metric captured: CLS
-    }).observe({ entryTypes: ["layout-shift"] });
+    });
+    clsObserver.observe({ entryTypes: ["layout-shift"] });
+    this.observers.push(clsObserver);
 
     // First Input Delay
-    new PerformanceObserver((list) => {
+    const fidObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         const maybeFirstInput = entry as PerformanceEntry & {
           processingStart?: number;
@@ -59,7 +72,9 @@ export class PerformanceMonitor {
           // Performance metric captured: FID
         }
       }
-    }).observe({ entryTypes: ["first-input"] });
+    });
+    fidObserver.observe({ entryTypes: ["first-input"] });
+    this.observers.push(fidObserver);
 
     // Time to Interactive
     this.measureTimeToInteractive();

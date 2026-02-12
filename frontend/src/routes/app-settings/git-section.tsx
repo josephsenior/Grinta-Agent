@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { GitBranch } from "lucide-react";
 import { SettingsInput } from "#/components/features/settings/settings-input";
 import { I18nKey } from "#/i18n/declaration";
-import { Accordion } from "#/components/features/settings/Accordion";
+import { Accordion } from "#/components/features/settings/accordion";
 
 interface GitSectionProps {
   gitUserName: string;

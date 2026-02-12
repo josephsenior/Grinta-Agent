@@ -1,4 +1,5 @@
 import { I18nKey } from "#/i18n/declaration";
+import { DOCUMENTATION_URL } from "../constants/app";
 
 export interface Tip {
   key: I18nKey;
@@ -7,38 +8,38 @@ export interface Tip {
 
 export const TIPS: Tip[] = [
   {
-    key: I18nKey.TIPS$CUSTOMIZE_MICROAGENT,
-    link: "https://docs.forge.dev/usage/prompting/microagents-repo",
+    key: I18nKey.TIPS$CUSTOMIZE_PLAYBOOK,
+    link: DOCUMENTATION_URL.PROMPTING.PLAYBOOKS_REPO,
   },
   {
     key: I18nKey.TIPS$SETUP_SCRIPT,
-    link: "https://docs.forge.dev/usage/prompting/repository#setup-script",
+    link: DOCUMENTATION_URL.PROMPTING.REPOSITORY_SETUP,
   },
   { key: I18nKey.TIPS$VSCODE_INSTANCE },
   { key: I18nKey.TIPS$SAVE_WORK },
   {
     key: I18nKey.TIPS$SPECIFY_FILES,
-    link: "https://docs.forge.dev/usage/prompting/prompting-best-practices",
+    link: DOCUMENTATION_URL.PROMPTING.BEST_PRACTICES,
   },
   {
     key: I18nKey.TIPS$HEADLESS_MODE,
-    link: "https://docs.forge.dev/usage/how-to/headless-mode",
+    link: DOCUMENTATION_URL.HOW_TO.HEADLESS_MODE,
   },
   {
     key: I18nKey.TIPS$CLI_MODE,
-    link: "https://docs.forge.dev/usage/how-to/cli-mode",
+    link: DOCUMENTATION_URL.HOW_TO.CLI_MODE,
   },
   {
     key: I18nKey.TIPS$GITHUB_HOOK,
-    link: "https://docs.forge.dev/usage/cloud/github-installation#working-on-github-issues-and-pull-requests-using-Forge",
+    link: DOCUMENTATION_URL.GITHUB.INSTALLATION,
   },
   {
     key: I18nKey.TIPS$BLOG_SIGNUP,
-    link: "https://www.forge.dev/blog",
+    link: DOCUMENTATION_URL.BLOG,
   },
   {
     key: I18nKey.TIPS$API_USAGE,
-    link: "https://docs.forge.dev/api-reference/health-check",
+    link: DOCUMENTATION_URL.HEALTH_CHECK,
   },
 ];
 

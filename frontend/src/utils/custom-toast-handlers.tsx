@@ -1,4 +1,8 @@
 import safeToast from "#/utils/safe-hot-toast";
+import {
+  TOAST_DETAILED_ERROR_MIN_DURATION,
+  TOAST_SUCCESS_DURATION,
+} from "../constants/app";
 import { calculateToastDuration } from "./toast-duration";
 import { normalizeToastMessage } from "./toast-normalize";
 import { extractUserFriendlyError } from "./format-error";
@@ -44,7 +48,7 @@ export const displayErrorToast = (error: unknown) => {
 export const displaySuccessToast = (message: unknown) => {
   const text = normalizeToastMessage(message);
   // Auto-dismiss after 3s as per UI/UX design specification
-  safeToast.success(text, { ...TOAST_OPTIONS, duration: 3000 });
+  safeToast.success(text, { ...TOAST_OPTIONS, duration: TOAST_SUCCESS_DURATION });
 };
 
 /**
@@ -54,7 +58,7 @@ export const displaySuccessToast = (message: unknown) => {
  */
 export const displayDetailedErrorToast = (error: UserFriendlyErrorData) => {
   const message = `${error.icon || "❌"} ${error.title}\n\n${error.message}`;
-  const duration = calculateToastDuration(message, 8000); // Longer for detailed errors
+  const duration = calculateToastDuration(message, TOAST_DETAILED_ERROR_MIN_DURATION); // Longer for detailed errors
 
   safeToast.error(message, {
     ...TOAST_OPTIONS,

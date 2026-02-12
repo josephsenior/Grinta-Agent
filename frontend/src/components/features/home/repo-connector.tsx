@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FaInfoCircle } from "react-icons/fa";
+import { Info } from "lucide-react";
 import { ConnectToProviderMessage } from "./connect-to-provider-message";
 import { RepositorySelectionForm } from "./repo-selection-form";
 import { useConfig } from "#/hooks/query/use-config";
@@ -35,7 +35,7 @@ export function RepoConnector({ onRepoSelection }: RepoConnectorProps) {
           placement="bottom"
           tooltipClassName="max-w-[348px]"
         >
-          <FaInfoCircle size={16} />
+          <Info size={16} />
         </TooltipButton>
       </div>
 

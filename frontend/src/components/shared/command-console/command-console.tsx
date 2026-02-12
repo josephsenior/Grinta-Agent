@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useWsClient } from "#/context/ws-client-provider";
-import ClientFormattedDate from "#/components/shared/ClientFormattedDate";
+import ClientFormattedDate from "#/components/shared/client-formatted-date";
 import { logger } from "#/utils/logger";
 
 function getNestedProperty(source: unknown, key: string) {

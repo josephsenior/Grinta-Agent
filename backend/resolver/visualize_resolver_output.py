@@ -9,15 +9,15 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from forge.resolver.io_utils import load_single_resolver_output
-from forge.resolver.resolver_output import ResolverOutput
+from backend.resolver.io_utils import load_single_resolver_output
+from backend.resolver.resolver_output import ResolverOutput
 
 ModelDumpWithOptions = Callable[[Any], dict[str, Any]]
 ModelDumpJson = Callable[[Any], str]
 PrintJsonStdout = Callable[..., None]
 
 try:
-    from forge.core.pydantic_compat import (
+    from backend.core.pydantic_compat import (
         model_dump_json as _model_dump_json,
         model_dump_with_options as _model_dump_with_options,
     )
@@ -29,7 +29,7 @@ except Exception:
     model_dump_json = None
 
 try:
-    from forge.core.io import print_json_stdout as _print_json_stdout
+    from backend.core.io import print_json_stdout as _print_json_stdout
 
     print_json_stdout: PrintJsonStdout | None = _print_json_stdout
 except Exception:

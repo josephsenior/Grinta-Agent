@@ -2,7 +2,7 @@ import React from "react";
 import { Loader2, Clock, TrendingUp } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "#/store";
-import { selectProgressData } from "#/store/streaming-slice";
+import { selectProgressData } from "#/state/streaming-slice";
 
 interface ProgressIndicatorProps {
   operationId: string;
@@ -46,7 +46,7 @@ export function ProgressIndicator({ operationId }: ProgressIndicatorProps) {
   const remaining = estimatedTotal ? estimatedTotal - elapsed : null;
 
   return (
-    <div className="progress-indicator relative rounded-lg overflow-hidden border border-border-secondary bg-gradient-to-br from-background-elevated to-background-surface my-3 shadow-sm">
+    <div className="progress-indicator relative rounded-lg overflow-hidden border border-border-secondary bg-linear-to-br from-background-elevated to-background-surface my-3 shadow-sm">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-500/20 to-transparent animate-shimmer" />
@@ -76,7 +76,7 @@ export function ProgressIndicator({ operationId }: ProgressIndicatorProps) {
 
           {/* Progress Fill */}
           <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-brand-500 via-accent-cyan to-brand-500 rounded-full transition-all duration-300 ease-out shadow-lg"
+            className="absolute inset-y-0 left-0 bg-linear-to-r from-brand-500 via-accent-cyan to-brand-500 rounded-full transition-all duration-300 ease-out shadow-lg"
             style={{
               width: `${Math.min(100, Math.max(0, progress))}%`,
               backgroundSize: "200% 100%",
@@ -136,7 +136,7 @@ export function ProgressIndicator({ operationId }: ProgressIndicatorProps) {
 
       {/* Bottom Accent */}
       <div
-        className="h-1 bg-gradient-to-r from-brand-500 via-accent-cyan to-brand-500"
+        className="h-1 bg-linear-to-r from-brand-500 via-accent-cyan to-brand-500"
         style={{
           backgroundSize: "200% 100%",
           animation: "gradient-shift 3s ease infinite",

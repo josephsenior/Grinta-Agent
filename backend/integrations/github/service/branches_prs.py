@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from forge.core.logger import forge_logger as logger
-from forge.integrations.github.queries import search_branches_graphql_query
-from forge.integrations.github.service.base import GitHubMixinBase
-from forge.integrations.service_types import Branch, PaginatedBranchesResponse
+from backend.core.constants import MAX_GITHUB_BRANCHES
+from backend.core.logger import forge_logger as logger
+from backend.integrations.github.queries import search_branches_graphql_query
+from backend.integrations.github.service.base import GitHubMixinBase
+from backend.integrations.service_types import Branch, PaginatedBranchesResponse
 
 
 class GitHubBranchesMixin(GitHubMixinBase):
@@ -14,7 +15,7 @@ class GitHubBranchesMixin(GitHubMixinBase):
     async def get_branches(self, repository: str) -> list[Branch]:
         """Get branches for a repository."""
         url = f"{self.BASE_URL}/repos/{repository}/branches"
-        MAX_BRANCHES = 5000
+        MAX_BRANCHES = MAX_GITHUB_BRANCHES
         PER_PAGE = 100
         all_branches: list[Branch] = []
         page = 1

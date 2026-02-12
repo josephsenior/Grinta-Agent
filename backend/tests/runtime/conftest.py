@@ -5,15 +5,15 @@ import stat
 import time
 import pytest
 from pytest import TempPathFactory
-from forge.core.config import MCPConfig, ForgeConfig, load_FORGE_config
-from forge.core.logger import forge_logger as logger
-from forge.events import EventStream
-from forge.llm.llm_registry import LLMRegistry
-from forge.runtime.base import Runtime
-from forge.runtime.impl.local.local_runtime_inprocess import LocalRuntime
-from forge.runtime.plugins import AgentSkillsRequirement
-from forge.storage import get_file_store
-from forge.utils.async_utils import call_async_from_sync
+from backend.core.config import MCPConfig, ForgeConfig, load_FORGE_config
+from backend.core.logger import forge_logger as logger
+from backend.events import EventStream
+from backend.models.llm_registry import LLMRegistry
+from backend.runtime.base import Runtime
+from backend.runtime.drivers.local.local_runtime_inprocess import LocalRuntime
+from backend.runtime.plugins import AgentSkillsRequirement
+from backend.storage import get_file_store
+from backend.utils.async_utils import call_async_from_sync
 
 TEST_IN_CI = os.getenv("TEST_IN_CI", "False").lower() in ["true", "1", "yes"]
 RUN_AS_Forge = os.getenv("RUN_AS_Forge", "True").lower() in ["true", "1", "yes"]

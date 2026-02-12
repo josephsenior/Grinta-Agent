@@ -7,7 +7,7 @@ import {
   selectIsStreaming,
   selectStreamingEnabled,
   selectStreamContent,
-} from "#/store/streaming-slice";
+} from "#/state/streaming-slice";
 import { cn } from "#/utils/utils";
 
 interface StreamingThoughtProps {
@@ -171,16 +171,13 @@ export function StreamingThought({
         {isStreaming && (
           <div className="flex-shrink-0 flex items-center gap-0.5 mt-1">
             <div
-              className="w-0.5 h-0.5 bg-[var(--text-success)] rounded-full animate-pulse"
-              style={{ animationDelay: "0ms" }}
+              className="w-0.5 h-0.5 bg-[var(--text-success)] rounded-full animate-pulse [animation-delay:0ms]"
             />
             <div
-              className="w-0.5 h-0.5 bg-[var(--text-success)] rounded-full animate-pulse"
-              style={{ animationDelay: "150ms" }}
+              className="w-0.5 h-0.5 bg-[var(--text-success)] rounded-full animate-pulse [animation-delay:150ms]"
             />
             <div
-              className="w-0.5 h-0.5 bg-[var(--text-success)] rounded-full animate-pulse"
-              style={{ animationDelay: "300ms" }}
+              className="w-0.5 h-0.5 bg-[var(--text-success)] rounded-full animate-pulse [animation-delay:300ms]"
             />
           </div>
         )}
@@ -220,16 +217,13 @@ export function ThinkingIndicator() {
       {/* Minimal animated dots */}
       <div className="flex items-center gap-0.5">
         <div
-          className="w-1 h-1 bg-[var(--text-success)] rounded-full animate-bounce"
-          style={{ animationDelay: "0ms" }}
+          className="w-1 h-1 bg-[var(--text-success)] rounded-full animate-bounce [animation-delay:0ms]"
         />
         <div
-          className="w-1 h-1 bg-[var(--text-success)] rounded-full animate-bounce"
-          style={{ animationDelay: "150ms" }}
+          className="w-1 h-1 bg-[var(--text-success)] rounded-full animate-bounce [animation-delay:150ms]"
         />
         <div
-          className="w-1 h-1 bg-[var(--text-success)] rounded-full animate-bounce"
-          style={{ animationDelay: "300ms" }}
+          className="w-1 h-1 bg-[var(--text-success)] rounded-full animate-bounce [animation-delay:300ms]"
         />
       </div>
     </div>

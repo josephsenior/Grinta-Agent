@@ -1,10 +1,9 @@
 import {
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-} from "@heroui/react";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+} from "#/components/ui/dialog";
 import React from "react";
 import { cn } from "#/utils/utils";
 import { Action, FooterContent } from "./footer-content";
@@ -36,39 +35,22 @@ export function BaseModal({
   testID,
 }: BaseModalProps) {
   return (
-    <Modal
-      data-testid={testID}
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      isDismissable={isDismissable}
-      backdrop="blur"
-      hideCloseButton
-      size="sm"
-      className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-xl overflow-hidden"
-      classNames={{
-        backdrop: "bg-[var(--bg-primary)]/40 backdrop-blur-md",
-        base: "border border-[var(--border-primary)] max-w-[600px] bg-[var(--bg-secondary)]",
-      }}
-    >
-      <ModalContent className={cn("p-6 sm:p-8", contentClassName)}>
-        {(closeModal) => (
-          <>
-            {title && (
-              <ModalHeader className="flex flex-col p-0">
-                <HeaderContent maintitle={title} subtitle={subtitle} />
-              </ModalHeader>
-            )}
-
-            <ModalBody className={bodyClassName}>{children}</ModalBody>
-
-            {actions && actions.length > 0 && (
-              <ModalFooter className="flex-row flex justify-start p-0">
-                <FooterContent actions={actions} closeModal={closeModal} />
-              </ModalFooter>
-            )}
-          </>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent data-testid={testID} className={cn("p-6 sm:p-8", contentClassName)}>
+        {title && (
+          <DialogHeader className="flex flex-col p-0">
+            <HeaderContent maintitle={title} subtitle={subtitle} />
+          </DialogHeader>
         )}
-      </ModalContent>
-    </Modal>
+
+        <div className={bodyClassName}>{children}</div>
+
+        {actions && actions.length > 0 && (
+          <DialogFooter className="flex-row flex justify-start p-0">
+            <FooterContent actions={actions} closeModal={() => onOpenChange(false)} />
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -3,9 +3,9 @@
 import os
 from unittest.mock import MagicMock
 from conftest import _close_test_runtime, _load_runtime
-from forge.core.logger import forge_logger as logger
-from forge.events.action import FileEditAction, FileWriteAction
-from forge.runtime.action_execution_server import _execute_file_editor
+from backend.core.logger import forge_logger as logger
+from backend.events.action import FileEditAction, FileWriteAction
+from backend.runtime.action_execution_server import _execute_file_editor
 
 
 def test_view_file(temp_dir, runtime_cls, run_as_Forge):

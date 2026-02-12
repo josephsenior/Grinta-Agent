@@ -40,10 +40,10 @@ class TestAutonomousWithChromeDevTools:
     @pytest.mark.asyncio
     async def test_monitor_agent_performance(self):
         """Monitor agent performance metrics during execution."""
-        from forge.core.config import ForgeConfig
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.core.config import ForgeConfig
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         config = ForgeConfig()
         runtime = await create_runtime(config)
@@ -99,10 +99,10 @@ class TestAutonomousWithChromeDevTools:
     @pytest.mark.asyncio
     async def test_monitor_network_activity(self):
         """Monitor network requests during agent execution."""
-        from forge.core.config import ForgeConfig
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.core.config import ForgeConfig
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         config = ForgeConfig()
         runtime = await create_runtime(config)
@@ -145,10 +145,10 @@ class TestAutonomousWithChromeDevTools:
     @pytest.mark.asyncio
     async def test_capture_console_errors(self):
         """Capture and analyze console errors during execution."""
-        from forge.core.config import ForgeConfig
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.core.config import ForgeConfig
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         config = ForgeConfig()
         runtime = await create_runtime(config)
@@ -186,10 +186,10 @@ class TestAutonomousWithChromeDevTools:
     @pytest.mark.asyncio
     async def test_trace_agent_decision_flow(self):
         """Trace agent's decision-making process with DevTools."""
-        from forge.core.config import ForgeConfig
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.core.config import ForgeConfig
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         config = ForgeConfig()
         runtime = await create_runtime(config)
@@ -250,11 +250,11 @@ class TestFullAutonomousWorkflow:
     @pytest.mark.asyncio
     async def test_complete_web_app_build(self):
         """Build a complete web app with frontend, backend, and database."""
-        from forge.core.config import ForgeConfig
-        from forge.core.config.llm_config import LLMConfig
-        from forge.controller.agent_controller import AgentController
-        from forge.core.setup import create_agent, create_runtime
-        from forge.events.action import MessageAction
+        from backend.core.config import ForgeConfig
+        from backend.core.config.llm_config import LLMConfig
+        from backend.controller.agent_controller import AgentController
+        from backend.core.setup import create_agent, create_runtime
+        from backend.events.action import MessageAction
 
         config = ForgeConfig()
         config.llm = LLMConfig(

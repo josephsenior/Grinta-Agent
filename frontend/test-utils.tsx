@@ -11,7 +11,7 @@ import { MemoryRouter } from "react-router-dom";
 import { AxiosError } from "axios";
 import { AppStore, RootState, rootReducer } from "./src/store";
 import { ToastProvider } from "#/components/shared/notifications/toast";
-import { SidebarProvider } from "#/contexts/sidebar-context";
+import { SidebarProvider } from "#/context/sidebar-context";
 
 // `vi` is a Vitest global used by unit tests. We use the ambient `vi`
 // declaration and guard it at runtime with `typeof vi !== 'undefined'` so

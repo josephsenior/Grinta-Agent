@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import base64
 
-from forge.core.logger import forge_logger as logger
-from forge.integrations.github.queries import (
+from backend.core.logger import forge_logger as logger
+from backend.integrations.github.queries import (
     suggested_task_issue_graphql_query,
     suggested_task_pr_graphql_query,
 )
-from forge.integrations.github.service.base import GitHubMixinBase
-from forge.integrations.service_types import (
-    MicroagentContentResponse,
+from backend.integrations.github.service.base import GitHubMixinBase
+from backend.integrations.service_types import (
+    PlaybookContentResponse,
     ProviderType,
     SuggestedTask,
     TaskType,
@@ -134,20 +134,20 @@ class GitHubFeaturesMixin(GitHubMixinBase):
 
         return pr_tasks + issue_tasks
 
-    "\n    Methods specifically for microagent management page\n    "
+    "\n    Methods specifically for playbook management page\n    "
 
     async def _get_cursorrules_url(self, repository: str) -> str:
         """Get the URL for checking .cursorrules file."""
         return f"{self.BASE_URL}/repos/{repository}/contents/.cursorrules"
 
-    async def _get_microagents_directory_url(
-        self, repository: str, microagents_path: str
+    async def _get_playbooks_directory_url(
+        self, repository: str, playbooks_path: str
     ) -> str:
-        """Get the URL for checking microagents directory."""
-        return f"{self.BASE_URL}/repos/{repository}/contents/{microagents_path}"
+        """Get the URL for checking playbooks directory."""
+        return f"{self.BASE_URL}/repos/{repository}/contents/{playbooks_path}"
 
-    def _is_valid_microagent_file(self, item: dict) -> bool:
-        """Check if an item represents a valid microagent file."""
+    def _is_valid_playbook_file(self, item: dict) -> bool:
+        """Check if an item represents a valid playbook file."""
         return (
             item["type"] == "file"
             and item["name"].endswith(".md")
@@ -158,17 +158,17 @@ class GitHubFeaturesMixin(GitHubMixinBase):
         """Extract file name from directory item."""
         return item["name"]
 
-    def _get_file_path_from_item(self, item: dict, microagents_path: str) -> str:
+    def _get_file_path_from_item(self, item: dict, playbooks_path: str) -> str:
         """Extract file path from directory item."""
-        return f"{microagents_path}/{item['name']}"
+        return f"{playbooks_path}/{item['name']}"
 
-    def _get_microagents_directory_params(self, microagents_path: str) -> dict | None:
-        """Get parameters for the microagents directory request. Return None if no parameters needed."""
+    def _get_playbooks_directory_params(self, playbooks_path: str) -> dict | None:
+        """Get parameters for the playbooks directory request. Return None if no parameters needed."""
         return None
 
-    async def get_microagent_content(
+    async def get_playbook_content(
         self, repository: str, file_path: str
-    ) -> MicroagentContentResponse:
+    ) -> PlaybookContentResponse:
         """Fetch individual file content from GitHub repository.
 
         Args:
@@ -176,7 +176,7 @@ class GitHubFeaturesMixin(GitHubMixinBase):
             file_path: Path to the file within the repository
 
         Returns:
-            MicroagentContentResponse with parsed content and triggers
+            PlaybookContentResponse with parsed content and triggers
 
         Raises:
             RuntimeError: If file cannot be fetched or doesn't exist
@@ -185,4 +185,4 @@ class GitHubFeaturesMixin(GitHubMixinBase):
         file_url = f"{self.BASE_URL}/repos/{repository}/contents/{file_path}"
         file_data, _ = await self._make_request(file_url)
         file_content = base64.b64decode(file_data["content"]).decode("utf-8")
-        return self._parse_microagent_content(file_content, file_path)
+        return self._parse_playbook_content(file_content, file_path)

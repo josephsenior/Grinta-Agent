@@ -84,7 +84,7 @@ export type ConversationTrigger =
   | "resolver"
   | "gui"
   | "suggested_task"
-  | "microagent_management";
+  | "playbook_management";
 
 export interface Conversation {
   conversation_id: string;
@@ -112,31 +112,31 @@ export interface InputMetadata {
   description: string;
 }
 
-export interface Microagent {
+export interface Playbook {
   name: string;
   type: "repo" | "knowledge";
   content: string;
   triggers: string[];
 }
 
-export interface GetMicroagentsResponse {
-  microagents: Microagent[];
+export interface GetPlaybooksResponse {
+  playbooks: Playbook[];
 }
 
-export interface CreateMicroagent {
+export interface CreatePlaybook {
   repo: string;
   git_provider?: Provider;
   title?: string;
 }
 
-export interface RepositoryMicroagent {
+export interface RepositoryPlaybook {
   name: string;
   path: string;
   created_at: string;
   git_provider: Provider;
 }
 
-export interface MicroagentContentResponse {
+export interface PlaybookContentResponse {
   content: string;
   path: string;
   git_provider: Provider;

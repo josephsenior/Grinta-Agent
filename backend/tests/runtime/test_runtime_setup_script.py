@@ -6,10 +6,10 @@ Original content preserved. See issue: duplicate collection causing import file 
 
 from unittest.mock import patch
 from conftest import _load_runtime
-from forge.core.setup import initialize_repository_for_runtime
-from forge.events.action import FileReadAction, FileWriteAction
-from forge.events.observation import FileReadObservation, FileWriteObservation
-from forge.integrations.service_types import ProviderType, Repository
+from backend.core.setup import initialize_repository_for_runtime
+from backend.events.action import FileReadAction, FileWriteAction
+from backend.events.observation import FileReadObservation, FileWriteObservation
+from backend.integrations.service_types import ProviderType, Repository
 
 
 def test_initialize_repository_for_runtime(temp_dir, runtime_cls, run_as_Forge):
@@ -22,7 +22,7 @@ def test_initialize_repository_for_runtime(temp_dir, runtime_cls, run_as_Forge):
         is_public=True,
     )
     with patch(
-        "forge.runtime.base.ProviderHandler.verify_repo_provider",
+        "backend.runtime.base.ProviderHandler.verify_repo_provider",
         return_value=mock_repo,
     ):
         repository_dir = initialize_repository_for_runtime(

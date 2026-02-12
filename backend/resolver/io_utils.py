@@ -3,8 +3,8 @@
 import json
 from collections.abc import Iterable
 
-from forge.resolver.interfaces.issue import Issue
-from forge.resolver.resolver_output import ResolverOutput
+from backend.resolver.interfaces.issue import Issue
+from backend.resolver.resolver_output import ResolverOutput
 
 
 def _deserialize_resolver_output(data: dict) -> ResolverOutput:

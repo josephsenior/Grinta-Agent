@@ -18,15 +18,15 @@ from typing import (
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, WithJsonSchema, field_validator
 
-from forge.core.logger import forge_logger as logger
-from forge.events.action.commands import CmdRunAction
-from forge.integrations.github.github_service import GithubServiceImpl
-from forge.integrations.service_types import (
+from backend.core.logger import forge_logger as logger
+from backend.events.action.commands import CmdRunAction
+from backend.integrations.github.github_service import GithubServiceImpl
+from backend.integrations.service_types import (
     AuthenticationError,
     Branch,
     GitService,
     InstallationsService,
-    MicroagentParseError,
+    PlaybookParseError,
     PaginatedBranchesResponse,
     ProviderType,
     Repository,
@@ -35,15 +35,15 @@ from forge.integrations.service_types import (
     TokenResponse,
     User,
 )
-from forge.utils.circuit_breaker import get_circuit_breaker_manager
+from backend.utils.circuit_breaker import get_circuit_breaker_manager
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
 
-    from forge.events.action.action import Action
-    from forge.events.stream import EventStream
-    from forge.microagent.types import MicroagentContentResponse, MicroagentResponse
-    from forge.server.types import AppMode
+    from backend.events.action.action import Action
+    from backend.events.stream import EventStream
+    from backend.instruction.types import PlaybookContentResponse, PlaybookResponse
+    from backend.server.types import AppMode
 
 
 class ProviderToken(BaseModel):
@@ -68,7 +68,7 @@ class ProviderToken(BaseModel):
     def validate_optional_strings(cls, v: str | None) -> str | None:
         """Validate optional string fields are non-empty if provided."""
         if v is not None:
-            from forge.core.security.type_safety import validate_non_empty_string
+            from backend.core.type_safety.type_safety import validate_non_empty_string
             return validate_non_empty_string(v, name="field")
         return v
 
@@ -606,14 +606,14 @@ class ProviderHandler:
             total_count=0,
         )
 
-    async def get_microagents(self, repository: str) -> list[MicroagentResponse]:
-        """Get microagents from a repository using the appropriate service.
+    async def get_playbooks(self, repository: str) -> list[PlaybookResponse]:
+        """Get playbooks from a repository using the appropriate service.
 
         Args:
             repository: Repository name in the format 'owner/repo'
 
         Returns:
-            List of microagents found in the repository
+            List of playbooks found in the repository
 
         Raises:
             AuthenticationError: If authentication fails
@@ -623,47 +623,47 @@ class ProviderHandler:
         for provider in self.provider_tokens:
             try:
                 service = self._get_service(provider)
-                op_key = f"provider:{provider.value}:get_microagents"
+                op_key = f"provider:{provider.value}:get_playbooks"
                 result = await get_circuit_breaker_manager().async_call(
                     op_key,
-                    lambda: service.get_microagents(repository),
+                    lambda: service.get_playbooks(repository),
                 )
                 if result:
                     return result
                 logger.debug(
-                    "No microagents found on %s for %s, trying other providers",
+                    "No playbooks found on %s for %s, trying other providers",
                     provider,
                     repository,
                 )
             except Exception as e:
                 errors.append(f"{provider.value}: {e!s}")
                 logger.warning(
-                    "Error fetching microagents from %s for %s: %s",
+                    "Error fetching playbooks from %s for %s: %s",
                     provider,
                     repository,
                     e,
                 )
         if errors:
             logger.error(
-                "Failed to fetch microagents for %s with all available providers. Errors: %s",
+                "Failed to fetch playbooks for %s with all available providers. Errors: %s",
                 repository,
                 "; ".join(errors),
             )
-            msg = f"Unable to fetch microagents for {repository}"
+            msg = f"Unable to fetch playbooks for {repository}"
             raise AuthenticationError(msg)
         return []
 
-    async def get_microagent_content(
+    async def get_playbook_content(
         self, repository: str, file_path: str
-    ) -> MicroagentContentResponse:
-        """Get content of a specific microagent file from a repository.
+    ) -> PlaybookContentResponse:
+        """Get content of a specific playbook file from a repository.
 
         Args:
             repository: Repository name in the format 'owner/repo'
-            file_path: Path to the microagent file within the repository
+            file_path: Path to the playbook file within the repository
 
         Returns:
-            MicroagentContentResponse with parsed content and triggers
+            PlaybookContentResponse with parsed content and triggers
 
         Raises:
             AuthenticationError: If authentication fails
@@ -673,10 +673,10 @@ class ProviderHandler:
         for provider in self.provider_tokens:
             try:
                 service = self._get_service(provider)
-                op_key = f"provider:{provider.value}:get_microagent_content"
+                op_key = f"provider:{provider.value}:get_playbook_content"
                 result = await get_circuit_breaker_manager().async_call(
                     op_key,
-                    lambda: service.get_microagent_content(repository, file_path),
+                    lambda: service.get_playbook_content(repository, file_path),
                 )
                 if result:
                     return result
@@ -694,10 +694,10 @@ class ProviderHandler:
                     file_path,
                 )
                 continue
-            except MicroagentParseError as e:
+            except PlaybookParseError as e:
                 errors.append(f"{provider.value}: {e!s}")
                 logger.warning(
-                    "Error parsing microagent content from %s for %s: %s",
+                    "Error parsing playbook content from %s for %s: %s",
                     provider,
                     repository,
                     e,
@@ -705,18 +705,18 @@ class ProviderHandler:
             except Exception as e:
                 errors.append(f"{provider.value}: {e!s}")
                 logger.warning(
-                    "Error fetching microagent content from %s for %s: %s",
+                    "Error fetching playbook content from %s for %s: %s",
                     provider,
                     repository,
                     e,
                 )
         if errors:
             logger.error(
-                "Failed to fetch microagent content for %s with all available providers. Errors: %s",
+                "Failed to fetch playbook content for %s with all available providers. Errors: %s",
                 repository,
                 "; ".join(errors),
             )
-        msg = f"Microagent file {file_path} not found in {repository}"
+        msg = f"Playbook file {file_path} not found in {repository}"
         raise AuthenticationError(msg)
 
     async def _verify_repository(self, repo_name: str) -> tuple[ProviderType, str]:

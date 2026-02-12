@@ -45,7 +45,7 @@ export function handleErrorEvents(
 ): void {
   if (isErrorEvent(event) || isAgentStatusError(event)) {
     displayErrorToast(
-      isErrorEvent(event) ? event.message : "MICROAGENT$UNKNOWN_ERROR",
+      isErrorEvent(event) ? event.message : "PLAYBOOK$UNKNOWN_ERROR",
     );
   }
 }
@@ -56,7 +56,7 @@ export function handleStatusEvents(
 ): void {
   if (isStatusUpdate(event)) {
     if (event.type === "info" && event.id === "STATUS$STARTING_RUNTIME") {
-      displaySuccessToast("MICROAGENT$CREATED");
+      displaySuccessToast("PLAYBOOK$CREATED");
     }
   }
 }
@@ -70,7 +70,7 @@ export function handleAgentStateEvents(
     isAgentStateChangeObservation(event) &&
     event.extras.agent_state === AgentState.FINISHED
   ) {
-    displaySuccessToast("MICROAGENT$FINISHED");
+    displaySuccessToast("PLAYBOOK$FINISHED");
     onUnsubscribe(conversationId);
   }
 }

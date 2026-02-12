@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import posthog from "#/utils/posthog";
 import React, { useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { gsap } from "gsap";

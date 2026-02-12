@@ -10,15 +10,15 @@ from typing import TYPE_CHECKING, Callable
 
 from pydantic import SecretStr
 
-from forge.core.logger import get_console_handler
-from forge.core.logger import forge_logger as logger
-from forge.events.action import Action
-from forge.events.action.message import MessageAction
-from forge.integrations.utils import validate_provider_token
+from backend.core.logger import get_console_handler
+from backend.core.logger import forge_logger as logger
+from backend.events.action import Action
+from backend.events.action.message import MessageAction
+from backend.integrations.utils import validate_provider_token
 
 if TYPE_CHECKING:
-    from forge.controller.state.state import State
-    from forge.integrations.service_types import ProviderType
+    from backend.controller.state.state import State
+    from backend.integrations.service_types import ProviderType
 
 
 async def identify_token(token: str, base_domain: str | None) -> ProviderType:

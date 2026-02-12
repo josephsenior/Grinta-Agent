@@ -5,10 +5,10 @@ import os
 import pytest
 
 from conftest import TEST_IN_CI, _close_test_runtime, _load_runtime
-from forge.runtime.utils.edit import get_diff
-from forge.core.logger import forge_logger as logger
-from forge.events.action import FileEditAction, FileReadAction
-from forge.events.observation import FileEditObservation
+from backend.runtime.utils.edit import get_diff
+from backend.core.logger import forge_logger as logger
+from backend.events.action import FileEditAction, FileReadAction
+from backend.events.observation import FileEditObservation
 
 ORGINAL = "from flask import Flask\napp = Flask(__name__)\n\n@app.route('/')\ndef index():\n    numbers = list(range(1, 11))\n    return str(numbers)\n\nif __name__ == '__main__':\n    app.run(port=5000)\n"
 

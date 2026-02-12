@@ -41,8 +41,8 @@ export function FileIcon({
         data-testid={dataTestId}
       >
         <i
-          className={iconClassWithColor || iconClass}
-          style={{ fontSize: size, lineHeight: 1, display: "inline-block" }}
+          className={`${iconClassWithColor || iconClass} leading-none inline-block`}
+          style={{ fontSize: size }}
           aria-hidden="true"
         />
       </div>
@@ -81,8 +81,8 @@ export function FileIcon({
       data-testid={dataTestId}
     >
       <span
-        className="text-center flex items-center justify-center"
-        style={{ fontSize: size * 0.7, lineHeight: 1 }}
+        className="text-center flex items-center justify-center leading-none"
+        style={{ fontSize: size * 0.7 }}
         aria-label={`${filename} icon`}
       >
         {fallback}

@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import ClientFormattedDate from "#/components/shared/ClientFormattedDate";
+import ClientFormattedDate from "#/components/shared/client-formatted-date";
 
 interface TerminalSnippetProps {
   text: string;

@@ -8,6 +8,7 @@ import React, {
 import { Trans, useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { I18nKey } from "#/i18n/declaration";
+import { DOCUMENTATION_URL } from "#/constants/app";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { SettingsInput } from "#/components/features/settings/settings-input";
 import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";
@@ -632,7 +633,7 @@ function ConfigureModalDescription({
 }) {
   const link = (
     <a
-      href="https://docs.forge.dev/usage/cloud/Forge-cloud"
+      href={DOCUMENTATION_URL.CLOUD_Forge_CLOUD}
       target="_blank"
       rel="noopener noreferrer"
       className="text-violet-500 hover:text-brand-400 hover:underline transition-colors duration-200"

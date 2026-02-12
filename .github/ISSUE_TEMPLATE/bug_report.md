@@ -40,7 +40,7 @@ If applicable, add screenshots to help explain your problem.
 ## Configuration
 
 - **Model Used:** [e.g., claude-sonnet-4-20250514]
-- **Agent Type:** [e.g., CodeActAgent]
+- **Agent Type:** [e.g., Orchestrator]
 - **Browser:** [e.g., Chrome 119, Firefox 120]
 
 ## Logs

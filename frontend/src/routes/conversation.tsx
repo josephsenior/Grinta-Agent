@@ -21,6 +21,8 @@ import Forge from "#/api/forge";
 import { ConversationSubscriptionsProvider } from "#/context/conversation-subscriptions-provider";
 import { ConversationTabs } from "#/components/features/conversation/conversation-tabs";
 import { logger } from "#/utils/logger";
+import { ChatErrorBoundary } from "#/components/shared/error-boundaries/chat-error-boundary";
+import { GlobalErrorBoundary } from "#/components/shared/error-boundaries/global-error-boundary";
 
 // Lazy load heavy conversation components for better performance
 const ChatInterface = React.lazy(() =>
@@ -105,16 +107,20 @@ function AppContent() {
       return (
         <div className="flex flex-col grow overflow-hidden h-full">
           <div className="flex-1 overflow-hidden">
-            <Suspense
-              fallback={
-                <div className="h-full bg-[var(--bg-elevated)] animate-pulse" />
-              }
-            >
-              <ChatInterface />
-            </Suspense>
+            <ChatErrorBoundary>
+              <Suspense
+                fallback={
+                  <div className="h-full bg-(--bg-elevated) animate-pulse" />
+                }
+              >
+                <ChatInterface />
+              </Suspense>
+            </ChatErrorBoundary>
           </div>
-          <div className="h-1/2 border-t border-[var(--border-primary)]">
-            <ConversationTabs />
+          <div className="h-1/2 border-t border-(--border-primary)">
+            <GlobalErrorBoundary>
+              <ConversationTabs />
+            </GlobalErrorBoundary>
           </div>
         </div>
       );
@@ -124,19 +130,25 @@ function AppContent() {
       <ResizablePanel
         orientation={Orientation.HORIZONTAL}
         className="grow h-full min-h-0 min-w-0"
-        initialSize={450}
-        firstClassName="overflow-hidden bg-[var(--bg-primary)] min-h-0 border-r border-[var(--border-primary)]"
-        secondClassName="flex flex-col overflow-hidden min-h-0 bg-[var(--bg-primary)]"
+        initialSize={window.innerWidth * 0.7} // Give code 70% width by default
+        firstClassName="flex flex-col overflow-hidden min-h-0 bg-[var(--bg-primary)] border-r border-[var(--border-primary)]"
+        secondClassName="overflow-hidden bg-[var(--bg-primary)] min-h-0"
         firstChild={
-          <Suspense
-            fallback={
-              <div className="h-full bg-[var(--bg-elevated)] animate-pulse" />
-            }
-          >
-            <ChatInterface />
-          </Suspense>
+          <GlobalErrorBoundary>
+            <ConversationTabs />
+          </GlobalErrorBoundary>
         }
-        secondChild={<ConversationTabs />}
+        secondChild={
+          <ChatErrorBoundary>
+            <Suspense
+              fallback={
+                <div className="h-full bg-(--bg-elevated) animate-pulse" />
+              }
+            >
+              <ChatInterface />
+            </Suspense>
+          </ChatErrorBoundary>
+        }
       />
     );
   }

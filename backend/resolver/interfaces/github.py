@@ -6,13 +6,13 @@ from typing import Any
 
 import httpx
 
-from forge.core.logger import forge_logger as logger
-from forge.resolver.interfaces.issue import (
+from backend.core.logger import forge_logger as logger
+from backend.resolver.interfaces.issue import (
     Issue,
     IssueHandlerInterface,
     ReviewThread,
 )
-from forge.resolver.utils import extract_issue_references
+from backend.resolver.utils import extract_issue_references
 
 
 class GithubIssueHandler(IssueHandlerInterface):

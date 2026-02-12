@@ -126,14 +126,10 @@ export function LoadingSpinner({
         className={cn(
           "absolute animate-spin",
           colorClasses[color],
-          "drop-shadow-lg filter transition-all duration-300",
+          "drop-shadow-[0_0_8px_rgba(139,92,246,0.3)] transition-all duration-300",
           "opacity-90" /* Slightly transparent for softer feel */,
           sizeStyle,
         )}
-        style={{
-          filter:
-            "drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))" /* Enhanced glow */,
-        }}
       />
     </div>
   );

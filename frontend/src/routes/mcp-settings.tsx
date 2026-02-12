@@ -14,6 +14,25 @@ import {
 } from "#/utils/custom-toast-handlers";
 import { cn } from "#/utils/utils";
 import type { MCPMarketplaceItem } from "#/types/mcp-marketplace";
+import type { MCPSSEServer, MCPStdioServer, MCPSHTTPServer } from "#/types/settings";
+
+type MCPServerType = "sse" | "stdio" | "shttp";
+
+interface MCPServerConfig {
+  id: string;
+  type: MCPServerType;
+  name?: string;
+  url?: string;
+  api_key?: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+}
+
+type ExtendedMCPServer = 
+  | (MCPSSEServer & { id: string; type: "sse" })
+  | (MCPStdioServer & { id: string; type: "stdio" })
+  | (MCPSHTTPServer & { id: string; type: "shttp" });
 
 interface MCPSettingsScreenProps {
   initialTab?: "my-servers" | "marketplace";
@@ -54,12 +73,12 @@ export function createTemplateInstaller({
       type: template.type,
     };
 
-    addMcpServer(payload as any, {
+    addMcpServer(payload as MCPServerConfig, {
       onSuccess: () => {
         displaySuccessToast("Template installed");
         setActiveTab("my-servers");
       },
-      onError: (error: any) => {
+      onError: (error: Error) => {
         displayErrorToast(error?.message || "Failed to install template");
       },
     });
@@ -74,7 +93,7 @@ export default function MCPSettingsScreen({
     initialTab,
   );
   const [isAdding, setIsAdding] = useState(false);
-  const [editingServer, setEditingServer] = useState<any>(null);
+  const [editingServer, setEditingServer] = useState<MCPServerConfig | null>(null);
   const [serverToDelete, setServerToDelete] = useState<string | null>(null);
 
   const { data: settings, isLoading } = useSettings();
@@ -82,25 +101,25 @@ export default function MCPSettingsScreen({
   const { mutate: updateMcpServer } = useUpdateMcpServer();
   const { mutate: deleteMcpServer } = useDeleteMcpServer();
 
-  const handleAddServer = (payload: any) => {
+  const handleAddServer = (payload: MCPServerConfig) => {
     addMcpServer(payload, {
       onSuccess: () => {
         displaySuccessToast("Server added successfully");
         setIsAdding(false);
       },
-      onError: (error: any) => {
+      onError: (error: Error) => {
         displayErrorToast(error?.message || "Failed to add MCP server");
       },
     });
   };
 
-  const handleUpdateServer = (payload: any) => {
+  const handleUpdateServer = (payload: { serverId: string; server: MCPServerConfig }) => {
     updateMcpServer(payload, {
       onSuccess: () => {
         displaySuccessToast("Server updated successfully");
         setEditingServer(null);
       },
-      onError: (error: any) => {
+      onError: (error: Error) => {
         displayErrorToast(error?.message || "Failed to update MCP server");
       },
     });
@@ -155,21 +174,21 @@ export default function MCPSettingsScreen({
     shttp_servers: [],
   };
 
-  const allServers = [
-    ...mcpConfig.sse_servers.map((s: any, i: number) => ({
+  const allServers: ExtendedMCPServer[] = [
+    ...mcpConfig.sse_servers.map((s: MCPSSEServer, i: number) => ({
       ...s,
       id: `sse-${i}`,
-      type: "sse",
+      type: "sse" as const,
     })),
-    ...mcpConfig.stdio_servers.map((s: any, i: number) => ({
+    ...mcpConfig.stdio_servers.map((s: MCPStdioServer, i: number) => ({
       ...s,
       id: `stdio-${i}`,
-      type: "stdio",
+      type: "stdio" as const,
     })),
-    ...mcpConfig.shttp_servers.map((s: any, i: number) => ({
+    ...mcpConfig.shttp_servers.map((s: MCPSHTTPServer, i: number) => ({
       ...s,
       id: `shttp-${i}`,
-      type: "shttp",
+      type: "shttp" as const,
     })),
   ];
 
@@ -219,13 +238,13 @@ export default function MCPSettingsScreen({
         {activeTab === "my-servers" ? (
           <MCPServerList
             servers={allServers}
-            onEdit={setEditingServer}
+            onEdit={(server) => setEditingServer(server)}
             onDelete={setServerToDelete}
           />
         ) : (
           <MCPMarketplace
             onInstall={installTemplate}
-            installedServers={allServers.map((s) => s.name)}
+            installedServers={allServers.map((s) => (s as MCPStdioServer & { id: string }).name ?? (s as { url?: string }).url ?? s.id)}
           />
         )}
       </div>
@@ -236,8 +255,8 @@ export default function MCPSettingsScreen({
             <div className="p-6">
               <MCPServerForm
                 mode={isAdding ? "add" : "edit"}
-                server={editingServer}
-                onSubmit={isAdding ? handleAddServer : handleUpdateServer}
+                server={editingServer ?? undefined}
+                onSubmit={isAdding ? handleAddServer : (server) => handleUpdateServer({ serverId: editingServer?.id ?? "", server })}
                 onCancel={() => {
                   setIsAdding(false);
                   setEditingServer(null);

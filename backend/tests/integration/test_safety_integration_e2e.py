@@ -6,11 +6,11 @@ These tests simulate real agent scenarios to verify the complete safety workflow
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from forge.core.config import AgentConfig
-from forge.controller.safety_validator import SafetyValidator, ExecutionContext
-from forge.events.action import CmdRunAction, ActionSecurityRisk
-from forge.security.command_analyzer import CommandAnalyzer
-from forge.security.safety_config import SafetyConfig
+from backend.core.config import AgentConfig
+from backend.controller.safety_validator import SafetyValidator, ExecutionContext
+from backend.events.action import CmdRunAction, ActionSecurityRisk
+from backend.security.command_analyzer import CommandAnalyzer
+from backend.security.safety_config import SafetyConfig
 
 
 class TestSafetyIntegrationE2E:

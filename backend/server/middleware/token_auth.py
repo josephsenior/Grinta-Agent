@@ -1,0 +1,78 @@
+"""Token-based authentication middleware."""
+
+import os
+import logging
+import secrets
+
+from fastapi import Request, status
+from fastapi.security.utils import get_authorization_scheme_param
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
+
+def get_session_api_key() -> str:
+    """Get the session API key from server configuration."""
+    from backend.server.shared import server_config
+    return server_config.session_api_key
+
+class SimpleTokenAuthMiddleware(BaseHTTPMiddleware):
+    """Middleware to enforce session-based authentication."""
+    
+    async def dispatch(self, request: Request, call_next):
+        # Allow OPTIONS requests (CORS preflight)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+            
+        # Allow health checks and static resources without auth
+        # NOTE: /mcp/ is intentionally public — runtime connects via server-to-server
+        # MCP protocol which has its own auth layer (api_key in MCP config).
+        # NOTE: /api/monitoring/ is NOT public — requires auth to prevent info leaks.
+        public_paths = [
+            "/health", "/api/health",
+            "/api/auth/", "/docs", "/openapi.json", "/favicon.ico",
+            "/alive", "/api/health/live", "/api/health/ready",
+            "/assets/", "/locales/", "/mcp/", "/static/",
+        ]
+        if any(request.url.path.startswith(path) for path in public_paths):
+            return await call_next(request)
+
+        # Check for X-Session-API-Key header (Preferred)
+        header_key = request.headers.get("X-Session-API-Key")
+        
+        # Query-param auth is leak-prone (URLs end up in logs/history/referrers).
+        # Keep it opt-in for local/dev convenience only.
+        allow_query_token_auth = os.getenv("FORGE_ALLOW_QUERY_TOKEN_AUTH", "false").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        query_token: str | None = None
+        if allow_query_token_auth:
+            query_token = request.query_params.get("token") or request.query_params.get(
+                "apiKey"
+            )
+        
+        # Check for token in Authorization Header (Bearer)
+        authorization = request.headers.get("Authorization")
+        scheme, bearer_token = get_authorization_scheme_param(authorization)
+        
+        expected_key = get_session_api_key()
+        
+        # Verify Key
+        is_valid = False
+        if header_key and secrets.compare_digest(header_key, expected_key):
+            is_valid = True
+        elif query_token and secrets.compare_digest(query_token, expected_key):
+            is_valid = True
+        elif scheme.lower() == "bearer" and secrets.compare_digest(bearer_token, expected_key):
+            is_valid = True
+            
+        if not is_valid:
+            logger.warning("Unauthorized access attempt to %s", request.url.path)
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Invalid or missing X-Session-API-Key"}
+            )
+            
+        return await call_next(request)

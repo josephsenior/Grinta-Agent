@@ -8,15 +8,15 @@ import re
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import jinja2
-from forge.llm.exceptions import RateLimitError as RateLimitErrorType
+from backend.models.exceptions import RateLimitError as RateLimitErrorType
 
-from forge.llm.llm import LLM
-from forge.resolver.utils import extract_image_urls
+from backend.models.llm import LLM
+from backend.resolver.utils import extract_image_urls
 
 if TYPE_CHECKING:
-    from forge.core.config import LLMConfig
-    from forge.events.event import Event
-    from forge.resolver.interfaces.issue import (
+    from backend.core.config import LLMConfig
+    from backend.events.event import Event
+    from backend.resolver.interfaces.issue import (
         Issue,
         IssueHandlerInterface,
         ReviewThread,

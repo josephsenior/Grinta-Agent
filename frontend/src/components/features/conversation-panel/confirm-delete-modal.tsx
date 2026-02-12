@@ -45,7 +45,7 @@ function ModalHeader({
       </div>
       {description && (
         <div className="card-modern border-error-500/20 bg-error-500/5">
-          <p className="text-base text-foreground font-medium leading-relaxed">
+          <p className="text-base font-medium leading-relaxed">
             {description}
           </p>
         </div>

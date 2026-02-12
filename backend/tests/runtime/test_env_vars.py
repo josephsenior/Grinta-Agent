@@ -4,8 +4,8 @@ import os
 from unittest.mock import patch
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from forge.events.action import CmdRunAction
-from forge.events.observation import CmdOutputObservation
+from backend.events.action import CmdRunAction
+from backend.events.observation import CmdOutputObservation
 
 
 def test_env_vars_os_environ(temp_dir, runtime_cls, run_as_Forge):
@@ -63,7 +63,7 @@ def test_env_vars_added_by_config(temp_dir, runtime_cls):
 
 
 def test_local_runtime_env_vars_persist_after_restart(temp_dir):
-    from forge.runtime.impl.local.local_runtime_inprocess import LocalRuntime
+    from backend.runtime.drivers.local.local_runtime_inprocess import LocalRuntime
 
     runtime, config = _load_runtime(temp_dir, LocalRuntime)
     runtime.add_env_vars({"GITHUB_TOKEN": "test_token"})

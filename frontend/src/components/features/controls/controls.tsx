@@ -1,6 +1,7 @@
 import React from "react";
 import { AgentControlBar } from "./agent-control-bar";
 import { AgentStatusBar } from "./agent-status-bar";
+import { BudgetIndicator } from "./budget-indicator";
 import { SecurityLock } from "./security-lock";
 import { useActiveConversation } from "#/hooks/query/use-active-conversation";
 import { useConversationId } from "#/hooks/use-conversation-id";
@@ -21,6 +22,7 @@ export function Controls({ showSecurityLock }: ControlsProps) {
       <div className="flex items-center gap-2">
         <AgentControlBar />
         <AgentStatusBar />
+        <BudgetIndicator />
 
         {showSecurityLock && <SecurityLock />}
       </div>

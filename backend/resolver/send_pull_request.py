@@ -12,20 +12,21 @@ from typing import TYPE_CHECKING
 import jinja2
 from pydantic import SecretStr
 
-from forge.core.config import LLMConfig
-from forge.core.logger import forge_logger as logger
-from forge.integrations.service_types import ProviderType
-from forge.llm.llm import LLM
-from forge.resolver.interfaces.github import GithubIssueHandler
-from forge.resolver.interfaces.issue_definitions import ServiceContextIssue
-from forge.resolver.io_utils import load_single_resolver_output
-from forge.resolver.patching import apply_diff, parse_patch
-from forge.resolver.utils import identify_token
-from forge.utils.async_utils import GENERAL_TIMEOUT, call_async_from_sync
+from backend.core.config import LLMConfig
+from backend.core.logger import forge_logger as logger
+from backend.integrations.service_types import ProviderType
+from backend.models.llm import LLM
+from backend.resolver.interfaces.github import GithubIssueHandler
+from backend.resolver.interfaces.issue_definitions import ServiceContextIssue
+from backend.resolver.io_utils import load_single_resolver_output
+from backend.resolver.patching import apply_diff, parse_patch
+from backend.resolver.utils import identify_token
+from backend.core.constants import GENERAL_TIMEOUT
+from backend.utils.async_utils import call_async_from_sync
 
 if TYPE_CHECKING:
-    from forge.resolver.interfaces.issue import Issue
-    from forge.resolver.resolver_output import ResolverOutput
+    from backend.resolver.interfaces.issue import Issue
+    from backend.resolver.resolver_output import ResolverOutput
 
 
 def _normalize_path(repo_dir: str, path: str | None) -> str | None:

@@ -6,13 +6,10 @@ import viteTsconfigPaths from "vite-tsconfig-paths";
 import svgr from "vite-plugin-svgr";
 import tailwindcss from "@tailwindcss/vite";
 import fixManifestPlugin from "./vite-plugin-fix-manifest.js";
-import reactRouterPlugin from "./scripts/react-router-plugin-wrapper.mjs";
 
 export default defineConfig(({ mode }) => {
   const envVars = loadEnv(mode, process.cwd());
-  // Disable React Router plugin for pure SPA mode (no SSR)
-  const PURE_SPA = true;
-
+  
   const {
     VITE_BACKEND_HOST = "127.0.0.1:3000",
     VITE_USE_TLS = "false",
@@ -143,7 +140,7 @@ export default defineConfig(({ mode }) => {
               return "conversation";
             if (id.includes("src/routes/settings")) return "settings";
             if (id.includes("src/routes/database-browser")) return "database-browser";
-            if (id.includes("src/routes/microagent-management")) return "microagent";
+            if (id.includes("src/routes/playbook-management")) return "playbook";
             
             // Component-based splitting
             if (id.includes("src/components/features/chat") && !id.includes("__tests__")) 
@@ -177,8 +174,6 @@ export default defineConfig(({ mode }) => {
       dedupe: ["react", "react-dom", "react-router", "react-router-dom", "react-redux", "@reduxjs/toolkit"],
     },
     plugins: [
-      // Disable react-router plugin for pure SPA builds to avoid any SSR/prerender paths
-      PURE_SPA ? null : reactRouterPlugin,
       fixManifestPlugin(),
       viteTsconfigPaths(),
       svgr(),
@@ -190,7 +185,6 @@ export default defineConfig(({ mode }) => {
       exclude: ["mermaid"], // Exclude mermaid to avoid circular dependency errors
       include: [
         "react-redux",
-        "posthog-js",
         "@tanstack/react-query",
         "react-hot-toast",
         "@reduxjs/toolkit",

@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { createPortal } from "react-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ForgeAction } from "#/types/core/actions";
 import { ForgeObservation } from "#/types/core/observations";
 import {
@@ -132,6 +133,8 @@ interface MessagesProps {
   showTechnicalDetails?: boolean;
   onAskAboutCode?: (code: string) => void;
   onRunCode?: (code: string, language: string) => void;
+  /** Scroll container ref for virtualisation. When provided the turn list is virtualised. */
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
 // Type definitions for helper functions
@@ -466,6 +469,7 @@ export const Messages: React.FC<MessagesProps> = React.memo(
     showTechnicalDetails = false,
     onAskAboutCode,
     onRunCode,
+    scrollContainerRef,
   }) => {
     const { getOptimisticUserMessage } = useOptimisticUserMessage();
     const { conversationId } = useConversationId();
@@ -517,6 +521,65 @@ export const Messages: React.FC<MessagesProps> = React.memo(
       t,
     };
 
+    // ── Virtualised turn list ────────────────────────────────────
+    const virtualizer = useVirtualizer({
+      count: turns.length,
+      getScrollElement: () => scrollContainerRef?.current ?? null,
+      estimateSize: () => 120, // rough average turn height
+      overscan: 8,
+    });
+
+    const canVirtualize =
+      scrollContainerRef?.current != null && turns.length > 30;
+
+    if (canVirtualize) {
+      return (
+        <>
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const turn = turns[virtualRow.index];
+              return (
+                <div
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  {renderTurn({
+                    turn,
+                    turnIndex: virtualRow.index,
+                    context: renderContext,
+                  })}
+                </div>
+              );
+            })}
+          </div>
+
+          {optimisticUserMessage && (
+            <ChatMessage
+              type="user"
+              message={optimisticUserMessage}
+              onAskAboutCode={onAskAboutCode}
+              onRunCode={onRunCode}
+            />
+          )}
+        </>
+      );
+    }
+
+    // ── Fallback: plain rendering for short conversations ──────
     return (
       <>
         {turns.map((turn: Turn, turnIndex: number) =>

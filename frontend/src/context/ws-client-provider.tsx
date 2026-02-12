@@ -1,5 +1,4 @@
-import React from "react";
-import { flushSync } from "react-dom";
+import React, { startTransition } from "react";
 import { io, Socket } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
 import EventLogger from "#/utils/event-logger";
@@ -37,12 +36,27 @@ import { logger } from "#/utils/logger";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { AgentState } from "#/types/agent-state";
 
-export type WebSocketStatus = "CONNECTING" | "CONNECTED" | "DISCONNECTED";
+// Extracted utilities
+import {
+  detectPlaywrightRun,
+  shouldEstablishConnection,
+  disconnectExistingSocket,
+  buildSocketQuery,
+  resolveSocketTarget,
+  createSocketConnection,
+  createSyntheticPlaywrightEvents,
+} from "./ws-client-connection";
+import {
+  extractTrajectoryMessageCandidate,
+  logTrajectoryNullCandidate,
+  extractTrajectoryId,
+  markItemAsHydrated,
+  isTrajectoryCandidate,
+  mergeTrajectoryEvents,
+  hydrateTrajectoryState,
+} from "./ws-client-trajectory";
 
-// Helper narrow types to avoid casting to `any` in several runtime checks
-type MaybeProcess = { env?: Record<string, string | undefined> };
-type MaybeImportMeta = { env?: Record<string, unknown> };
-type WindowWithPlaywright = Window & { __Forge_PLAYWRIGHT?: boolean };
+export type WebSocketStatus = "CONNECTING" | "CONNECTED" | "DISCONNECTED";
 
 const hasValidMessageProperty = (obj: unknown): obj is { message: string } =>
   typeof obj === "object" &&
@@ -74,324 +88,6 @@ interface WsClientProviderProps {
   conversationId: string;
 }
 
-function detectPlaywrightRun(): boolean {
-  const hasProcessFlag =
-    typeof process !== "undefined" &&
-    (process as MaybeProcess).env?.PLAYWRIGHT === "1";
-  const hasViteFlag = Boolean(
-    (import.meta as MaybeImportMeta).env?.VITE_PLAYWRIGHT_STUB,
-  );
-  const windowFlag =
-    typeof window !== "undefined" &&
-    (window as WindowWithPlaywright).__Forge_PLAYWRIGHT === true;
-
-  return Boolean(hasProcessFlag || hasViteFlag || windowFlag);
-}
-
-function shouldEstablishConnection(
-  conversation: { status?: string; runtime_status?: unknown } | undefined,
-  isPlaywright: boolean,
-): boolean {
-  if (isPlaywright) {
-    return true;
-  }
-
-  if (!conversation) {
-    return false;
-  }
-
-  const status = conversation.status?.toUpperCase();
-
-  // Allow connection for active conversations (handle both uppercase and lowercase)
-  if (status === "RUNNING" || status === "STARTING") {
-    return true;
-  }
-
-  // Allow connection if runtime_status exists (runtime is available)
-  if (conversation.runtime_status) {
-    return true;
-  }
-
-  // Allow connection for stopped conversations - WebSocket connection is needed
-  // to initialize/restart the runtime, so we should attempt connection even if stopped
-  if (status === "STOPPED") {
-    return true;
-  }
-
-  // For ERROR status, still allow connection - the WebSocket might help recover
-  if (status === "ERROR") {
-    return true;
-  }
-
-  // For other statuses or undefined, be more permissive - allow connection attempts
-  // The backend will reject if it's truly not allowed
-  return true;
-}
-
-function disconnectExistingSocket(ref: React.MutableRefObject<Socket | null>) {
-  const socket = ref.current;
-  if (socket?.connected) {
-    socket.disconnect();
-  }
-}
-
-function buildSocketQuery({
-  conversationId,
-  conversation,
-  providers,
-  lastEvent,
-}: {
-  conversationId: string;
-  conversation: { session_api_key?: string | null } | undefined;
-  providers: unknown;
-  lastEvent: Record<string, unknown> | null;
-}): Record<string, unknown> {
-  const latestEventId = (lastEvent as { id?: unknown } | null)?.id ?? -1;
-  const query: Record<string, unknown> = {
-    latest_event_id: latestEventId,
-    conversation_id: conversationId,
-    providers_set: providers,
-  };
-
-  if (conversation?.session_api_key) {
-    query.session_api_key = conversation.session_api_key;
-  }
-
-  return query;
-}
-
-function resolveSocketTarget(
-  conversation: { url?: string | null } | undefined,
-): { baseUrl: string; socketPath: string } {
-  if (conversation?.url && !conversation.url.startsWith("/")) {
-    try {
-      const url = new URL(conversation.url);
-      const prefix = url.pathname.split("/api/conversations")[0] || "/";
-      const sanitized = prefix.replace(/\/$/, "");
-      return {
-        baseUrl: url.origin,
-        socketPath: `${sanitized}/socket.io`,
-      };
-    } catch {
-      // Fall through to env/proxy-based resolution
-    }
-  }
-
-  // Prefer explicit backend URL from env, otherwise use current origin so that
-  // dev proxy and production hosts behave correctly. This avoids hardcoding
-  // `localhost:3000` which breaks when backend runs on a different port.
-  const envBase =
-    (import.meta.env.VITE_BACKEND_BASE_URL as string | undefined) ||
-    (import.meta.env.VITE_BACKEND_HOST as string | undefined);
-
-  let baseUrl: string;
-  if (envBase && envBase.includes("://")) {
-    baseUrl = envBase;
-  } else if (envBase) {
-    // allow host:port form in env (no protocol)
-    if (typeof window !== "undefined" && window.location) {
-      baseUrl = `${window.location.protocol}//${envBase}`;
-    } else {
-      baseUrl = `http://${envBase}`;
-    }
-  } else if (typeof window !== "undefined" && window.location) {
-    baseUrl = window.location.origin;
-  } else {
-    // Default to backend port used by the local Python server
-    baseUrl = "http://localhost:3000";
-  }
-
-  return { baseUrl, socketPath: "/socket.io" };
-}
-
-function createSocketConnection({
-  baseUrl,
-  socketPath,
-  query,
-}: {
-  baseUrl: string | null;
-  socketPath: string;
-  query: Record<string, unknown>;
-}): Socket {
-  // Check if this is a local connection
-  const isLocal = 
-    baseUrl?.includes("localhost") || 
-    baseUrl?.includes("127.0.0.1") ||
-    (typeof window !== "undefined" && window.location.hostname === "localhost");
-
-  return io(baseUrl ?? undefined, {
-    // For local connections, use websocket directly (skip polling)
-    // For remote connections, allow fallback to polling
-    transports: isLocal ? ["websocket"] : ["websocket", "polling"],
-    path: socketPath,
-    query,
-    // Local connections should be much faster - reduce timeout
-    timeout: isLocal ? 2000 : 20000, // 2 seconds for local, 20 for remote
-    reconnection: true,
-    reconnectionDelay: isLocal ? 100 : 1000, // Faster reconnection for local
-    reconnectionAttempts: 5,
-    forceNew: true,
-    // Skip upgrade process for local - connect directly with websocket
-    upgrade: !isLocal, // Only upgrade for remote connections
-    autoConnect: true,
-    rememberUpgrade: !isLocal, // Don't remember upgrade for local
-  });
-}
-
-function createSyntheticPlaywrightEvents(conversationId: string) {
-  const timestamp = new Date().toISOString();
-  return [
-    {
-      id: "pw-agent-state",
-      source: "system",
-      message: "AWAITING_USER_INPUT",
-      timestamp,
-      observation: "agent_state_change",
-      content: "",
-      extras: { agent_state: "AWAITING_USER_INPUT" },
-    },
-    {
-      id: "pw-session-ready",
-      source: "system",
-      message: "SESSION_READY",
-      timestamp,
-      observation: "session_ready",
-      content: "SESSION_READY",
-      extras: { conversation_id: conversationId },
-    },
-  ] as Record<string, unknown>[];
-}
-
-function extractTrajectoryMessageCandidate(item: Record<string, unknown>) {
-  const messageProp = getProp(item, "message");
-  const contentProp = getProp(item, "content");
-  const argsProp = getProp(item, "args") as Record<string, unknown> | undefined;
-
-  const candidates = [
-    typeof messageProp === "string" ? messageProp : undefined,
-    typeof contentProp === "string" ? contentProp : undefined,
-    typeof argsProp?.content === "string" ? argsProp.content : undefined,
-    typeof argsProp?.command === "string" ? argsProp.command : undefined,
-  ];
-
-  return candidates.find((value): value is string => Boolean(value));
-}
-
-function logTrajectoryNullCandidate(item: Record<string, unknown>) {
-  try {
-    const candidate = extractTrajectoryMessageCandidate(item);
-    if (!candidate) {
-      return;
-    }
-
-    if (candidate.toUpperCase() === "NULL") {
-      logger.warn("Trajectory contains literal 'NULL'", {
-        id: getProp(item, "id"),
-        item,
-      });
-    }
-  } catch (error) {
-    // ignore logging failures
-  }
-}
-
-function extractTrajectoryId(item: Record<string, unknown>): string {
-  const rawId = getProp(item, "id");
-  if (typeof rawId === "string" && rawId.trim().length > 0) {
-    return rawId;
-  }
-  if (typeof rawId === "number" && Number.isFinite(rawId)) {
-    return String(rawId);
-  }
-  return Math.random().toString(36).slice(2, 9);
-}
-
-function markItemAsHydrated(
-  item: Record<string, unknown>,
-  hydratedIds: Set<string>,
-  id: string,
-) {
-  try {
-    // eslint-disable-next-line no-param-reassign
-    (item as Record<string, unknown>).__hydrated = true;
-  } catch (error) {
-    // ignore if flag cannot be set
-  }
-  hydratedIds.add(id);
-}
-
-function isTrajectoryCandidate(item: Record<string, unknown>): boolean {
-  return (
-    "id" in item && "source" in item && "message" in item && "timestamp" in item
-  );
-}
-
-function mergeTrajectoryEvents(
-  prev: (ForgeAction | ForgeObservation)[],
-  trajectory: unknown[],
-  hydratedIds: Set<string>,
-): (ForgeAction | ForgeObservation)[] {
-  const existingIds = new Set(
-    prev.map((event) => String(getProp(event, "id") ?? "")),
-  );
-  const merged = [...prev];
-
-  for (const rawItem of trajectory) {
-    const item = rawItem as Record<string, unknown>;
-    if (item && typeof item === "object") {
-      logTrajectoryNullCandidate(item);
-      const id = extractTrajectoryId(item);
-      if (!existingIds.has(id)) {
-        markItemAsHydrated(item, hydratedIds, id);
-        if (isTrajectoryCandidate(item)) {
-          if (
-            isForgeAction(item as unknown) ||
-            isForgeObservation(item as unknown)
-          ) {
-            merged.push(item as unknown as ForgeParsedEvent);
-            existingIds.add(id);
-          } else {
-            logger.debug("Skipping non-event trajectory item", { id, item });
-          }
-        } else {
-          logger.debug("Skipping incomplete trajectory item", { id, item });
-        }
-      }
-    } else {
-      logger.debug("Skipping non-object trajectory item", { item });
-    }
-  }
-
-  return merged;
-}
-
-async function hydrateTrajectoryState({
-  conversationId,
-  setParsedEvents,
-  hydratedEventIdsRef,
-}: {
-  conversationId: string;
-  setParsedEvents: React.Dispatch<
-    React.SetStateAction<(ForgeAction | ForgeObservation)[]>
-  >;
-  hydratedEventIdsRef: React.MutableRefObject<Set<string>>;
-}) {
-  try {
-    const resp = await Forge.getTrajectory(conversationId);
-    const trajectory = resp?.trajectory ?? [];
-    if (!Array.isArray(trajectory) || trajectory.length === 0) {
-      return;
-    }
-
-    setParsedEvents((prev) =>
-      mergeTrajectoryEvents(prev, trajectory, hydratedEventIdsRef.current),
-    );
-  } catch (error) {
-    // Ignore trajectory hydration failures - UI can still operate with live socket
-    // no-op
-  }
-}
-
 function registerSocketHandlers({
   socket,
   conversationId,
@@ -412,13 +108,16 @@ function registerSocketHandlers({
   setWebSocketStatus: (status: WebSocketStatus) => void;
 }): () => void {
   const reconnectHandler = async () => {
-    const lastEventId = lastEventRef.current?.id ?? -1;
+    const lastEventId = Number(lastEventRef.current?.id ?? -1);
     try {
-      const resp = await Forge.getTrajectory(conversationId);
+      // Pass sinceId to fetch only events we missed during disconnect
+      const resp = await Forge.getTrajectory(conversationId, {
+        sinceId: lastEventId >= 0 ? lastEventId : undefined,
+      });
       const trajectory = resp?.trajectory ?? [];
       const missedEvents = trajectory.filter((item) => {
         const eventId = Number(getProp(item, "id") ?? -1);
-        return Number.isFinite(eventId) && eventId > Number(lastEventId);
+        return Number.isFinite(eventId) && eventId > lastEventId;
       });
 
       if (missedEvents.length > 0) {
@@ -442,6 +141,17 @@ function registerSocketHandlers({
   socket.on("connect_failed", handleError);
   socket.on("disconnect", handleDisconnect);
 
+  // Track reconnection attempts for status feedback
+  const reconnectAttemptHandler = (attempt: number) => {
+    setWebSocketStatus("CONNECTING");
+    if (attempt > 3) {
+      EventLogger.warning(
+        `WebSocket reconnection attempt ${attempt} — backoff active`,
+      );
+    }
+  };
+  socket.io.on("reconnect_attempt", reconnectAttemptHandler);
+
   return () => {
     socket.off("reconnect", reconnectHandler);
     socket.off("connect", handleConnect);
@@ -449,6 +159,7 @@ function registerSocketHandlers({
     socket.off("connect_error", handleError);
     socket.off("connect_failed", handleError);
     socket.off("disconnect", handleDisconnect);
+    socket.io.off("reconnect_attempt", reconnectAttemptHandler);
     socket.disconnect();
   };
 }
@@ -524,6 +235,10 @@ export function updateStatusWhenErrorMessagePresent(data: unknown) {
   }
 }
 
+// Maximum number of raw / parsed events kept in memory per conversation.
+// Older events are dropped from the front when exceeded.
+const MAX_WS_EVENTS = 5_000;
+
 export function WsClientProvider({
   conversationId,
   children,
@@ -585,18 +300,21 @@ export function WsClientProvider({
 
     // 🔄 CRITICAL FIX: Auto-recover from ERROR state when WebSocket connects
     // This handles cases where runtime becomes available after being down
-    import("#/state/agent-slice").then(
-      ({ getCurrentAgentState, setCurrentAgentState }) => {
-        import("#/store").then(({ default: store }) => {
-          const currentState = getCurrentAgentState(store.getState());
-          // Only recover if currently in ERROR state
-          if (currentState === AgentState.ERROR) {
-            // Recover from ERROR state when WebSocket reconnects
-            store.dispatch(setCurrentAgentState(AgentState.LOADING));
-          }
-        });
-      },
-    );
+    Promise.all([
+      import("#/state/agent-slice"),
+      import("#/store"),
+    ])
+      .then(([{ getCurrentAgentState, setCurrentAgentState }, { default: store }]) => {
+        const currentState = getCurrentAgentState(store.getState());
+        // Only recover if currently in ERROR state
+        if (currentState === AgentState.ERROR) {
+          // Recover from ERROR state when WebSocket reconnects
+          store.dispatch(setCurrentAgentState(AgentState.LOADING));
+        }
+      })
+      .catch((error) => {
+        logger.error("Failed to recover agent state:", error);
+      });
   }
 
   const updateLastEventRefFromEvent = React.useCallback(
@@ -611,7 +329,12 @@ export function WsClientProvider({
 
   const appendEvent = React.useCallback(
     (event: Record<string, unknown>) => {
-      setEvents((prevEvents) => [...prevEvents, event]);
+      setEvents((prevEvents) => {
+        const next = [...prevEvents, event];
+        return next.length > MAX_WS_EVENTS
+          ? next.slice(next.length - MAX_WS_EVENTS)
+          : next;
+      });
       updateLastEventRefFromEvent(event);
     },
     [setEvents, updateLastEventRefFromEvent],
@@ -652,7 +375,7 @@ export function WsClientProvider({
 
       const eventId =
         getEventId(event as unknown as Record<string, unknown>) ?? "";
-      flushSync(() => {
+      startTransition(() => {
         setParsedEvents((prevEvents) => {
           const existingIds = new Set(
             prevEvents.map(
@@ -666,7 +389,10 @@ export function WsClientProvider({
             return prevEvents;
           }
 
-          return [...prevEvents, event as ForgeAction | ForgeObservation];
+          const next = [...prevEvents, event as ForgeAction | ForgeObservation];
+          return next.length > MAX_WS_EVENTS
+            ? next.slice(next.length - MAX_WS_EVENTS)
+            : next;
         });
       });
     },
@@ -813,14 +539,18 @@ export function WsClientProvider({
 
     // 🔄 CRITICAL FIX: Reset agent state when switching conversations
     // This prevents ERROR state from persisting across conversations
-    import("#/state/agent-slice").then(({ setCurrentAgentState }) => {
-      import("#/store").then(({ default: store }) => {
-        import("#/types/agent-state").then(({ AgentState }) => {
-          // New conversation - reset agent state
-          store.dispatch(setCurrentAgentState(AgentState.LOADING));
-        });
+    Promise.all([
+      import("#/state/agent-slice"),
+      import("#/store"),
+      import("#/types/agent-state"),
+    ])
+      .then(([{ setCurrentAgentState }, { default: store }, { AgentState }]) => {
+        // New conversation - reset agent state
+        store.dispatch(setCurrentAgentState(AgentState.LOADING));
+      })
+      .catch((error) => {
+        logger.error("Failed to reset agent state:", error);
       });
-    });
   }, [conversationId]);
 
   React.useEffect(() => {
@@ -884,7 +614,12 @@ export function WsClientProvider({
       const { baseUrl, socketPath } = resolveSocketTarget(
         conversation as { url?: string | null } | undefined,
       );
-      const socket = createSocketConnection({ baseUrl, socketPath, query });
+      const socket = createSocketConnection({
+        baseUrl,
+        socketPath,
+        query,
+        sessionApiKey: (conversation as any)?.session_api_key,
+      });
       sioRef.current = socket;
       teardown = registerSocketHandlers({
         socket,
@@ -912,10 +647,6 @@ export function WsClientProvider({
       if (teardown) {
         teardown();
       }
-    };
-
-    return () => {
-      teardown?.();
     };
   }, [
     conversationId,

@@ -41,10 +41,7 @@ function ThemeToggleIcon({
         toggleTheme();
         return undefined;
       }}
-      className={`group relative p-2 rounded-lg transition-all duration-200 ${className}`}
-      style={{
-        color: "var(--text-secondary)",
-      }}
+      className={`group relative p-2 rounded-lg transition-all duration-200 text-[var(--text-secondary)] ${className}`}
       onMouseEnter={(e) => {
         const target = e.currentTarget;
         target.style.color = "var(--text-primary)";
@@ -62,19 +59,17 @@ function ThemeToggleIcon({
     >
       <div className="relative w-5 h-5">
         <Sun
-          className="absolute inset-0 w-5 h-5 transition-all duration-300"
+          className="absolute inset-0 w-5 h-5 transition-all duration-300 text-[#F59E0B]"
           style={{
             opacity: sunOpacity,
             transform: sunTransform,
-            color: "#F59E0B",
           }}
         />
         <Moon
-          className="absolute inset-0 w-5 h-5 transition-all duration-300"
+          className="absolute inset-0 w-5 h-5 transition-all duration-300 text-[var(--text-primary)]"
           style={{
             opacity: moonOpacity,
             transform: moonTransform,
-            color: "var(--text-primary)",
           }}
         />
       </div>

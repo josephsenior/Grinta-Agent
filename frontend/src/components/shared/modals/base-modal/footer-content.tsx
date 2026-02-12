@@ -1,4 +1,4 @@
-import { Button } from "@heroui/react";
+import { Button } from "#/components/ui/button";
 import React from "react";
 
 export interface Action {
@@ -44,8 +44,8 @@ export function FooterContent({ actions, closeModal }: FooterContentProps) {
           <Button
             key={label}
             type="button"
-            isDisabled={isDisabled}
-            onPress={() => {
+            disabled={isDisabled}
+            onClick={() => {
               action();
               if (closeAfterAction) {
                 closeModal();

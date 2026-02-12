@@ -2,7 +2,11 @@
 
 ## Overview
 
-Modern React frontend with 300+ components, real-time WebSocket communication, and production-grade UX.
+Modern React frontend with 300+ components, real-time WebSocket communication, and a polished UX.
+
+## Authentication
+
+Forge OSS uses a session API key for both HTTP and Socket.IO. The single source of truth is [docs/AUTH.md](../docs/AUTH.md).
 
 ## Technology Stack
 
@@ -189,8 +193,8 @@ VITE_POSTHOG_API_KEY=...
 
 ```bash
 npm run dev          # Start dev server
-npm run build        # Production build
-npm run preview      # Preview production build
+npm run build        # Release build
+npm run preview      # Preview release build
 npm run lint         # Run ESLint
 npm run type-check   # Run TypeScript compiler
 ```
@@ -416,7 +420,7 @@ describe('MyComponent', () => {
 npm run dev
 ```
 
-### Production Build
+### Release Build
 
 ```bash
 npm run build
@@ -431,7 +435,7 @@ npm run build
 # Staging
 VITE_API_URL=https://staging-api.Forge.dev npm run build
 
-# Production
+# Hosted
 VITE_API_URL=https://api.Forge.dev npm run build
 ```
 

@@ -5,7 +5,7 @@ import { showErrorToast } from "#/utils/error-handler";
 import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
 import { useWsClient } from "#/context/ws-client-provider";
-import { useNotification } from "#/hooks/useNotification";
+import { useBrowserNotification } from "#/hooks/use-browser-notification";
 import { browserTab } from "#/utils/browser-tab";
 import { useActiveConversation } from "#/hooks/query/use-active-conversation";
 import { getIndicatorColor, getStatusCode } from "#/utils/status";
@@ -35,7 +35,7 @@ export function AgentStatusBar() {
     conversation?.runtime_status || null,
     curAgentState,
   );
-  const { notify } = useNotification();
+  const { notify } = useBrowserNotification();
 
   // Show error toast if required
   React.useEffect(() => {

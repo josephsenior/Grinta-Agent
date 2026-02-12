@@ -157,13 +157,7 @@ const renderInlineCode = ({
   isComplete: boolean;
 }) => (
   <code
-    style={{
-      backgroundColor: "#2a3038",
-      padding: "0.2em 0.4em",
-      borderRadius: "4px",
-      color: "#e6edf3",
-      border: "1px solid #30363d",
-    }}
+    className="bg-[#2a3038] px-[0.4em] py-[0.2em] rounded text-[#e6edf3] border border-[#30363d]"
   >
     {displayedCode}
     {!isComplete && <TypingCursor />}
@@ -311,14 +305,9 @@ const renderPlainBlock = ({
       />
     )}
     <pre
+      className="bg-[#2a3038] p-[1em] rounded text-[#e6edf3] border border-[#30363d] overflow-auto"
       style={{
-        backgroundColor: "#2a3038",
-        padding: "1em",
         paddingTop: isComplete ? "2.5em" : "1em",
-        borderRadius: "4px",
-        color: "#e6edf3",
-        border: "1px solid #30363d",
-        overflow: "auto",
       }}
     >
       <code>

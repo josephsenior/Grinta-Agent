@@ -21,7 +21,7 @@ import { Badge } from "#/components/ui/badge";
 import { cn } from "#/utils/utils";
 import { ForgeAction, ForgeObservation } from "#/types/core";
 import { isUserMessage, isAssistantMessage } from "#/types/core/guards";
-import ClientTimeDelta from "#/components/shared/ClientTimeDelta";
+import ClientTimeDelta from "#/components/shared/client-time-delta";
 import { useConversationSearch } from "./conversation-search/hooks/use-conversation-search";
 import { SearchFilter } from "./conversation-search/types";
 

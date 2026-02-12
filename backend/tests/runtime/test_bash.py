@@ -6,11 +6,11 @@ import time
 from pathlib import Path
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from forge.core.logger import forge_logger as logger
-from forge.events.action import CmdRunAction
-from forge.events.observation import CmdOutputObservation, ErrorObservation
-from forge.runtime.impl.local.local_runtime_inprocess import LocalRuntime
-from forge.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
+from backend.core.logger import forge_logger as logger
+from backend.events.action import CmdRunAction
+from backend.events.observation import CmdOutputObservation, ErrorObservation
+from backend.runtime.drivers.local.local_runtime_inprocess import LocalRuntime
+from backend.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
 
 
 def get_timeout_suffix(timeout_seconds):

@@ -2,6 +2,7 @@
 public/locales/**/*
 src/i18n/declaration.ts
 .env
+.env.local
 node_modules/
 /test-results/
 /playwright-report/

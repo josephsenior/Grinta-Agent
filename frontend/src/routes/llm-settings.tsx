@@ -72,7 +72,7 @@ const getSecurityAnalyzerOptions = (
 
 const getAgentOptions = (agent?: string) => {
   const defaults = [
-    { key: "CodeActAgent", label: "CodeActAgent" },
+    { key: "Orchestrator", label: "Orchestrator" },
     { key: "CoActAgent", label: "CoActAgent" },
   ];
 

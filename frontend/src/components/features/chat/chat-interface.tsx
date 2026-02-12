@@ -12,6 +12,7 @@ import { EmptyState } from "./empty-state";
 import { MessageSkeleton } from "./message-skeleton";
 import { ConversationSearch } from "./conversation-search";
 import { ErrorMessageBanner } from "./error-message-banner";
+import { ConnectionStatusBanner } from "./connection-status-banner";
 import { Button } from "#/components/ui/button";
 import { StatusIndicator } from "./status-indicator";
 import { AgentControlBar } from "#/components/features/controls/agent-control-bar";
@@ -212,6 +213,7 @@ function ChatMessagesSection({
             showTechnicalDetails={showTechnicalDetails}
             onAskAboutCode={onAskAboutCode}
             onRunCode={onRunCode}
+            scrollContainerRef={scrollRef}
           />
         )}
       </div>
@@ -458,6 +460,8 @@ export function ChatInterface() {
             hitBottom={hitBottom}
             scrollDomToBottom={scrollDomToBottom}
           />
+
+          <ConnectionStatusBanner />
 
           <div className="flex-1 flex flex-col min-h-0">
             <ChatStatusBanner lastEvent={lastEvent} />

@@ -4,6 +4,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { logger } from "../utils/logger";
+import { getCurrentConversation } from "#/api/forge-helpers";
 
 // Resolve backend base URL robustly for dev/prod:
 function resolveBackendBase(): string {
@@ -32,7 +33,21 @@ export const Forge = axios.create({
   baseURL: resolveBackendBase(),
 });
 
-// Set up the global interceptor
+// ---------------------------------------------------------------------------
+// Request interceptor — auto-inject X-Session-API-Key on every request
+// ---------------------------------------------------------------------------
+Forge.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const conversation = getCurrentConversation();
+    const sessionApiKey = conversation?.session_api_key;
+    if (sessionApiKey && !config.headers.get("X-Session-API-Key")) {
+      config.headers.set("X-Session-API-Key", sessionApiKey);
+    }
+    return config;
+  },
+);
+
+// Set up the global response interceptor
 Forge.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
@@ -55,16 +70,25 @@ Forge.interceptors.response.use(
 
     if (error.response?.status === 503 && errorCode !== "RUNTIME_NOT_READY") {
       // Dynamically import to avoid circular dependencies
-      import("#/state/agent-slice").then(({ setCurrentAgentState }) => {
-        import("#/store").then(({ default: store }) => {
-          import("#/types/agent-state").then(({ AgentState }) => {
-            logger.error(
-              "🔴 Runtime unavailable (503), setting agent to ERROR state",
-            );
-            store.dispatch(setCurrentAgentState(AgentState.ERROR));
-          });
+      import("#/state/agent-slice")
+        .then(({ setCurrentAgentState }) => {
+          return Promise.all([
+            setCurrentAgentState,
+            import("#/store"),
+            import("#/types/agent-state"),
+          ]);
+        })
+        .then(([setCurrentAgentState, storeModule, agentStateModule]) => {
+          logger.error(
+            "🔴 Runtime unavailable (503), setting agent to ERROR state",
+          );
+          storeModule.default.dispatch(
+            setCurrentAgentState(agentStateModule.AgentState.ERROR),
+          );
+        })
+        .catch((importError) => {
+          logger.error("Failed to set agent ERROR state:", importError);
         });
-      });
     }
 
     // Continue with the error for other error handlers

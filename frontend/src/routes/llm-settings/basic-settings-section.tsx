@@ -5,6 +5,7 @@ import { SettingsInput } from "#/components/features/settings/settings-input";
 import { HelpLink } from "#/components/features/settings/help-link";
 import { KeyStatusIcon } from "#/components/features/settings/key-status-icon";
 import { I18nKey } from "#/i18n/declaration";
+import { DOCUMENTATION_URL } from "#/constants/app";
 import type { Settings } from "#/types/settings";
 
 export interface BasicSettingsSectionProps {
@@ -70,7 +71,7 @@ export function BasicSettingsSection({
           testId="llm-api-key-help-anchor"
           text={t(I18nKey.SETTINGS$DONT_KNOW_API_KEY)}
           linkText={t(I18nKey.SETTINGS$CLICK_FOR_INSTRUCTIONS)}
-          href="https://docs.forge.dev/usage/local-setup#getting-an-api-key"
+          href={DOCUMENTATION_URL.LOCAL_SETUP_API_KEY}
         />
       </div>
     </div>

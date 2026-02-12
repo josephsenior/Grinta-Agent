@@ -1,3 +1,4 @@
+import { DOCUMENTATION_URL } from "#/constants/app";
 import { useTranslation } from "react-i18next";
 import DocsIcon from "#/icons/academy.svg?react";
 import { I18nKey } from "#/i18n/declaration";
@@ -13,7 +14,7 @@ export function DocsButton({ disabled = false }: DocsButtonProps) {
     <TooltipButton
       tooltip={t(I18nKey.SIDEBAR$DOCS)}
       ariaLabel={t(I18nKey.SIDEBAR$DOCS)}
-      href="https://docs.forge.dev"
+      href={DOCUMENTATION_URL.HOME}
       disabled={disabled}
     >
       <DocsIcon

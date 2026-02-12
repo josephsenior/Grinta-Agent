@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
-import { FaTrash, FaEye, FaEyeSlash, FaCopy } from "react-icons/fa6";
+import { Trash2, Eye, EyeOff, Copy } from "lucide-react";
 import { I18nKey } from "#/i18n/declaration";
 import { BrandButton } from "#/components/features/settings/brand-button";
 import { LoadingSpinner } from "#/components/shared/loading-spinner";
@@ -12,12 +12,13 @@ import {
 import { CreateApiKeyModal } from "./create-api-key-modal";
 import { DeleteApiKeyModal } from "./delete-api-key-modal";
 import { NewApiKeyModal } from "./new-api-key-modal";
+import { DOCUMENTATION_URL } from "#/constants/app";
 import { useApiKeys } from "#/hooks/query/use-api-keys";
 import {
   useLlmApiKey,
   useRefreshLlmApiKey,
 } from "#/hooks/query/use-llm-api-key";
-import ClientFormattedDate from "#/components/shared/ClientFormattedDate";
+import ClientFormattedDate from "#/components/shared/client-formatted-date";
 
 interface LlmApiKeyManagerProps {
   llmApiKey: { key: string | null } | undefined;
@@ -104,9 +105,9 @@ function LlmApiKeyManager({
                   onClick={() => setShowLlmApiKey(!showLlmApiKey)}
                 >
                   {showLlmApiKey ? (
-                    <FaEyeSlash size={20} />
+                    <EyeOff size={20} />
                   ) : (
-                    <FaEye size={20} />
+                    <Eye size={20} />
                   )}
                 </button>
               )}
@@ -122,7 +123,7 @@ function LlmApiKeyManager({
                   }
                 }}
               >
-                <FaCopy size={20} />
+                <Copy size={20} />
               </button>
             </div>
           </div>
@@ -182,7 +183,7 @@ function ApiKeysTable({ apiKeys, isLoading, onDeleteKey }: ApiKeysTableProps) {
         <tbody className="divide-y divide-brand-500/15">
           {apiKeys.map((key) => (
             <tr key={key.id} className="hover:bg-brand-500/5 transition-colors">
-              <td className="px-4 py-3 truncate max-w-[240px]" title={key.name}>
+              <td className="px-4 py-3 truncate max-w-60" title={key.name}>
                 {key.name}
               </td>
               <td className="px-4 py-3">{formatDate(key.created_at)}</td>
@@ -194,7 +195,7 @@ function ApiKeysTable({ apiKeys, isLoading, onDeleteKey }: ApiKeysTableProps) {
                   aria-label={`Delete ${key.name}`}
                   className="cursor-pointer text-foreground-secondary hover:text-foreground"
                 >
-                  <FaTrash size={16} />
+                  <Trash2 size={16} />
                 </button>
               </td>
             </tr>
@@ -276,7 +277,7 @@ export function ApiKeysManager() {
             components={{
               a: (
                 <a
-                  href="https://docs.forge.dev/usage/cloud/cloud-api"
+                  href={DOCUMENTATION_URL.CLOUD_API}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-violet-500 hover:text-brand-400 hover:underline transition-colors duration-200"

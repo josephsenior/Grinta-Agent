@@ -9,7 +9,7 @@ import streamingReducer, {
   selectStreamContent,
   selectIsStreaming,
   selectStreamError,
-} from "#/store/streaming-slice";
+} from "#/state/streaming-slice";
 import type { RootState } from "#/store";
 
 describe("streamingSlice", () => {

@@ -3,7 +3,7 @@ import ReactJsonView from "@microlink/react-json-view";
 import { useTranslation } from "react-i18next";
 import { MCPObservation } from "#/types/core/observations";
 import { hasExtras } from "#/types/core/guards";
-import { JSON_VIEW_THEME } from "#/utils/constants";
+import { JSON_VIEW_THEME } from "#/constants/app";
 import { I18nKey } from "#/i18n/declaration";
 
 function parseObservationOutput(content: unknown) {

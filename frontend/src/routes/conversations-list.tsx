@@ -11,7 +11,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { I18nKey } from "#/i18n/declaration";
-import ClientFormattedDate from "#/components/shared/ClientFormattedDate";
+import ClientFormattedDate from "#/components/shared/client-formatted-date";
 import { usePaginatedConversations } from "#/hooks/query/use-paginated-conversations";
 import { useCreateConversation } from "#/hooks/mutation/use-create-conversation";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";

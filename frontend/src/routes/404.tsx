@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Home, ArrowLeft } from "lucide-react";
 import { Button } from "#/components/ui/button";
-import { SEO } from "#/components/shared/SEO";
+import { SEO } from "#/components/shared/seo";
 
 export default function NotFound() {
   const { t } = useTranslation();

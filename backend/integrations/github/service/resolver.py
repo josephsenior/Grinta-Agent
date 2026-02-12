@@ -5,14 +5,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from forge.core.logger import forge_logger as logger
-from forge.integrations.github.queries import (
+from backend.core.logger import forge_logger as logger
+from backend.integrations.github.queries import (
     get_review_threads_graphql_query,
     get_thread_comments_graphql_query,
     get_thread_from_comment_graphql_query,
 )
-from forge.integrations.github.service.base import GitHubMixinBase
-from forge.integrations.service_types import Comment
+from backend.integrations.github.service.base import GitHubMixinBase
+from backend.integrations.service_types import Comment
 
 
 class GitHubResolverMixin(GitHubMixinBase):

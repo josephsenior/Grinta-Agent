@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from forge.resolver.issue_resolver import IssueResolver
+from backend.resolver.issue_resolver import IssueResolver
 
 
 def main() -> None:

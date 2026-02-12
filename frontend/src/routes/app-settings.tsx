@@ -88,7 +88,6 @@ function useAppSettingsController(t: TFunction): AppSettingsController {
 
   const formAction = React.useCallback(
     (formData: FormData) => {
-      console.log("[formAction] formData entries:", Array.from(formData.entries()));
       const languageLabel = formData.get("language-input")?.toString();
       const languageValue = AvailableLanguages.find(
         ({ label }) => label === languageLabel,

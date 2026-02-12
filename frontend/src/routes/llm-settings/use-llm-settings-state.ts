@@ -40,7 +40,7 @@ export function useLlmSettingsState({
     normalizeSecurityAnalyzerSelection(settings?.SECURITY_ANALYZER),
   );
   const [agentValue, setAgentValue] = useState(
-    settings?.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "CodeActAgent",
+    settings?.AGENT ?? DEFAULT_SETTINGS.AGENT ?? "Orchestrator",
   );
   const [enableDefaultCondenser, setEnableDefaultCondenser] = useState(
     settings?.ENABLE_DEFAULT_CONDENSER ??

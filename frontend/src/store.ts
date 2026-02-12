@@ -9,8 +9,8 @@ import securityAnalyzerReducer from "./state/security-analyzer-slice";
 import statusReducer from "./state/status-slice";
 import metricsReducer from "./state/metrics-slice";
 import eventMessageReducer from "./state/event-message-slice";
-import streamingReducer from "./store/streaming-slice";
-import notificationsReducer from "./store/notifications-slice";
+import streamingReducer from "./state/streaming-slice";
+import notificationsReducer from "./state/notifications-slice";
 
 export const rootReducer = combineReducers({
   fileState: fileStateReducer,

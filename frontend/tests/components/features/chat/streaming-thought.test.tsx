@@ -8,7 +8,7 @@ import streamingReducer, {
   startStream,
   appendStreamChunk,
   completeStream,
-} from "#/store/streaming-slice";
+} from "#/state/streaming-slice";
 
 // Ensure components detect test environment and fast-path streaming
 (process.env as any).NODE_ENV = "test";

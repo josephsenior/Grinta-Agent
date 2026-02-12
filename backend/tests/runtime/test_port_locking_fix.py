@@ -2,7 +2,7 @@
 
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from forge.runtime.utils.port_lock import PortLock, find_available_port_with_lock
+from backend.runtime.utils.port_lock import PortLock, find_available_port_with_lock
 
 
 class TestPortLockingFix:
@@ -133,7 +133,7 @@ class TestPortLockingFix:
 
     def test_port_allocation_without_locking_shows_race_condition(self):
         """Test that demonstrates race condition without locking."""
-        from forge.runtime.utils import find_available_tcp_port
+        from backend.runtime.utils import find_available_tcp_port
 
         allocated_ports = []
 

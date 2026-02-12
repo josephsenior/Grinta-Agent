@@ -13,22 +13,22 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from forge.controller.agent_controller import AgentController
-from forge.controller.autonomy import AutonomyLevel
-from forge.controller.error_recovery import ErrorRecoveryStrategy, ErrorType
-from forge.controller.safety_validator import SafetyValidator, ExecutionContext
-from forge.controller.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
-from forge.events.action import CmdRunAction, ActionSecurityRisk, AgentFinishAction
-from forge.security.command_analyzer import CommandAnalyzer
-from forge.security.safety_config import SafetyConfig
-from forge.validation.task_validator import (
+from backend.controller.agent_controller import AgentController
+from backend.controller.autonomy import AutonomyLevel
+from backend.controller.error_recovery import ErrorRecoveryStrategy, ErrorType
+from backend.controller.safety_validator import SafetyValidator, ExecutionContext
+from backend.controller.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
+from backend.events.action import CmdRunAction, ActionSecurityRisk, PlaybookFinishAction
+from backend.security.command_analyzer import CommandAnalyzer
+from backend.security.safety_config import SafetyConfig
+from backend.validation.task_validator import (
     Task,
     TestPassingValidator,
     GitDiffValidator,
     CompositeValidator,
 )
-from forge.core.config import AgentConfig
-from forge.controller.state.state import State
+from backend.core.config import AgentConfig
+from backend.controller.state.state import State
 
 
 class TestCommandRiskDetection:
@@ -321,7 +321,7 @@ class TestSemanticStuckDetection:
 
     def test_detects_low_diversity_high_failure(self):
         """Test detection of semantic loops."""
-        from forge.controller.stuck import StuckDetector
+        from backend.controller.stuck import StuckDetector
 
         # Create mock state with semantic loop
         state = MagicMock()

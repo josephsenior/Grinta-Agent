@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from dataclasses import dataclass
 
-from forge.resolver.interfaces.issue import Issue
+from backend.resolver.interfaces.issue import Issue
 
 
 @dataclass

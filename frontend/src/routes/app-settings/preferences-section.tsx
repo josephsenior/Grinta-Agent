@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { SettingsSwitch } from "#/components/features/settings/settings-switch";
 import { I18nKey } from "#/i18n/declaration";
-import { Accordion } from "#/components/features/settings/Accordion";
-import { SettingCard } from "#/components/features/settings/SettingCard";
+import { Accordion } from "#/components/features/settings/accordion";
+import { SettingCard } from "#/components/features/settings/setting-card";
 
 interface PreferencesSectionProps {
   enableAnalytics: boolean;
@@ -123,7 +123,7 @@ export function PreferencesSection({
         </SettingCard>
 
         {!isSaas && (
-          <p className="text-xs text-[var(--text-tertiary)] mt-2">
+          <p className="text-xs text-(--text-tertiary) mt-2">
             {t(I18nKey.SETTINGS$SAAS_ONLY_CONTROLS_NOTE)}
           </p>
         )}

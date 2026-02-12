@@ -2,6 +2,8 @@
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Node
 frontend/node_modules/
@@ -22,6 +24,10 @@ frontend/tmp_trace_extract/
 
 # Secrets
 .env
+.env.local
+.jwt_secret
+~/
+backend/~/  # Never commit JWT secrets or sensitive backend configs
 
 # local venv created during snapshot work
 .venv2/
@@ -42,12 +48,16 @@ tmp_*.txt
 tmp_*.ini
 tmp_*.py
 temp_*.py
+test_*.txt
+debug_*.txt
+debug_*.py
 
 diag_*.txt
 
 # Runtime user data
 backend/prompts/
 backend/snippets/
+backend/workspace/
 workspace/users/
 workspace/sessions/
 
@@ -64,14 +74,6 @@ htmlcov/
 .ruff_cache/
 .tox/
 
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
 # Debug/error logs
 *.out
 tsc_errors*.txt
-
-.env.local

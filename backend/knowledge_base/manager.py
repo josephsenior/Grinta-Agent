@@ -8,14 +8,14 @@ import asyncio
 from contextlib import contextmanager
 from typing import Any
 
-from forge.memory.enhanced_vector_store import EnhancedVectorStore
-from forge.storage.data_models.knowledge_base import (
+from backend.memory.enhanced_vector_store import EnhancedVectorStore
+from backend.storage.data_models.knowledge_base import (
     DocumentChunk,
     KnowledgeBaseCollection,
     KnowledgeBaseDocument,
     KnowledgeBaseSearchResult,
 )
-from forge.storage.knowledge_base_store import get_knowledge_base_store
+from backend.storage.knowledge_base_store import get_knowledge_base_store
 
 logger = logging.getLogger(__name__)
 

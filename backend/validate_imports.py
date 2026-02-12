@@ -7,9 +7,14 @@ missing dependencies or modules before runtime.
 import sys
 from pathlib import Path
 
-# Add backend to path
-backend_dir = Path(__file__).parent
-sys.path.insert(0, str(backend_dir))
+# When running as a script, python adds the script's dir to sys.path[0].
+# This causes issues because 'backend' contains 'mcp', shadowing the 'mcp' library.
+# We must remove the script's dir (backend/) from sys.path.
+backend_dir = Path(__file__).resolve().parent
+sys.path = [p for p in sys.path if Path(p).resolve() != backend_dir]
+
+# Add project root to path (so 'backend' package is importable)
+sys.path.insert(0, str(backend_dir.parent))
 
 errors = []
 warnings = []
@@ -38,36 +43,31 @@ def main():
     
     # Core imports
     print("Checking core modules...")
-    try_import("forge.server.app", "Main FastAPI app")
-    try_import("forge.server.listen", "Server entry point")
+    try_import("backend.server.app", "Main FastAPI app")
+    try_import("backend.server.listen", "Server entry point")
     
     # Route imports (from app.py)
     print("\nChecking route modules...")
     routes_to_check = [
-        ("forge.server.routes.conversation", "Conversation routes"),
-        ("forge.server.routes.features", "Features routes"),
-        ("forge.server.routes.feedback", "Feedback routes"),
-        ("forge.server.routes.files", "File routes"),
-        ("forge.server.routes.git", "Git routes"),
-        ("forge.server.routes.global_export", "Export routes"),
-        ("forge.server.routes.knowledge_base", "Knowledge base routes"),
-        ("forge.server.routes.manage_conversations", "Manage conversations routes"),
-        ("forge.server.routes.memory", "Memory routes"),
-        ("forge.server.routes.monitoring", "Monitoring routes"),
-        ("forge.server.routes.public", "Public API routes"),
-        ("forge.server.routes.secrets", "Secrets routes"),
-        ("forge.server.routes.settings", "Settings routes"),
-        ("forge.server.routes.templates", "Templates routes"),
-        ("forge.server.routes.trajectory", "Trajectory routes"),
-        ("forge.server.routes.dashboard", "Dashboard routes"),
-        ("forge.server.routes.profile", "Profile routes"),
-        ("forge.server.routes.notifications", "Notifications routes"),
-        ("forge.server.routes.search", "Search routes"),
-        ("forge.server.routes.activity", "Activity routes"),
-        ("forge.server.routes.mcp", "MCP routes"),
-        ("forge.server.routes.auth", "Auth routes"),
-        ("forge.server.routes.user_management", "User management routes"),
-        ("forge.server.routes.billing", "Billing routes"),
+        ("backend.server.routes.conversation", "Conversation routes"),
+        ("backend.server.routes.features", "Features routes"),
+        ("backend.server.routes.feedback", "Feedback routes"),
+        ("backend.server.routes.files", "File routes"),
+        ("backend.server.routes.git", "Git routes"),
+        ("backend.server.routes.global_export", "Export routes"),
+        ("backend.server.routes.knowledge_base", "Knowledge base routes"),
+        ("backend.server.routes.manage_conversations", "Manage conversations routes"),
+        ("backend.server.routes.memory", "Memory routes"),
+        ("backend.server.routes.monitoring", "Monitoring routes"),
+        ("backend.server.routes.public", "Public API routes"),
+        ("backend.server.routes.secrets", "Secrets routes"),
+        ("backend.server.routes.settings", "Settings routes"),
+        ("backend.server.routes.templates", "Templates routes"),
+        ("backend.server.routes.trajectory", "Trajectory routes"),
+        ("backend.server.routes.profile", "Profile routes"),
+        ("backend.server.routes.notifications", "Notifications routes"),
+        ("backend.server.routes.search", "Search routes"),
+        ("backend.server.routes.mcp", "MCP routes"),
     ]
     
     for module_name, description in routes_to_check:
@@ -93,3 +93,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+

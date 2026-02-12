@@ -6,6 +6,18 @@
 #
 ##############################################################################
 
+################################ Security ####################################
+# Authentication and authorization settings (OSS Mode)
+##############################################################################
+[security]
+# Unique key for session management (replaces password login)
+# If not set, the server will log a warning and use a default 'dev' key
+# Provide this key in the 'X-Session-API-Key' header
+# IMPORTANT: Change this key before deploying to any shared/public environment.
+# If left empty or removed, the server will auto-generate a secure random key
+# and persist it to .env.local on first startup.
+# session_api_key = ""
+
 #################################### Core ####################################
 # General core configurations
 ##############################################################################
@@ -46,8 +58,9 @@
 # Enable the browser environment
 #enable_browser = true
 
-# Maximum budget per task, 0.0 means no limit
-#max_budget_per_task = 0.0
+# Maximum LLM cost (USD) per task. Default $5.00 prevents runaway costs.
+# Set to 0 for no limit (not recommended for unattended sessions).
+max_budget_per_task = 5.0
 
 # Maximum number of iterations
 #max_iterations = 500
@@ -59,7 +72,7 @@
 #runtime = "local"
 
 # Name of the default agent
-#default_agent = "CodeActAgent"
+#default_agent = "Orchestrator"
 
 # JWT secret for authentication
 #jwt_secret = ""
@@ -204,14 +217,14 @@ correct_num = 5
 
 [llm.gpt4o-mini]
 api_key = ""
-model = "gpt-4o"
+model = "gpt-4o-mini"
 
 
 #################################### Agent ###################################
 # Configuration for agents (group name starts with 'agent')
 # Use 'agent' for the default agent config
 # otherwise, group name must be `agent.<agent_name>` (case-sensitive), e.g.
-# agent.CodeActAgent
+# agent.Orchestrator
 ##############################################################################
 [agent]
 
@@ -239,11 +252,11 @@ enable_finish = true
 # LLM config group to use
 #llm_config = 'your-llm-config-group'
 
-# Whether to use prompt extension (e.g., microagent, repo/runtime info) at all
+# Whether to use prompt extension (e.g., playbook, repo/runtime info) at all
 #enable_prompt_extensions = true
 
-# List of microagents to disable
-#disabled_microagents = []
+# List of playbooks to disable
+#disabled_playbooks = []
 
 # Whether history should be truncated to continue the session when hitting LLM context
 # length limit
@@ -251,6 +264,14 @@ enable_history_truncation = true
 
 # Whether the condensation request tool is enabled
 enable_condensation_request = false
+
+# Safety: Auto-pause the agent after repeated failures (5 consecutive errors,
+# 3 stuck detections, 10 high-risk actions). Disable only for debugging.
+enable_circuit_breaker = true
+
+# Safety: When the iteration/budget limit is hit, give the agent one final turn
+# to save work and summarize progress. Highly recommended for long sessions.
+enable_graceful_shutdown = true
 
 [agent.RepoExplorerAgent]
 # Example: use a cheaper model for RepoExplorerAgent to reduce cost, especially
@@ -300,13 +321,14 @@ classpath = "my_package.my_module.MyCustomAgent"
 ##############################################################################
 [condenser]
 # The type of condenser to use. Available options:
-# - "noop": No condensing, keeps full history (default)
+# - "smart": Adaptive condensing that preserves important context (default)
+# - "noop": No condensing, keeps full history (use for debugging)
 # - "observation_masking": Keeps full event structure but masks older observations
 # - "recent": Keeps only recent events and discards older ones
 # - "llm": Uses an LLM to summarize conversation history
 # - "amortized": Intelligently forgets older events while preserving important context
 # - "llm_attention": Uses an LLM to prioritize most relevant context
-type = "noop"
+type = "smart"
 
 # Examples for each condenser type (uncomment and modify as needed):
 

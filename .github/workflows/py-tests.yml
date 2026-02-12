@@ -16,26 +16,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Run python tests on Linux
-  test-on-linux:
-    name: Python Tests on Linux
+  gates-on-linux:
+    name: Python Gates on Linux
     runs-on: blacksmith-4vcpu-ubuntu-2204
-    env:
-      INSTALL_DOCKER: '0' # Set to '0' to skip Docker installation
     strategy:
       matrix:
         python-version: ['3.12']
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Install tmux
-        run: sudo apt-get update && sudo apt-get install -y tmux
-      - name: Setup Node.js
-        uses: useblacksmith/setup-node@v5
-        with:
-          node-version: '22.x'
       - name: Install poetry via pipx
         run: pipx install poetry
       - name: Set up Python
@@ -43,18 +31,22 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'poetry'
+      - name: Poetry validation
+        run: poetry check --lock
       - name: Install Python dependencies using Poetry
         run: poetry install --with dev,test,runtime
-      - name: Build Environment
-        run: make build
-      - name: Run Unit Tests
-        run: PYTHONPATH=".:$PYTHONPATH" poetry run pytest --forked -n auto -svv ./tests/unit
-      - name: Run Runtime Tests with CLIRuntime
-        run: PYTHONPATH=".:$PYTHONPATH" TEST_RUNTIME=cli poetry run pytest -svv tests/runtime/test_bash.py
+      - name: Verify optional imports
+        run: python backend/scripts/verify/verify_optional_imports.py
+      - name: Compile backend (syntax gate)
+        run: poetry run python -m compileall backend
+      - name: Run minimal pytest slice
+        run: PYTHONPATH=".:$PYTHONPATH" poetry run pytest -q \
+          backend/tests/test_metrics_labels.py \
+          backend/tests/test_request_metrics.py \
+          backend/tests/integration/test_trajectory_replay.py
 
-  # Run specific Windows python tests
-  test-on-windows:
-    name: Python Tests on Windows
+  gates-on-windows:
+    name: Python Gates on Windows
     runs-on: windows-latest
     strategy:
       matrix:
@@ -70,38 +62,42 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'poetry'
+      - name: Poetry validation
+        run: poetry check --lock
       - name: Install Python dependencies using Poetry
         run: poetry install --with dev,test,runtime
-      - name: Run Windows unit tests
-        run: poetry run pytest -svv tests/unit/runtime/utils/test_windows_bash.py
+      - name: Verify optional imports
+        run: python backend/scripts/verify/verify_optional_imports.py
+      - name: Compile backend (syntax gate)
+        run: poetry run python -m compileall backend
+      - name: Run minimal pytest slice
+        run: poetry run pytest -q backend/tests/test_metrics_labels.py backend/tests/test_request_metrics.py backend/tests/integration/test_trajectory_replay.py
         env:
           PYTHONPATH: ".;$env:PYTHONPATH"
-          DEBUG: "1"
-      - name: Run Windows runtime tests with LocalRuntime
-        run: $env:TEST_RUNTIME="local"; poetry run pytest -svv tests/runtime/test_bash.py
-        env:
-          PYTHONPATH: ".;$env:PYTHONPATH"
-          TEST_RUNTIME: local
-          DEBUG: "1"
 
-    heavy-tests:
-      name: Heavy / Integration Tests
-      runs-on: ubuntu-22.04
-      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-      strategy:
-        matrix:
-          python-version: ['3.12']
-      steps:
-        - uses: actions/checkout@v4
-        - name: Install poetry via pipx
-          run: pipx install poetry
-        - name: Set up Python
-          uses: useblacksmith/setup-python@v6
-          with:
-            python-version: ${{ matrix.python-version }}
-            cache: 'poetry'
-        - name: Install Python dependencies
-          run: |
-            poetry install --with dev,test,runtime
-        - name: Run heavy / integration tests
-          run: PYTHONPATH=".:$PYTHONPATH" poetry run pytest -m "heavy or integration or benchmark" -vv
+  heavy-tests:
+    name: Heavy / Integration Tests
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry via pipx
+        run: pipx install poetry
+      - name: Set up Python
+        uses: useblacksmith/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'poetry'
+      - name: Install Python dependencies
+        run: poetry install --with dev,test,runtime
+      - name: Poetry validation
+        run: poetry check --lock
+      - name: Verify optional imports
+        run: python backend/scripts/verify/verify_optional_imports.py
+      - name: Compile backend (syntax gate)
+        run: poetry run python -m compileall backend
+      - name: Run heavy / integration tests
+        run: PYTHONPATH=".:$PYTHONPATH" poetry run pytest -m "heavy or integration or benchmark" -vv

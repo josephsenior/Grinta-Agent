@@ -82,7 +82,7 @@ safety_settings = [
 # with the helper script at `scripts/set_FORGE_api_key.ps1`.
 
 [condenser]
-type="noop"
+type = "smart"
 
 
 [llm.heavy]
@@ -114,7 +114,7 @@ enable_think = true                   # ✅ Reasoning steps
 enable_finish = true                  # ✅ Task completion
 enable_history_truncation = true      # ✅ Memory management
 enable_condensation_request = false   # Keep full context for beta
-enable_prompt_extensions = true       # ✅ Microagents (react, testing, api)
+enable_prompt_extensions = true       # ✅ Playbooks (react, testing, api)
 enable_mcp = true                     # ✅ MCP tools (shadcn, fetch, search)
 schema_version = "2025-11-14"
 # Autonomy settings for simple mode
@@ -136,7 +136,7 @@ ttl_seconds = 600
 # ttl_seconds = 900
 
 # USE OPTIMIZED PROMPTS!
-# CodeActAgent: "system_prompt_forge.j2" (most optimized)
+# Orchestrator: "system_prompt_forge.j2" (most optimized)
 # Options: system_prompt.j2 | system_prompt_forge.j2 | system_prompt_ultimate.j2 | system_prompt_optimized.j2
 system_prompt_filename = "system_prompt_forge.j2"
 

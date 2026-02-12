@@ -4,9 +4,9 @@ import os
 import re
 import pytest
 from conftest import _close_test_runtime, _load_runtime
-from forge.core.logger import forge_logger as logger
-from forge.events.action import BrowseInteractiveAction, BrowseURLAction, CmdRunAction
-from forge.events.observation import (
+from backend.core.logger import forge_logger as logger
+from backend.events.action import BrowseInteractiveAction, BrowseURLAction, CmdRunAction
+from backend.events.observation import (
     BrowserOutputObservation,
     CmdOutputObservation,
     ErrorObservation,

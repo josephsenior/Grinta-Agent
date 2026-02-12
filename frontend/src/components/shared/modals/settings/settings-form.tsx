@@ -1,8 +1,9 @@
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import React from "react";
-import posthog from "posthog-js";
+import posthog from "#/utils/posthog";
 import { I18nKey } from "#/i18n/declaration";
+import { DOCUMENTATION_URL } from "#/constants/app";
 import { organizeModelsAndProviders } from "#/utils/organize-models-and-providers";
 import { DangerModal } from "../confirmation-modals/danger-modal";
 import { extractSettings } from "#/utils/settings-utils";
@@ -95,7 +96,7 @@ export function SettingsForm({ settings, models, onClose }: SettingsFormProps) {
             testId="llm-api-key-help-anchor"
             text={t(I18nKey.SETTINGS$DONT_KNOW_API_KEY)}
             linkText={t(I18nKey.SETTINGS$CLICK_FOR_INSTRUCTIONS)}
-            href="https://docs.forge.dev/usage/local-setup#getting-an-api-key"
+            href={DOCUMENTATION_URL.LOCAL_SETUP_API_KEY}
           />
         </div>
 

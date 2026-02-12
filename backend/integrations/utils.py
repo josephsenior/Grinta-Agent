@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pydantic import SecretStr
 
-from forge.core.logger import forge_logger as logger
-from forge.integrations.github.github_service import GitHubService
-from forge.integrations.service_types import ProviderType
+from backend.core.logger import forge_logger as logger
+from backend.integrations.github.github_service import GitHubService
+from backend.integrations.service_types import ProviderType
 
 
 async def validate_provider_token(
@@ -31,7 +31,7 @@ async def validate_provider_token(
         github_service = GitHubService(token=token, base_domain=base_domain)
         await github_service.verify_access()
         return ProviderType.GITHUB
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Failed to validate token against GitHub: {e}")
     logger.debug("Failed to validate token against supported providers")
     return None

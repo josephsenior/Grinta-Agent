@@ -8,7 +8,7 @@ import streamingReducer, {
   startStream,
   appendStreamChunk,
   completeStream,
-} from "#/store/streaming-slice";
+} from "#/state/streaming-slice";
 
 describe("StreamingTerminal", () => {
   let store: ReturnType<typeof configureStore>;

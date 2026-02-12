@@ -17,6 +17,9 @@ export type SecurityAnalyzerLog = {
 
 const initialLogs: SecurityAnalyzerLog[] = [];
 
+/** Maximum security analyzer logs retained in memory. */
+const MAX_SECURITY_LOGS = 1_000;
+
 export const securityAnalyzerSlice = createSlice({
   name: "securityAnalyzer",
   initialState: {
@@ -50,6 +53,9 @@ export const securityAnalyzerSlice = createSlice({
         }
       } else {
         state.logs.push(log);
+        if (state.logs.length > MAX_SECURITY_LOGS) {
+          state.logs = state.logs.slice(-MAX_SECURITY_LOGS);
+        }
       }
     },
   },

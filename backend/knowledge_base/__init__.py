@@ -1,7 +1,7 @@
 """Knowledge Base module for document storage and retrieval."""
 
-from forge.knowledge_base.manager import KnowledgeBaseManager
-from forge.storage.data_models.knowledge_base import (
+from backend.knowledge_base.manager import KnowledgeBaseManager
+from backend.storage.data_models.knowledge_base import (
     KnowledgeBaseCollection,
     KnowledgeBaseDocument,
     KnowledgeBaseSearchResult,

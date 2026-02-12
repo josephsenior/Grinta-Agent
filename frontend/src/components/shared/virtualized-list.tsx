@@ -71,12 +71,8 @@ export function VirtualizedList<T>({
             <div
               key={key}
               data-index={virtualRow.index}
-              className={itemClassName}
+              className={cn("absolute top-0 left-0 w-full", itemClassName)}
               style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
                 height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
               }}
@@ -149,10 +145,9 @@ export function VirtualizedGrid<T>({
       }}
     >
       <div
+        className="w-full relative"
         style={{
           height: `${virtualizer.getTotalSize()}px`,
-          width: "100%",
-          position: "relative",
         }}
       >
         {virtualRows.map((virtualRow) => {
@@ -163,16 +158,11 @@ export function VirtualizedGrid<T>({
             <div
               key={virtualRow.index}
               data-index={virtualRow.index}
+              className="absolute top-0 left-0 w-full grid gap-4"
               style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
                 height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
-                display: "grid",
                 gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                gap: "1rem",
               }}
             >
               {rowItems.map((item, colIndex) => {

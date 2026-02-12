@@ -289,7 +289,7 @@ def main():
     print("-" * 80)
     try:
         # This is a more comprehensive check - it will catch import-time errors
-        from forge.server.app import app
+        from backend.server.app import app
         
         # Check if app has routes
         route_count = len(app.routes)

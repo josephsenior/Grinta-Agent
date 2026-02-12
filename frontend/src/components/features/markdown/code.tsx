@@ -77,14 +77,7 @@ export function code({
     if (!isMultiline) {
       return (
         <code
-          className={className}
-          style={{
-            backgroundColor: "#2a3038",
-            padding: "0.2em 0.4em",
-            borderRadius: "4px",
-            color: "#e6edf3",
-            border: "1px solid #30363d",
-          }}
+          className={cn(className, "bg-[#2a3038] px-[0.4em] py-[0.2em] rounded text-[#e6edf3] border border-[#30363d]")}
         >
           {children}
         </code>
@@ -95,15 +88,7 @@ export function code({
       <div className="relative group">
         <CopyCodeButton code={codeString} />
         <pre
-          style={{
-            backgroundColor: "#2a3038",
-            padding: "1em",
-            paddingRight: "3em", // Make room for copy button
-            borderRadius: "4px",
-            color: "#e6edf3",
-            border: "1px solid #30363d",
-            overflow: "auto",
-          }}
+          className="bg-[#2a3038] p-[1em] pr-[3em] rounded text-[#e6edf3] border border-[#30363d] overflow-auto"
         >
           <code className={className}>{codeString}</code>
         </pre>

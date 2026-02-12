@@ -93,7 +93,7 @@ export interface AgentThinkObservation extends ForgeObservationEvent<"think"> {
   };
 }
 
-export interface MicroagentKnowledge {
+export interface PlaybookKnowledge {
   name: string;
   trigger: string;
   content: string;
@@ -111,7 +111,7 @@ export interface RecallObservation extends ForgeObservationEvent<"recall"> {
     additional_agent_instructions?: string;
     conversation_instructions?: string;
     date?: string;
-    microagent_knowledge?: MicroagentKnowledge[];
+    playbook_knowledge?: PlaybookKnowledge[];
   };
 }
 

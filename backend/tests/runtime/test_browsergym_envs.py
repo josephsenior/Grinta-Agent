@@ -1,8 +1,8 @@
 import json
 import pytest
-from forge.core.logger import forge_logger as logger
-from forge.events.action.browse import BrowseInteractiveAction
-from forge.events.observation.browse import BrowserOutputObservation
+from backend.core.logger import forge_logger as logger
+from backend.events.action.browse import BrowseInteractiveAction
+from backend.events.observation.browse import BrowserOutputObservation
 from tests.runtime.conftest import _close_test_runtime, _load_runtime
 
 
@@ -32,7 +32,7 @@ def test_browsergym_eval_env(runtime_cls, temp_dir):
         force_rebuild_runtime=True,
         enable_browser=True,
     )
-    from forge.runtime.browser.browser_env import (
+    from backend.runtime.browser.browser_env import (
         BROWSER_EVAL_GET_GOAL_ACTION,
         BROWSER_EVAL_GET_REWARDS_ACTION,
     )
