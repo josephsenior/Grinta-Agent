@@ -9,11 +9,14 @@ passing into tenacity.retry(..., before_sleep=...). The callable records an
 from __future__ import annotations
 
 import contextlib
+import logging
 from typing import Any, Callable
 
 from tenacity import RetryCallState
 
 from backend.utils.metrics_labels import sanitize_operation_label
+
+logger = logging.getLogger(__name__)
 
 
 def call_tenacity_hooks(
@@ -27,15 +30,12 @@ def call_tenacity_hooks(
     hook functions (rather than passing them to tenacity). Keeps a single
     safe pattern so instrumentation cannot raise.
     """
-    try:
-        if before:
-            with contextlib.suppress(Exception):
-                before(retry_state)
-        if after:
-            with contextlib.suppress(Exception):
-                after(retry_state)
-    except Exception:
-        pass
+    if before:
+        with contextlib.suppress(Exception):
+            before(retry_state)
+    if after:
+        with contextlib.suppress(Exception):
+            after(retry_state)
 
 
 def _record_metrics_event_runtime(ev: dict) -> None:
@@ -96,8 +96,10 @@ def tenacity_after_factory(operation: str) -> Callable[[RetryCallState], None]:
                         {"status": "retry_success", "operation": op}
                     )
                     return
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug(
+                    "tenacity after-hook: outcome.successful() raised: %s", exc
+                )
             attempt_idx = getattr(retry_state, "attempt_number", None)
             stop_state = getattr(retry_state, "stop", None)
             max_attempts = (
@@ -123,7 +125,7 @@ def tenacity_after_factory(operation: str) -> Callable[[RetryCallState], None]:
                         ),
                     },
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("tenacity after-hook failed for %s: %s", operation, exc)
 
     return _after

@@ -1,6 +1,6 @@
 import os
 from enum import Enum
-from typing import Any, Dict, Set
+from typing import Any
 
 """Central location for Forge core constants."""
 
@@ -275,7 +275,7 @@ PROVIDER_CONFIGURATIONS = {
     },
 }
 
-UNKNOWN_PROVIDER_CONFIG: Dict[str, Any] = {
+UNKNOWN_PROVIDER_CONFIG: dict[str, Any] = {
     "name": "unknown",
     "env_var": None,
     "requires_protocol": True,

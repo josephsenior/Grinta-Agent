@@ -17,7 +17,7 @@ from pydantic import BaseModel
 class ForgeJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles datetime and event objects."""
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         """Serialize Forge-specific objects when dumping JSON."""
         if isinstance(obj, datetime):
             return obj.isoformat()
@@ -36,7 +36,7 @@ class ForgeJSONEncoder(json.JSONEncoder):
 _json_encoder = ForgeJSONEncoder()
 
 
-def dumps(obj, **kwargs):
+def dumps(obj: Any, **kwargs: Any) -> str:
     """Serialize an object to str format."""
     if not kwargs:
         return _json_encoder.encode(obj)
@@ -49,7 +49,7 @@ def dumps(obj, **kwargs):
 
 
 
-def loads(json_str, **kwargs):
+def loads(json_str: str, **kwargs: Any) -> Any:
     """Create a JSON object from str."""
     try:
         return json.loads(json_str, **kwargs)
@@ -76,3 +76,6 @@ def loads(json_str, **kwargs):
                     ) from e
     msg = "No valid JSON object found in response."
     raise LLMResponseError(msg)
+
+
+__all__ = ["ForgeJSONEncoder", "dumps", "loads"]

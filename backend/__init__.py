@@ -51,5 +51,14 @@ def get_version():
 
 try:
     __version__ = get_version()
-except Exception:
+except Exception as _exc:
+    import warnings as _w
+    _w.warn(
+        f"Forge: could not determine package version ({_exc!r}); "
+        "reporting 'unknown'. Check that pyproject.toml is readable.",
+        stacklevel=1,
+    )
     __version__ = "unknown"
+
+
+__all__ = ["__version__", "__package_name__", "get_version"]

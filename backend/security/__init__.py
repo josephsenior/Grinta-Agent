@@ -1,6 +1,15 @@
-from backend.security.analyzer import SecurityAnalyzer
+"""Security analysis framework for Forge agent actions."""
 
-class options:
-    @staticmethod
-    def get_security_analyzer() -> SecurityAnalyzer | None:
-        return None
+from backend.security.analyzer import SecurityAnalyzer
+from backend.security.command_analyzer import CommandAnalyzer, RiskCategory
+from backend.security.options import SecurityAnalyzers, get_security_analyzer
+from backend.security.safety_config import SafetyConfig
+
+__all__ = [
+    "CommandAnalyzer",
+    "RiskCategory",
+    "SafetyConfig",
+    "SecurityAnalyzer",
+    "SecurityAnalyzers",
+    "get_security_analyzer",
+]

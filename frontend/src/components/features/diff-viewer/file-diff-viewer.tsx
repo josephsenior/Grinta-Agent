@@ -1,4 +1,4 @@
-import { Editor, Monaco } from "@monaco-editor/react";
+import { DiffEditor, Monaco } from "@monaco-editor/react";
 import React from "react";
 import { editor as editor_t } from "monaco-editor";
 import { Copy, Check, FileText, ChevronRight } from "lucide-react";
@@ -178,7 +178,7 @@ function FileDiffHeader({
 
 // Hook
 function useFileDiffController({ path, type }: FileDiffViewerProps) {
-  const editorRef = React.useRef<editor_t.IStandaloneCodeEditor | null>(null);
+  const editorRef = React.useRef<editor_t.IStandaloneDiffEditor | null>(null);
   const [copied, setCopied] = React.useState(false);
   const [lineCount, setLineCount] = React.useState(0);
   const isDeleted = type === "D";
@@ -225,15 +225,14 @@ function useFileDiffController({ path, type }: FileDiffViewerProps) {
   }, []);
 
   const handleEditorDidMount = React.useCallback(
-    (editor: editor_t.IStandaloneCodeEditor) => {
+    (editor: editor_t.IStandaloneDiffEditor) => {
       editorRef.current = editor;
     },
     [],
   );
 
-  const content = isDeleted
-    ? diffQuery.data?.original
-    : diffQuery.data?.modified;
+  const original = diffQuery.data?.original || "";
+  const modified = diffQuery.data?.modified || "";
   const status = (type === "U" ? STATUS_MAP.A : STATUS_MAP[type]) || "?";
 
   return {
@@ -244,7 +243,8 @@ function useFileDiffController({ path, type }: FileDiffViewerProps) {
     breadcrumbs,
     beforeMount,
     handleEditorDidMount,
-    content,
+    original,
+    modified,
     isLoading: diffQuery.isLoading,
     filePath,
     status,
@@ -273,11 +273,12 @@ export function FileDiffViewer({ path, type }: FileDiffViewerProps) {
           </div>
         )}
 
-        {!controller.isLoading && controller.content && (
-          <Editor
+        {!controller.isLoading && (controller.original || controller.modified) && (
+          <DiffEditor
             beforeMount={controller.beforeMount}
             onMount={controller.handleEditorDidMount}
-            value={controller.content}
+            original={controller.original}
+            modified={controller.modified}
             language={getLanguageFromPath(controller.filePath)}
             options={{
               readOnly: true,
@@ -300,11 +301,12 @@ export function FileDiffViewer({ path, type }: FileDiffViewerProps) {
               folding: true,
               lineDecorationsWidth: 0,
               lineNumbersMinChars: 3,
+              renderSideBySide: true,
             }}
           />
         )}
 
-        {!controller.isLoading && !controller.content && (
+        {!controller.isLoading && !controller.original && !controller.modified && (
           <div className="flex items-center justify-center h-full">
             <div className="text-sm text-foreground-secondary">
               {t("diffViewer.noDiffAvailable", "No diff available")}

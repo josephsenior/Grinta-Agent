@@ -705,6 +705,10 @@ Please retry the file creation."""
             and action.confirmation_state
             == ActionConfirmationStatus.AWAITING_CONFIRMATION
         ):
+            # Allow file edits to run in runtime preview mode (dry-run) so users can
+            # review diffs before confirming. Other actions remain blocked.
+            if isinstance(action, FileEditAction):
+                return None
             return NullObservation("")
 
         if (

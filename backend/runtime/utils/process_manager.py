@@ -334,10 +334,28 @@ def get_process_manager_health_snapshot(active_processes: list[ManagedProcess] |
     if metrics["forced_kill_attempts_total"] > 0:
         warnings.append("forced_kill_attempts_detected")
 
+    severity = "green"
+    if "forced_kill_attempts_detected" in warnings:
+        severity = "yellow"
+    if metrics["cleanup_failures_total"] > 0:
+        severity = "red"
+
+    recommendations: list[str] = []
+    if "active_processes_without_details" in warnings:
+        recommendations.append("verify_process_tracking_registration_and_cleanup_hooks")
+    if "high_active_process_count" in warnings:
+        recommendations.append("review_long_running_command_policy_and_timeouts")
+    if "forced_kill_attempts_detected" in warnings:
+        recommendations.append("inspect_graceful_shutdown_paths_before_force_kill")
+    if metrics["cleanup_failures_total"] > 0:
+        recommendations.append("investigate_runtime_permissions_and_process_ownership")
+
     return {
         "metrics": metrics,
         "tracked_processes": processes,
         "warnings": warnings,
+        "severity": severity,
+        "recommendations": recommendations,
         "timestamp": time.time(),
     }
 
@@ -346,4 +364,5 @@ __all__ = [
     "ProcessManager",
     "ManagedProcess",
     "get_process_manager_metrics_snapshot",
+    "get_process_manager_health_snapshot",
 ]

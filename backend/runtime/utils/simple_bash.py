@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-import time
 from typing import TYPE_CHECKING
 
 from backend.core.logger import forge_logger as logger
@@ -17,7 +16,7 @@ from backend.events.observation.commands import (
     CmdOutputMetadata,
     CmdOutputObservation,
 )
-from backend.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
+from backend.runtime.utils.process_registry import TaskCancellationService
 
 if TYPE_CHECKING:
     from backend.events.action import CmdRunAction
@@ -36,6 +35,7 @@ class SimpleBashSession:
         username: str | None = None,
         no_change_timeout_seconds: int = 30,
         max_memory_mb: int | None = None,
+        cancellation_service: TaskCancellationService | None = None,
     ) -> None:
         """Initialize simple Bash session.
         
@@ -52,6 +52,7 @@ class SimpleBashSession:
         self._cwd: str = self.work_dir
         self.NO_CHANGE_TIMEOUT_SECONDS = no_change_timeout_seconds
         self.max_memory_mb = max_memory_mb
+        self._cancellation = cancellation_service or TaskCancellationService(label="runtime")
         
         logger.info(
             "Initializing SimpleBashSession (no tmux). Work dir: %s",
@@ -67,6 +68,7 @@ class SimpleBashSession:
                 capture_output=True,
                 text=True,
                 timeout=5,
+                check=False,
             )
             if result.returncode != 0:
                 raise RuntimeError("Bash is not available")
@@ -130,6 +132,10 @@ class SimpleBashSession:
             if exit_code == 0 and stdout.strip().isdigit():
                 pid = stdout.strip()
                 logger.info("Background process started with PID: %s", pid)
+                try:
+                    self._cancellation.register_pid(int(pid))
+                except Exception:
+                    logger.debug("Failed to register background pid=%s", pid, exc_info=True)
                 metadata = CmdOutputMetadata(
                     exit_code=0,
                     working_dir=self._cwd,
@@ -192,37 +198,52 @@ class SimpleBashSession:
         if self._closed:
             raise RuntimeError("Bash session is closed")
         
+        process: subprocess.Popen | None = None
         try:
-            result = subprocess.run(
+            process = subprocess.Popen(
                 ["bash", "-c", command],
                 cwd=self._cwd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=timeout,
             )
-            
-            # Update CWD if command changed directory
+            self._cancellation.register_process(process)
+
+            stdout, stderr = process.communicate(timeout=timeout)
+            return_code = process.returncode
+
             if "cd " in command:
-                # Try to get the new CWD
                 cwd_result = subprocess.run(
                     ["bash", "-c", "pwd"],
                     cwd=self._cwd,
                     capture_output=True,
                     text=True,
                     timeout=5,
+                    check=False,
                 )
                 if cwd_result.returncode == 0:
                     new_cwd = cwd_result.stdout.strip()
                     if os.path.isdir(new_cwd):
                         self._cwd = new_cwd
-            
-            return (result.stdout, result.stderr, result.returncode)
+
+            return (stdout, stderr, return_code)
+
         except subprocess.TimeoutExpired:
             logger.warning("Command timed out after %s seconds: %s", timeout, command)
+            if process is not None:
+                try:
+                    process.kill()
+                except Exception:
+                    pass
             return ("", f"Command timed out after {timeout} seconds", 124)
+
         except Exception as e:
             logger.error("Error running Bash command: %s", e)
             return ("", str(e), 1)
+
+        finally:
+            if process is not None and getattr(process, "pid", None):
+                self._cancellation.unregister_process(process.pid)
     
     def _normalize_timeout(self, timeout: int | float | None) -> int:
         """Normalize timeout value."""

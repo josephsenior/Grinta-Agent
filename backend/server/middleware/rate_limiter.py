@@ -18,6 +18,28 @@ if TYPE_CHECKING:
 
 # In-memory rate limit store (use Redis in production for distributed systems)
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
+_last_cleanup: float = 0.0
+_CLEANUP_INTERVAL: float = 300.0  # Purge expired keys every 5 minutes
+
+
+def _purge_expired_keys(max_age: float = 3600.0) -> None:
+    """Remove keys whose newest timestamp is older than *max_age* seconds.
+
+    Called lazily from :meth:`RateLimiter._check_rate_limit` to avoid
+    unbounded memory growth in the in-memory store.
+    """
+    global _last_cleanup
+    now = time.time()
+    if now - _last_cleanup < _CLEANUP_INTERVAL:
+        return
+    _last_cleanup = now
+    stale = [
+        key
+        for key, timestamps in _rate_limit_store.items()
+        if not timestamps or (now - max(timestamps)) > max_age
+    ]
+    for key in stale:
+        del _rate_limit_store[key]
 
 
 class RateLimiter:
@@ -62,16 +84,31 @@ class RateLimiter:
             return await call_next(request)
 
         # Skip rate limiting for health checks, static files, and authentication endpoints
-        # Authentication endpoints should never be rate-limited to allow users to register/login
-        # This is CRITICAL - users must be able to authenticate even if rate limited elsewhere
         path = request.url.path
         
         # Normalize path (remove trailing slash, handle query params)
         normalized_path = path.rstrip('/')
+        current_time = time.time()
         
-        # Check if this is an auth endpoint (must be checked first, before any rate limiting)
+        # Auth endpoints get their own stricter per-IP rate limiting
+        # to prevent brute-force attacks (configurable, default 10/min)
         if normalized_path.startswith("/api/auth") or path.startswith("/api/auth"):
-            logger.debug(f"Rate limiting skipped for auth endpoint: {path}")
+            auth_key = f"auth:{await self._get_rate_limit_key(request)}"
+            auth_ts = _rate_limit_store[auth_key]
+            auth_ts[:] = [ts for ts in auth_ts if current_time - ts < 60]
+            auth_limit = int(os.getenv("AUTH_RATE_LIMIT_PER_MIN", "10"))
+            if len(auth_ts) >= auth_limit:
+                logger.warning("Auth rate limit exceeded for %s", auth_key)
+                resp = error(
+                    message="Too many authentication attempts. Try again later.",
+                    status_code=429,
+                    error_code="AUTH_RATE_LIMIT_EXCEEDED",
+                    details={"reason": "auth_brute_force_protection"},
+                    retry_after=60,
+                )
+                resp.headers["Retry-After"] = "60"
+                return resp
+            auth_ts.append(current_time)
             return await call_next(request)
         
         # Check other excluded paths (public endpoints that are called frequently)
@@ -153,6 +190,9 @@ class RateLimiter:
 
         """
         current_time = time.time()
+
+        # Lazily purge stale keys to prevent unbounded memory growth
+        _purge_expired_keys(max_age=self.hour_window)
 
         # Get request timestamps for this key
         timestamps = _rate_limit_store[key]
@@ -252,17 +292,10 @@ class EndpointRateLimiter:
             return await call_next(request)
 
         # Skip rate limiting for authentication endpoints
-        # Authentication endpoints should never be rate-limited to allow users to register/login
-        # This is CRITICAL - users must be able to authenticate even if rate limited elsewhere
+        # Auth endpoints are handled by RateLimiter's own auth-specific limiter,
+        # so we delegate to it rather than skipping entirely.
         path = request.url.path
-        
-        # Normalize path (remove trailing slash)
         normalized_path = path.rstrip('/')
-        
-        # Check if this is an auth endpoint (must be checked first, before any rate limiting)
-        if normalized_path.startswith("/api/auth") or path.startswith("/api/auth"):
-            logger.debug(f"Rate limiting skipped for auth endpoint: {path}")
-            return await call_next(request)
         
         # Exclude public options endpoints (called frequently on page load)
         if normalized_path.startswith("/api/options") or path.startswith("/api/options"):

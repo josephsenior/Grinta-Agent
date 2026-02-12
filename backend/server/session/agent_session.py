@@ -557,6 +557,14 @@ class AgentSession:
                 self.event_stream.close()  # type: ignore[attr-defined]
         except Exception as e:
             self.logger.warning("Error closing event stream: %s", e)
+
+        # Best-effort: terminate any subprocesses/servers started by this runtime.
+        try:
+            runtime = self.runtime
+            if runtime is not None and hasattr(runtime, "hard_kill"):
+                runtime.hard_kill()  # type: ignore[call-arg]
+        except Exception as e:
+            self.logger.warning("Error hard-killing runtime processes: %s", e)
         try:
             if self.controller is not None:
                 self.controller.save_state()

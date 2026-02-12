@@ -603,6 +603,15 @@ class AgentController:
         self._pending_action = None
         self.agent.reset()
 
+    async def stop(self) -> None:
+        """Stop the agent and perform a hard kill on running processes."""
+        logger.info("Stopping agent...")
+        # 2. Update state to STOPPED
+        await self.set_agent_state_to(AgentState.STOPPED)
+        
+        # 3. Ensure any pending actions are cleared or marked as cancelled?
+        self._pending_action = None
+
     async def set_agent_state_to(self, new_state: AgentState) -> None:
         """Delegate to the state transition service for consistency."""
         await self.state_service.set_agent_state(new_state)

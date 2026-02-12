@@ -1,6 +1,9 @@
 """Async helper utilities for bridging sync/async execution and task coordination."""
 
+from __future__ import annotations
+
 import asyncio
+import os
 from collections.abc import Coroutine, Iterable
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
@@ -8,18 +11,19 @@ from typing import Any, Awaitable, Callable
 
 from backend.core.constants import GENERAL_TIMEOUT
 
-EXECUTOR: ThreadPoolExecutor = ThreadPoolExecutor()
+# Bounded worker pool — defaults to min(32, CPU+4) but can be overridden via env.
+_MAX_WORKERS = int(os.getenv("FORGE_THREAD_POOL_MAX_WORKERS", "32"))
+EXECUTOR: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=_MAX_WORKERS)
 
 
-async def call_sync_from_async(fn: Callable, *args, **kwargs):
-    """Shorthand for running a function in the default background thread pool executor.
+async def call_sync_from_async(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    """Run a synchronous function in the background thread-pool and await the result.
 
-    and awaiting the result. The nature of synchronous code is that the future
-    returned by this function is not cancellable.
+    The returned future is **not** cancellable because synchronous code cannot
+    be interrupted once scheduled.
     """
-    loop = asyncio.get_event_loop()
-    coro = loop.run_in_executor(None, lambda: fn(*args, **kwargs))
-    return await coro
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, lambda: fn(*args, **kwargs))
 
 
 def call_async_from_sync(
@@ -136,7 +140,7 @@ class AsyncException(Exception):
 
 async def run_in_loop(
     coro: Coroutine, loop: asyncio.AbstractEventLoop, timeout: float = GENERAL_TIMEOUT
-):
+) -> Any:
     """Run `coro` on `loop`, using thread handoff when switching event loops."""
     running_loop = asyncio.get_running_loop()
     if running_loop == loop:
@@ -144,7 +148,9 @@ async def run_in_loop(
     return await call_sync_from_async(_run_in_loop, coro, loop, timeout)
 
 
-def _run_in_loop(coro: Coroutine, loop: asyncio.AbstractEventLoop, timeout: float):
+def _run_in_loop(
+    coro: Coroutine, loop: asyncio.AbstractEventLoop, timeout: float
+) -> Any:
     """Run a coroutine in a specific event loop with timeout.
 
     Args:
@@ -182,13 +188,9 @@ def run_or_schedule(coro: Coroutine[Any, Any, Any]) -> None:
         return
 
     # No running loop — fall back to synchronous execution.
+    loop = asyncio.new_event_loop()
     try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop is None or loop.is_closed():
-        loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(coro)
+        loop.run_until_complete(coro)
+    finally:
+        loop.close()

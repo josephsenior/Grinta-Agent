@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any
 
 from backend.core.schemas import AgentState
 
@@ -147,9 +147,18 @@ def _extract_agent_state(state: Any) -> str:
 
 def _collect_event_stream_stats(controller: Any) -> dict[str, Any]:
     event_stream = getattr(controller, "event_stream", None)
-    if event_stream and hasattr(event_stream, "get_stats"):
+    if not event_stream:
+        return {}
+
+    stats: dict[str, Any] = {}
+    if hasattr(event_stream, "get_stats"):
         with contextlib.suppress(Exception):
-            return event_stream.get_stats() or {}
+            stats.update(event_stream.get_stats() or {})
+    if hasattr(event_stream, "get_backpressure_snapshot"):
+        with contextlib.suppress(Exception):
+            stats.update(event_stream.get_backpressure_snapshot() or {})
+    if stats:
+        return stats
     return {}
 
 
@@ -168,6 +177,7 @@ def _build_warnings(
     circuit_breaker: CircuitBreakerHealth | None,
     is_stuck: bool,
     agent_state: str,
+    event_stream_stats: dict[str, Any] | None = None,
 ) -> list[str]:
     warnings: list[str] = []
     warnings.extend(_iteration_warnings(iteration))
@@ -176,7 +186,82 @@ def _build_warnings(
     warnings.extend(_circuit_warnings(circuit_breaker))
     warnings.extend(_stuck_warnings(is_stuck))
     warnings.extend(_agent_state_warnings(agent_state))
+    warnings.extend(_event_stream_warnings(event_stream_stats or {}))
     return warnings
+
+
+def _event_stream_warnings(event_stream_stats: dict[str, Any]) -> list[str]:
+    warnings: list[str] = []
+    if int(event_stream_stats.get("dropped_oldest", 0) or 0) > 0:
+        warnings.append("event_stream_dropped_oldest")
+    if int(event_stream_stats.get("dropped_newest", 0) or 0) > 0:
+        warnings.append("event_stream_dropped_newest")
+    if int(event_stream_stats.get("persist_failures", 0) or 0) > 0:
+        warnings.append("event_stream_persist_failures")
+    if int(event_stream_stats.get("durable_writer_errors", 0) or 0) > 0:
+        warnings.append("event_stream_durable_writer_errors")
+    if int(event_stream_stats.get("durable_enqueue_failures", 0) or 0) > 0:
+        warnings.append("event_stream_durable_enqueue_failures")
+    if int(event_stream_stats.get("critical_queue_blocked", 0) or 0) > 0:
+        warnings.append("event_stream_critical_blocked")
+    return warnings
+
+
+def _health_severity(warnings: list[str], agent_state: str) -> str:
+    """Classify overall controller health severity (green/yellow/red)."""
+    if agent_state == AgentState.ERROR.value:
+        return "red"
+
+    red_markers = {
+        "iteration_limit_reached",
+        "budget_limit_reached",
+        "circuit_breaker_tripped",
+        "stuck_detector_triggered",
+        "event_stream_persist_failures",
+        "event_stream_durable_writer_errors",
+        "event_stream_durable_enqueue_failures",
+    }
+    if any(marker in red_markers for marker in warnings):
+        return "red"
+
+    yellow_markers = {
+        "budget_90_percent",
+        "budget_80_percent",
+        "budget_50_percent",
+        "retry_pending",
+        "circuit_breaker_near_limit",
+        "event_stream_dropped_oldest",
+        "event_stream_dropped_newest",
+        "event_stream_critical_blocked",
+    }
+    if any(marker in yellow_markers for marker in warnings):
+        return "yellow"
+
+    return "green"
+
+
+def _health_recommendations(warnings: list[str]) -> list[str]:
+    """Translate warnings into concise operator actions."""
+    recommendations: list[str] = []
+    if "event_stream_persist_failures" in warnings:
+        recommendations.append("inspect_event_storage_and_permissions")
+    if "event_stream_durable_writer_errors" in warnings:
+        recommendations.append("check_durable_writer_and_disk_health")
+    if "event_stream_durable_enqueue_failures" in warnings:
+        recommendations.append("reduce_event_pressure_or_raise_writer_capacity")
+    if "event_stream_dropped_oldest" in warnings or "event_stream_dropped_newest" in warnings:
+        recommendations.append("increase_event_queue_capacity_or_reduce_event_volume")
+    if "event_stream_critical_blocked" in warnings:
+        recommendations.append("investigate_delivery_worker_saturation")
+    if "circuit_breaker_tripped" in warnings or "circuit_breaker_near_limit" in warnings:
+        recommendations.append("review_recent_action_failures_and_risk_patterns")
+    if "budget_90_percent" in warnings or "budget_limit_reached" in warnings:
+        recommendations.append("adjust_budget_or_task_scope")
+    if "iteration_limit_reached" in warnings:
+        recommendations.append("increase_iteration_limit_or_refine_task_prompt")
+    if "stuck_detector_triggered" in warnings:
+        recommendations.append("inspect_looping_actions_and_add_guardrails")
+    return recommendations
 
 
 def _iteration_warnings(iteration: IterationHealth | None) -> list[str]:
@@ -304,8 +389,16 @@ def collect_controller_health(controller: Any) -> dict[str, Any]:
 
     agent_state_value = _extract_agent_state(state)
     warnings = _build_warnings(
-        iteration, budget, retry, circuit_breaker, is_stuck, agent_state_value
+        iteration,
+        budget,
+        retry,
+        circuit_breaker,
+        is_stuck,
+        agent_state_value,
+        event_stream_stats,
     )
+    severity = _health_severity(warnings, agent_state_value)
+    recommendations = _health_recommendations(warnings)
 
     pending_action = getattr(controller, "_pending_action", None)
 
@@ -313,8 +406,10 @@ def collect_controller_health(controller: Any) -> dict[str, Any]:
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "controller_id": getattr(controller, "id", None),
         "state": _state_snapshot(state, iteration, budget, pending_action),
+        "severity": severity,
         "services": _service_snapshot(retry, circuit_breaker, is_stuck),
         "event_stream": event_stream_stats,
         "warnings": warnings,
+        "recommendations": recommendations,
     }
 

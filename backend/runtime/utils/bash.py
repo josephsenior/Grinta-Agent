@@ -5,7 +5,6 @@ from __future__ import annotations
 import getpass
 import os
 import re
-import sys
 import time
 import traceback
 import uuid
@@ -32,6 +31,7 @@ if TYPE_CHECKING:
     from libtmux.session import Session
     from libtmux.window import Window
     from backend.events.action import CmdRunAction
+    from backend.runtime.utils.process_registry import TaskCancellationService
 
 
 def split_bash_commands(commands: str) -> list[str]:
@@ -194,6 +194,7 @@ class BashSession:
         username: str | None = None,
         no_change_timeout_seconds: int = 30,
         max_memory_mb: int | None = None,
+        cancellation_service: "TaskCancellationService | None" = None,
     ) -> None:
         """Configure tmux-backed shell session defaults and resource limits."""
         self.NO_CHANGE_TIMEOUT_SECONDS = no_change_timeout_seconds
@@ -201,6 +202,8 @@ class BashSession:
         self.username = username
         self._initialized = False
         self.max_memory_mb = max_memory_mb
+        self._cancellation_service = cancellation_service
+        self._cancellation_callback_key: str | None = None
         self.server: Server | None = None
         self.session: Session | None = None
         self.window: Window | None = None
@@ -231,6 +234,15 @@ class BashSession:
             raise RuntimeError("Failed to create tmux session")
         session = cast("Session", session_obj)
         self.session = session
+
+        # Register a session-scoped kill callback so runtime.hard_kill() can
+        # terminate this tmux session (and its process tree) reliably.
+        if self._cancellation_service is not None:
+            self._cancellation_callback_key = f"tmux-session:{session_name}"
+            self._cancellation_service.register_kill_callback(
+                self._cancellation_callback_key,
+                self._hard_kill_tmux_session,
+            )
         session.set_option("history-limit", str(self.HISTORY_LIMIT), _global=True)
         session.history_limit = str(self.HISTORY_LIMIT)
         window, pane = self._get_window_and_pane_with_retry(session)
@@ -250,15 +262,27 @@ class BashSession:
         self._cwd = os.path.abspath(self.work_dir)
         self._initialized = True
 
+    def _hard_kill_tmux_session(self) -> None:
+        session = self.session
+        if session is None:
+            return
+        try:
+            session.kill()
+        except Exception:
+            logger.debug("Failed to kill tmux session", exc_info=True)
+
     def _should_use_su(self) -> bool:
         """Determine if we should wrap shell command in `su username -`."""
         username = self.username
         if not username:
             return False
-        geteuid = getattr(os, "geteuid", None)
-        if not callable(geteuid):
+        if not hasattr(os, "geteuid"):
             return False
-        if geteuid() != 0:
+        try:
+            uid = int(os.geteuid())
+        except AttributeError:
+            return False
+        if uid != 0:
             return False
         current_user = None
         try:
@@ -316,9 +340,19 @@ class BashSession:
         """Clean up the session."""
         if self._closed:
             return
+        if self._cancellation_service is not None and self._cancellation_callback_key:
+            try:
+                self._cancellation_service.unregister_kill_callback(
+                    self._cancellation_callback_key
+                )
+            except Exception:
+                logger.debug("Failed to unregister tmux kill callback", exc_info=True)
         session = self.session
         if session is not None:
-            session.kill()
+            try:
+                session.kill()
+            except Exception:
+                logger.debug("Failed to kill tmux session during close", exc_info=True)
         self._closed = True
 
     @property
@@ -702,7 +736,8 @@ class BashSession:
                 is_prompt, response = detect_interactive_prompt(cur_pane_output)
                 if is_prompt and response:
                     logger.info(
-                        f"🤖 Auto-responding to interactive prompt with: {response!r}"
+                        "🤖 Auto-responding to interactive prompt with: %r",
+                        response,
                     )
                     self._send_command_to_pane(response, is_input=True)
                     # Reset last_change_time to avoid timeout during prompt handling
@@ -721,7 +756,9 @@ class BashSession:
                 )
                 if detected_server and not hasattr(self, "_last_detected_server_url"):
                     logger.info(
-                        f"🚀 Server detected: {detected_server.url} (health: {detected_server.health_status})"
+                        "🚀 Server detected: %s (health: %s)",
+                        detected_server.url,
+                        detected_server.health_status,
                     )
                     # Store for runtime to emit ServerReadyObservation - only detect each server once
                     self._last_detected_server = detected_server

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import React, { useMemo, useCallback } from "react";
+import { DiffEditor } from "@monaco-editor/react";
 import { useSelector } from "react-redux";
 import { ConfirmationButtons } from "#/components/shared/buttons/confirmation-buttons";
 import { ForgeAction } from "#/types/core/actions";
@@ -95,6 +96,10 @@ function resolveObservationSpecificDecision(
     observation.content
   ) {
     return { type: "run" };
+  }
+
+  if (observation.observation === "edit") {
+    return { type: "file-edit-observation" };
   }
 
   return null;
@@ -318,6 +323,7 @@ type RenderDecisionType =
   | "paired-thought"
   | "file-write"
   | "file-edit"
+  | "file-edit-observation"
   | "streaming-chunk"
   | "finish"
   | "chat-message"
@@ -634,6 +640,65 @@ const renderRunDecision: DecisionHandler = ({
     </div>
   ) : null;
 
+const renderFileEditObservationDecision: DecisionHandler = ({
+  event,
+  extras,
+  shouldShowConfirmationButtons,
+}) => {
+  if (!isForgeObservation(event) || event.observation !== "edit") {
+    return null;
+  }
+
+  const path = typeof extras.path === "string" ? extras.path : "";
+  const oldContent = typeof extras.old_content === "string" ? extras.old_content : "";
+  const newContent = typeof extras.new_content === "string" ? extras.new_content : "";
+  const diffText =
+    typeof extras.diff === "string"
+      ? extras.diff
+      : typeof event.content === "string"
+        ? event.content
+        : "";
+  const isPreview = extras.preview === true;
+  const canRenderDiff =
+    typeof extras.old_content === "string" || typeof extras.new_content === "string";
+  const language = getLanguageFromPath(path);
+
+  return (
+    <div className="space-y-2">
+      <GenericEventMessage
+        title={isPreview ? "Edit preview" : "File edit"}
+        details={path || "File changes"}
+        success
+      />
+      {canRenderDiff ? (
+        <div className="h-[280px] rounded-lg overflow-hidden border border-border">
+          <DiffEditor
+            theme="vs-dark"
+            language={language}
+            original={oldContent}
+            modified={newContent}
+            options={{
+              readOnly: true,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              renderSideBySide: true,
+              wordWrap: "on",
+              automaticLayout: true,
+            }}
+          />
+        </div>
+      ) : (
+        <GenericEventMessage
+          title={path || "File edit diff"}
+          details={diffText || "No diff available."}
+          success
+        />
+      )}
+      {shouldShowConfirmationButtons && <ConfirmationButtons />}
+    </div>
+  );
+};
+
 const renderGenericDecision: DecisionHandler = (context) => {
   const {
     event,
@@ -671,6 +736,7 @@ const decisionHandlers: Record<RenderDecisionType, DecisionHandler> = {
   "paired-thought": renderPairedThoughtDecision,
   "file-write": renderFileWriteDecision,
   "file-edit": renderFileEditDecision,
+  "file-edit-observation": renderFileEditObservationDecision,
   "streaming-chunk": renderStreamingChunkDecision,
   finish: renderFinishDecision,
   "chat-message": renderChatMessageDecision,
@@ -752,9 +818,8 @@ function useEventMessageController({
   const { hydratedEventIds } = useWsClient();
 
   const shouldShowConfirmationButtons = useMemo(
-    () =>
-      isLastMessage && event.source === "agent" && isAwaitingUserConfirmation,
-    [event.source, isAwaitingUserConfirmation, isLastMessage],
+    () => isLastMessage && isAwaitingUserConfirmation,
+    [isAwaitingUserConfirmation, isLastMessage],
   );
 
   const extras = useMemo(

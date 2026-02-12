@@ -27,6 +27,20 @@ from backend.models.model_features import get_features, ModelFeatures
 from backend.models.llm_utils import get_token_count, create_pretrained_tokenizer
 from backend.utils.tenacity_stop import stop_if_should_exit
 from backend.models.direct_clients import get_direct_client, LLMResponse
+from backend.models.exceptions import (
+    APIConnectionError,
+    APIError,
+    AuthenticationError,
+    BadRequestError,
+    ContentPolicyViolationError,
+    ContextWindowExceededError,
+    InternalServerError,
+    LLMError,
+    RateLimitError,
+    ServiceUnavailableError,
+    Timeout,
+    is_context_window_error,
+)
 
 from backend.core.exceptions import LLMNoResponseError
 from backend.core.logger import forge_logger as logger
@@ -36,6 +50,90 @@ from backend.models.retry_mixin import RetryMixin
 
 if TYPE_CHECKING:
     from backend.core.config import LLMConfig
+
+
+def _map_provider_exception(exc: Exception, model: str) -> Exception:
+    """Map provider SDK exceptions to our :mod:`backend.models.exceptions` hierarchy.
+
+    If the exception is already one of ours, it passes through unchanged.
+    Unknown exceptions are wrapped in :class:`APIError` for uniformity.
+    """
+    if isinstance(exc, LLMError):
+        return exc
+
+    exc_name = type(exc).__name__.lower()
+    exc_str = str(exc).lower()
+
+    # OpenAI SDK exceptions
+    try:
+        import openai as _oai  # noqa: F811
+
+        if isinstance(exc, _oai.AuthenticationError):
+            return AuthenticationError(str(exc), model=model, llm_provider="openai")
+        if isinstance(exc, _oai.RateLimitError):
+            return RateLimitError(str(exc), model=model, llm_provider="openai")
+        if isinstance(exc, _oai.APIConnectionError):
+            return APIConnectionError(str(exc), model=model, llm_provider="openai")
+        if isinstance(exc, _oai.APITimeoutError):
+            return Timeout(str(exc), model=model, llm_provider="openai")
+        if isinstance(exc, _oai.BadRequestError):
+            if is_context_window_error(exc_str, exc):
+                return ContextWindowExceededError(str(exc), model=model, llm_provider="openai")
+            return BadRequestError(str(exc), model=model, llm_provider="openai")
+        if isinstance(exc, _oai.InternalServerError):
+            return InternalServerError(str(exc), model=model, llm_provider="openai")
+        if isinstance(exc, _oai.APIStatusError):
+            status = getattr(exc, "status_code", None)
+            if status == 503:
+                return ServiceUnavailableError(str(exc), model=model, llm_provider="openai")
+            return APIError(str(exc), model=model, llm_provider="openai", status_code=status)
+    except ImportError:
+        pass
+
+    # Anthropic SDK exceptions
+    try:
+        import anthropic as _anth
+
+        if isinstance(exc, _anth.AuthenticationError):
+            return AuthenticationError(str(exc), model=model, llm_provider="anthropic")
+        if isinstance(exc, _anth.RateLimitError):
+            return RateLimitError(str(exc), model=model, llm_provider="anthropic")
+        if isinstance(exc, _anth.APIConnectionError):
+            return APIConnectionError(str(exc), model=model, llm_provider="anthropic")
+        if isinstance(exc, _anth.APITimeoutError):
+            return Timeout(str(exc), model=model, llm_provider="anthropic")
+        if isinstance(exc, _anth.BadRequestError):
+            if is_context_window_error(exc_str, exc):
+                return ContextWindowExceededError(str(exc), model=model, llm_provider="anthropic")
+            return BadRequestError(str(exc), model=model, llm_provider="anthropic")
+        if isinstance(exc, _anth.InternalServerError):
+            return InternalServerError(str(exc), model=model, llm_provider="anthropic")
+        if isinstance(exc, _anth.APIStatusError):
+            status = getattr(exc, "status_code", None)
+            if status == 503:
+                return ServiceUnavailableError(str(exc), model=model, llm_provider="anthropic")
+            return APIError(str(exc), model=model, llm_provider="anthropic", status_code=status)
+    except ImportError:
+        pass
+
+    # Google Generative AI exceptions
+    if "google" in exc_name or "generativeai" in exc_name:
+        if is_context_window_error(exc_str, exc):
+            return ContextWindowExceededError(str(exc), model=model, llm_provider="google")
+        if "quota" in exc_str or "rate" in exc_str:
+            return RateLimitError(str(exc), model=model, llm_provider="google")
+        return APIError(str(exc), model=model, llm_provider="google")
+
+    # Content-policy / safety-filter heuristics
+    if "content_filter" in exc_str or "content policy" in exc_str or "safety" in exc_str:
+        return ContentPolicyViolationError(str(exc), model=model)
+
+    # Context-window overflow heuristic (catches providers we don't explicitly know)
+    if is_context_window_error(exc_str, exc):
+        return ContextWindowExceededError(str(exc), model=model)
+
+    # Fallback — wrap in generic APIError so callers always get LLMError subtypes
+    return APIError(str(exc), model=model)
 
 
 # Create a standalone retry decorator for class-level decorators
@@ -57,14 +155,7 @@ def retry_decorator(**kwargs: Any) -> Callable:
     )
 
 
-from backend.models.exceptions import (
-    APIConnectionError,
-    ContentPolicyViolationError,
-    RateLimitError,
-    ServiceUnavailableError,
-)
-
-__all__ = ["LLM"]
+__all__ = ["LLM", "_map_provider_exception"]
 
 LLM_RETRY_EXCEPTIONS: tuple[type[Exception], ...] = (
     APIConnectionError,
@@ -112,20 +203,35 @@ class LLM(RetryMixin, DebugMixin):
         # Configure capabilities
         try:
             features = get_features(self.config.model)
-            self._function_calling_active = self.config.native_tool_calling if self.config.native_tool_calling is not None else features.supports_function_calling
-        except Exception:
-            logger.debug(f"Could not get features for model: {self.config.model}")
+            self._function_calling_active = (
+                self.config.native_tool_calling
+                if self.config.native_tool_calling is not None
+                else features.supports_function_calling
+            )
+        except (KeyError, ValueError) as exc:
+            logger.warning(
+                "Could not detect function-calling support for model %s: %s  "
+                "— defaulting to disabled. If this model supports tools, "
+                "set native_tool_calling=true in the LLM config.",
+                self.config.model, exc,
+            )
             self._function_calling_active = self.config.native_tool_calling or False
 
         # Initialize model info (limits, etc)
         self.init_model_info()
-        
+
         # Cache model features for easy access
         try:
             self._cached_features = get_features(self.config.model)
-        except Exception:
+        except (KeyError, ValueError) as exc:
+            logger.warning(
+                "Model feature lookup failed for %s: %s  "
+                "— using empty defaults. Token limits, vision, and "
+                "other capabilities may be inaccurate.",
+                self.config.model, exc,
+            )
             from backend.models.model_features import ModelFeatures
-            self._cached_features = ModelFeatures()  # Default features
+            self._cached_features = ModelFeatures()
 
         # Handle custom tokenizer
         if self.config.custom_tokenizer:
@@ -147,8 +253,12 @@ class LLM(RetryMixin, DebugMixin):
                 self.config.max_input_tokens = features.max_input_tokens
             if self.config.max_output_tokens is None:
                 self.config.max_output_tokens = features.max_output_tokens
-        except Exception as e:
-            logger.debug(f"Could not initialize model info for {self.config.model}: {e}")
+        except (KeyError, ValueError, AttributeError) as exc:
+            logger.warning(
+                "Could not initialize token limits for model %s: %s  "
+                "— max_input_tokens and max_output_tokens may be None.",
+                self.config.model, exc,
+            )
 
     def _extract_api_key(self) -> str | None:
         """Extract API key from config or environment."""
@@ -292,8 +402,10 @@ class LLM(RetryMixin, DebugMixin):
                 self.log_response(response.to_dict())
                 return response
             except Exception as e:
-                # Map SDK exceptions to our custom exceptions if needed
-                # For now, we assume the client or the retry decorator handles it
+                # Map provider SDK exceptions to our unified hierarchy
+                mapped = _map_provider_exception(e, self.config.model)
+                if mapped is not e:
+                    raise mapped from e
                 raise
 
         return _completion_with_retry(**call_kwargs)
@@ -393,7 +505,10 @@ class LLM(RetryMixin, DebugMixin):
                         
                 yield chunk
         except Exception as e:
-            logger.error(f"LLM astream error: {e}")
+            logger.error("LLM astream error: %s", e)
+            mapped = _map_provider_exception(e, self.config.model)
+            if mapped is not e:
+                raise mapped from e
             raise
 
     async def _check_cancelled(self) -> bool:

@@ -226,9 +226,13 @@ class LocalRuntimeInProcess(ActionExecutionClient):
                 self._temp_workspace = tempfile.mkdtemp(
                     prefix=f"FORGE_workspace_{self.sid}_"
                 )
+            self.config.workspace_mount_path_in_sandbox = self._temp_workspace
             # Ensure we start inside the workspace to prevent accidental global access
             os.chdir(self._temp_workspace)
             logger.info(f"Using workspace: {self._temp_workspace}")
+            return
+
+        self.config.workspace_mount_path_in_sandbox = self._temp_workspace
 
     async def execute_action(self, action: Any) -> Observation:
         """Execute action directly via ActionExecutor."""
@@ -245,6 +249,15 @@ class LocalRuntimeInProcess(ActionExecutionClient):
             logger.warning(f"Security analysis failed: {e}")
 
         return await self._executor.run_action(action)
+
+    def hard_kill(self) -> None:
+        """Best-effort immediate termination of processes started by this runtime."""
+        if self._executor is None:
+            return
+        try:
+            self._executor.hard_kill()
+        except Exception:
+            logger.debug("LocalRuntimeInProcess hard_kill failed", exc_info=True)
 
     def run(self, action: CmdRunAction) -> Observation:
         """Execute command via ActionExecutor."""

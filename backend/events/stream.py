@@ -11,7 +11,9 @@ import inspect
 import os
 import re
 import threading
+import time
 import weakref
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from enum import Enum
@@ -23,7 +25,7 @@ from backend.events.event import Event, EventSource
 from backend.events.event_store import EventStore
 from backend.events.serialization.event import event_from_dict, event_to_dict
 from backend.adapters import json
-from backend.storage.locations import get_conversation_dir
+from backend.storage.locations import get_conversation_dir, get_conversation_events_dir
 from backend.utils.async_utils import call_sync_from_async
 from backend.utils.shutdown_listener import should_continue
 
@@ -90,8 +92,28 @@ class EventStream(EventStore):
     _hwm_ratio: float
     _block_timeout: float
     _stats: dict[str, int]
+    _started_at_monotonic: float
+    _rate_window_seconds: int
+    _recent_enqueued: deque[float]
+    _recent_drops: deque[float]
+    _recent_persist_failures: deque[float]
     # Global weak registry for metrics aggregation
     _GLOBAL_STREAMS: ClassVar[weakref.WeakSet["EventStream"]] = weakref.WeakSet()
+    _CRITICAL_ACTIONS: ClassVar[set[str]] = {
+        "change_agent_state",
+        "finish",
+        "reject",
+    }
+    _CRITICAL_OBSERVATIONS: ClassVar[set[str]] = {
+        "error",
+        "agent_state_changed",
+        "user_rejected",
+    }
+
+    # EventStore instances are identity-based objects; keep hashability explicit so
+    # WeakSet registration for global metrics works even if parent classes define
+    # custom equality semantics.
+    __hash__ = object.__hash__
 
     def __init__(
         self,
@@ -112,9 +134,16 @@ class EventStream(EventStore):
             sid: Session ID for this event stream
             file_store: File storage backend for persisting events
             user_id: Optional user ID for scoping
+            max_queue_size: Maximum in-memory delivery queue size
+            drop_policy: Backpressure policy (drop_oldest, drop_newest, block)
+            hwm_ratio: High-watermark ratio for queue pressure logging
+            block_timeout: Timeout used when drop policy is block
+            worker_count: Number of delivery workers
+            async_write: Whether to use async durable persistence writer
 
         """
         super().__init__(sid, file_store, user_id)
+        self._started_at_monotonic = time.monotonic()
         self._stop_flag = threading.Event()
         # Backpressure configuration (env-based to avoid broad config wiring)
         # --- EventStream tuning (configurable via env or constructor args) ---
@@ -150,7 +179,25 @@ class EventStream(EventStore):
             "high_watermark_hits": 0,
             "persist_failures": 0,
             "cache_write_failures": 0,
+            "critical_events": 0,
+            "critical_queue_blocked": 0,
+            "critical_sync_persistence": 0,
+            "durable_enqueue_failures": 0,
         }
+        self._rate_window_seconds = 60
+        try:
+            self._rate_window_seconds = max(
+                10,
+                min(
+                    600,
+                    int(os.getenv("FORGE_EVENTSTREAM_RATE_WINDOW_SECONDS", "60")),
+                ),
+            )
+        except Exception:
+            self._rate_window_seconds = 60
+        self._recent_enqueued = deque()
+        self._recent_drops = deque()
+        self._recent_persist_failures = deque()
         self._queue_loop: asyncio.AbstractEventLoop | None = None
         self._async_queue: asyncio.Queue[Event | object] | None = None
         self._queue_size = 0
@@ -253,8 +300,11 @@ class EventStream(EventStore):
                 try:
                     self.file_store.delete(pending_path)
                     cleaned += 1
-                except Exception:
-                    pass  # Best-effort cleanup
+                except Exception as exc:
+                    logger.debug(
+                        "WAL cleanup: could not delete stale .pending file %s: %s",
+                        pending_path, exc,
+                    )
             except FileNotFoundError:
                 # Event file is missing — recover from the .pending marker
                 try:
@@ -310,19 +360,63 @@ class EventStream(EventStore):
 
         Intended for health classification in long-running sessions.
         """
+        self._trim_recent_window()
         snapshot = dict(self._stats)
+        snapshot["queue_size"] = int(self._queue_size)
+        snapshot["max_queue_size"] = int(self._max_queue_size)
+        snapshot["uptime_seconds"] = int(max(0.0, time.monotonic() - self._started_at_monotonic))
+        snapshot["rate_window_seconds"] = int(self._rate_window_seconds)
+        snapshot["events_window_count"] = int(len(self._recent_enqueued))
+        snapshot["drops_window_count"] = int(len(self._recent_drops))
+        snapshot["persist_failures_window_count"] = int(len(self._recent_persist_failures))
+        if self._rate_window_seconds > 0:
+            snapshot["events_per_minute"] = int(
+                round(len(self._recent_enqueued) * 60 / self._rate_window_seconds)
+            )
+            snapshot["drops_per_minute"] = int(
+                round(len(self._recent_drops) * 60 / self._rate_window_seconds)
+            )
+            snapshot["persist_failures_per_minute"] = int(
+                round(len(self._recent_persist_failures) * 60 / self._rate_window_seconds)
+            )
+        else:
+            snapshot["events_per_minute"] = 0
+            snapshot["drops_per_minute"] = 0
+            snapshot["persist_failures_per_minute"] = 0
+        if self._max_queue_size > 0:
+            snapshot["queue_utilization_pct"] = int(
+                round((self._queue_size / self._max_queue_size) * 100)
+            )
+        else:
+            snapshot["queue_utilization_pct"] = 0
         if self._durable_writer:
             snapshot["durable_writer_drops"] = int(self._durable_writer.drop_count)
             snapshot["durable_writer_queue_depth"] = int(self._durable_writer.queue_depth)
             snapshot["durable_writer_errors"] = int(self._durable_writer.error_count)
         return snapshot
 
+    def _trim_recent_window(self) -> None:
+        now = time.monotonic()
+        cutoff = now - self._rate_window_seconds
+        for samples in (
+            self._recent_enqueued,
+            self._recent_drops,
+            self._recent_persist_failures,
+        ):
+            while samples and samples[0] < cutoff:
+                samples.popleft()
+
+    def _record_recent(self, samples: deque[float]) -> None:
+        samples.append(time.monotonic())
+        self._trim_recent_window()
+
     @classmethod
     def iter_global_streams(cls) -> list["EventStream"]:
         """Return a snapshot list of all live EventStream instances."""
         try:
             return list(cls._GLOBAL_STREAMS)
-        except Exception:  # pragma: no cover - defensive
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug("iter_global_streams failed: %s", exc)
             return []
 
     def _clean_up_subscriber(self, subscriber_id: str, callback_id: str) -> None:
@@ -520,6 +614,15 @@ class EventStream(EventStore):
         cache_payload: tuple[str, str] | None,
     ) -> None:
         filename = self._get_filename_for_id(event_id, self.user_id)
+        is_critical = self._is_critical_payload(payload)
+
+        # Critical control/error events are persisted synchronously to reduce
+        # the chance of losing session state transitions under backpressure.
+        if is_critical:
+            self._stats["critical_sync_persistence"] += 1
+            self._write_event_sync(filename, payload, cache_payload)
+            return
+
         writer = self._durable_writer
         if writer:
             persisted = PersistedEvent(
@@ -531,8 +634,29 @@ class EventStream(EventStore):
             )
             if writer.enqueue(persisted):
                 return
+            self._stats["durable_enqueue_failures"] += 1
 
         self._write_event_sync(filename, payload, cache_payload)
+
+    @classmethod
+    def _is_critical_payload(cls, payload: dict[str, Any]) -> bool:
+        action_name = payload.get("action")
+        if isinstance(action_name, str):
+            return action_name in cls._CRITICAL_ACTIONS
+        observation_name = payload.get("observation")
+        if isinstance(observation_name, str):
+            return observation_name in cls._CRITICAL_OBSERVATIONS
+        return False
+
+    @classmethod
+    def _is_critical_event(cls, event: Event) -> bool:
+        action_name = getattr(event, "action", None)
+        if isinstance(action_name, str):
+            return action_name in cls._CRITICAL_ACTIONS
+        observation_name = getattr(event, "observation", None)
+        if isinstance(observation_name, str):
+            return observation_name in cls._CRITICAL_OBSERVATIONS
+        return False
 
     def _write_event_sync(
         self,
@@ -580,20 +704,27 @@ class EventStream(EventStore):
             pending_file = filename + ".pending"
             try:
                 self.file_store.write(pending_file, event_json)
-            except Exception:
-                pass  # Best-effort; not fatal if marker cannot be written
+            except Exception as exc:
+                logger.debug(
+                    "WAL: could not write .pending marker %s: %s",
+                    pending_file, exc,
+                )
 
             self.file_store.write(filename, event_json)
 
             # Success — remove the intent marker
             try:
                 self.file_store.delete(pending_file)
-            except Exception:
-                pass  # Best-effort cleanup
+            except Exception as exc:
+                logger.debug(
+                    "WAL: could not remove .pending marker %s: %s",
+                    pending_file, exc,
+                )
         except Exception as exc:  # pragma: no cover - defensive
             # Persistence should not crash the event stream. Track the failure so
             # session health logic can degrade appropriately.
             self._stats["persist_failures"] += 1
+            self._record_recent(self._recent_persist_failures)
             logger.error(
                 "Failed to persist event file %s for %s: %s",
                 filename,
@@ -846,6 +977,10 @@ class EventStream(EventStore):
         if not self._async_queue:
             return
         queue = self._async_queue
+        is_critical = self._is_critical_event(event)
+        if is_critical:
+            self._stats["critical_events"] += 1
+
         if (
             self._max_queue_size > 0
             and queue.qsize() / self._max_queue_size >= self._hwm_ratio
@@ -858,18 +993,31 @@ class EventStream(EventStore):
                 self._drop_policy,
             )
 
+        if is_critical:
+            # Never drop critical control/error events due to queue pressure.
+            if queue.full():
+                self._stats["critical_queue_blocked"] += 1
+            await queue.put(event)
+            self._stats["enqueued"] += 1
+            self._record_recent(self._recent_enqueued)
+            self._queue_size = queue.qsize()
+            return
+
         if queue.full():
             if self._drop_policy == "drop_oldest":
                 try:
                     _ = queue.get_nowait()
                     queue.task_done()
                     self._stats["dropped_oldest"] += 1
+                    self._record_recent(self._recent_drops)
                 except asyncio.QueueEmpty:
                     self._stats["dropped_newest"] += 1
+                    self._record_recent(self._recent_drops)
                     logger.warning("EventStream full; dropped newest (empty on get)")
                     return
                 queue.put_nowait(event)
                 self._stats["enqueued"] += 1
+                self._record_recent(self._recent_enqueued)
                 self._queue_size = queue.qsize()
                 return
             if self._drop_policy == "block":
@@ -878,21 +1026,25 @@ class EventStream(EventStore):
                         queue.put(event), timeout=self._block_timeout
                     )
                     self._stats["enqueued"] += 1
+                    self._record_recent(self._recent_enqueued)
                     self._queue_size = queue.qsize()
                     return
                 except asyncio.TimeoutError:
                     self._stats["dropped_newest"] += 1
+                    self._record_recent(self._recent_drops)
                     logger.warning(
                         "EventStream full after blocking %.3fs; dropped newest",
                         self._block_timeout,
                     )
                     return
             self._stats["dropped_newest"] += 1
+            self._record_recent(self._recent_drops)
             logger.warning("EventStream full; dropped newest")
             return
 
         queue.put_nowait(event)
         self._stats["enqueued"] += 1
+        self._record_recent(self._recent_enqueued)
         self._queue_size = queue.qsize()
 
     async def _initiate_shutdown(self) -> None:
@@ -918,20 +1070,63 @@ def get_aggregated_event_stream_stats() -> dict[str, int]:
         "dropped_oldest": 0,
         "dropped_newest": 0,
         "high_watermark_hits": 0,
+        "persist_failures": 0,
+        "cache_write_failures": 0,
+        "critical_events": 0,
+        "critical_queue_blocked": 0,
+        "critical_sync_persistence": 0,
+        "durable_enqueue_failures": 0,
+        "durable_writer_drops": 0,
+        "durable_writer_queue_depth": 0,
+        "durable_writer_errors": 0,
+        "events_per_minute": 0,
+        "drops_per_minute": 0,
+        "persist_failures_per_minute": 0,
+        "queue_utilization_pct_avg": 0,
+        "uptime_seconds_sum": 0,
         "queue_size": 0,
     }
     # Copy to list to avoid mutation during iteration
     for stream in EventStream.iter_global_streams():
         try:
-            stats = stream.get_stats()
+            stats = stream.get_backpressure_snapshot()
             totals["streams"] += 1
             totals["enqueued"] += stats.get("enqueued", 0)
             totals["dropped_oldest"] += stats.get("dropped_oldest", 0)
             totals["dropped_newest"] += stats.get("dropped_newest", 0)
             totals["high_watermark_hits"] += stats.get("high_watermark_hits", 0)
+            totals["persist_failures"] += stats.get("persist_failures", 0)
+            totals["cache_write_failures"] += stats.get("cache_write_failures", 0)
+            totals["critical_events"] += stats.get("critical_events", 0)
+            totals["critical_queue_blocked"] += stats.get("critical_queue_blocked", 0)
+            totals["critical_sync_persistence"] += stats.get(
+                "critical_sync_persistence", 0
+            )
+            totals["durable_enqueue_failures"] += stats.get(
+                "durable_enqueue_failures", 0
+            )
+            totals["durable_writer_drops"] += stats.get("durable_writer_drops", 0)
+            totals["durable_writer_queue_depth"] += stats.get(
+                "durable_writer_queue_depth", 0
+            )
+            totals["durable_writer_errors"] += stats.get("durable_writer_errors", 0)
+            totals["events_per_minute"] += stats.get("events_per_minute", 0)
+            totals["drops_per_minute"] += stats.get("drops_per_minute", 0)
+            totals["persist_failures_per_minute"] += stats.get(
+                "persist_failures_per_minute", 0
+            )
+            totals["queue_utilization_pct_avg"] += stats.get("queue_utilization_pct", 0)
+            totals["uptime_seconds_sum"] += stats.get("uptime_seconds", 0)
             totals["queue_size"] += stats.get("queue_size", 0)
-        except Exception:  # pragma: no cover - defensive
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug(
+                "Aggregation: skipping broken EventStream: %s", exc
+            )
             continue
+    if totals["streams"] > 0:
+        totals["queue_utilization_pct_avg"] = int(
+            round(totals["queue_utilization_pct_avg"] / totals["streams"])
+        )
     return totals
 
 

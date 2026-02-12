@@ -22,8 +22,6 @@ if sys.platform != "win32":
 
 import os
 import subprocess
-import time
-from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING
 
@@ -33,8 +31,7 @@ from backend.events.observation.commands import (
     CmdOutputMetadata,
     CmdOutputObservation,
 )
-from backend.runtime.utils.bash_constants import TIMEOUT_MESSAGE_TEMPLATE
-from backend.utils.shutdown_listener import should_continue
+from backend.runtime.utils.process_registry import TaskCancellationService
 
 if TYPE_CHECKING:
     from backend.events.action import CmdRunAction
@@ -56,6 +53,7 @@ def _find_powershell_executable() -> str:
             capture_output=True,
             text=True,
             timeout=5,
+            check=False,
         )
         if result.returncode == 0:
             logger.info("Found PowerShell 7 (pwsh.exe)")
@@ -70,6 +68,7 @@ def _find_powershell_executable() -> str:
             capture_output=True,
             text=True,
             timeout=5,
+            check=False,
         )
         if result.returncode == 0:
             logger.info("Found Windows PowerShell (powershell.exe)")
@@ -96,6 +95,7 @@ class WindowsPowershellSession:
         username: str | None = None,
         no_change_timeout_seconds: int = 30,
         max_memory_mb: int | None = None,
+        cancellation_service: TaskCancellationService | None = None,
     ) -> None:
         """Initializes the PowerShell session.
 
@@ -113,6 +113,7 @@ class WindowsPowershellSession:
         self.NO_CHANGE_TIMEOUT_SECONDS = no_change_timeout_seconds
         self.max_memory_mb = max_memory_mb
         self._job_lock = RLock()
+        self._cancellation = cancellation_service or TaskCancellationService(label="runtime")
         
         try:
             self.powershell_exe = _find_powershell_executable()
@@ -179,15 +180,23 @@ class WindowsPowershellSession:
             command,
         ]
         
+        process = None
         try:
-            result = subprocess.run(
+            # Use Popen instead of run to capture PID for cancellation service
+            process = subprocess.Popen(
                 ps_command,
                 cwd=work_dir,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                stdin=subprocess.PIPE if input_text is not None else None,
                 text=True,
-                timeout=timeout,
-                input=input_text,
             )
+            
+            # Register for cancellation
+            self._cancellation.register_process(process)
+            
+            stdout, stderr = process.communicate(input=input_text, timeout=timeout)
+            return_code = process.returncode
             
             # Update CWD if command changed directory
             if "Set-Location" in command or "cd " in command:
@@ -198,19 +207,34 @@ class WindowsPowershellSession:
                     capture_output=True,
                     text=True,
                     timeout=5,
+                    check=False,
                 )
                 if cwd_result.returncode == 0:
                     new_cwd = cwd_result.stdout.strip()
                     if os.path.isdir(new_cwd):
                         self._cwd = new_cwd
             
-            return (result.stdout, result.stderr, result.returncode)
+            return (stdout, stderr, return_code)
         except subprocess.TimeoutExpired:
             logger.warning("Command timed out after %s seconds: %s", timeout, command)
+            if process:
+                try:
+                    process.kill()
+                    process.wait()
+                except Exception:
+                    pass
             return ("", f"Command timed out after {timeout} seconds", 124)
         except Exception as e:
             logger.error("Error running PowerShell command: %s", e)
+            if process:
+                try:
+                    process.kill()
+                except Exception:
+                    pass
             return ("", str(e), 1)
+        finally:
+            if process:
+                self._cancellation.unregister_process(process.pid)
 
     def execute(self, action: "CmdRunAction") -> CmdOutputObservation | ErrorObservation:
         """Executes a command.
@@ -240,21 +264,28 @@ class WindowsPowershellSession:
         )
         
         if run_in_background:
-            # For background commands, start a job
-            # PowerShell jobs require a persistent session, so we'll use Start-Process
-            # or Start-Job in a way that works with subprocess
-            job_command = f'Start-Job -ScriptBlock {{ Set-Location "{self._cwd}"; {command} }} | ForEach-Object {{ Write-Output $_.Id }}'
-            stdout, stderr, exit_code = self._run_command(job_command, timeout=10)
+            # Start a real background process so we can reliably terminate it later.
+            # We launch a new PowerShell instance that sets location and runs the command.
+            escaped_cwd = self._cwd.replace('"', '`"')
+            child_script = f'Set-Location "{escaped_cwd}"; {command}'
+            child_script_escaped = child_script.replace("'", "''")
+            start_proc = (
+                f"$p = Start-Process -FilePath '{self.powershell_exe}' -NoNewWindow -PassThru "
+                f"-ArgumentList @('-NoProfile','-NonInteractive','-Command','{child_script_escaped}'); "
+                "Write-Output $p.Id"
+            )
+            stdout, stderr, exit_code = self._run_command(start_proc, timeout=10)
             if exit_code == 0 and stdout.strip().isdigit():
-                job_id = stdout.strip()
-                logger.info("Background job started with ID: %s", job_id)
+                child_pid = int(stdout.strip())
+                logger.info("Background process started with PID: %s", child_pid)
+                self._cancellation.register_pid(child_pid)
                 metadata = CmdOutputMetadata(
                     exit_code=0,
                     working_dir=self._cwd.replace("\\", "\\\\"),
                 )
                 # Output format: [1] for compatibility with bash/tmux tests
                 return CmdOutputObservation(
-                    content=f"[{job_id}]",
+                    content=f"[{child_pid}]",
                     command=command,
                     metadata=metadata,
                 )

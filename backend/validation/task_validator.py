@@ -432,9 +432,9 @@ class LLMTaskEvaluator(TaskValidator):
         except Exception as e:
             logger.error(f"LLM evaluation failed: {e}")
             return ValidationResult(
-                passed=True,  # Don't block on LLM errors
-                reason="LLM evaluation failed",
-                confidence=0.3,
+                passed=False,
+                reason=f"LLM evaluation failed: {e}",
+                confidence=0.1,
             )
 
     def _create_evaluation_prompt(self, task: Task, state: State) -> str:
@@ -510,12 +510,12 @@ Has this task been completed? Respond in JSON format:
                 confidence=data.get("confidence", 0.5),
                 missing_items=data.get("missing_items", []),
             )
-        except Exception:
-            # Fallback if parsing fails
+        except Exception as exc:
+            logger.warning("Could not parse LLM evaluation response: %s", exc)
             return ValidationResult(
-                passed=True,
-                reason="Could not parse LLM response",
-                confidence=0.3,
+                passed=False,
+                reason=f"Could not parse LLM response: {exc}",
+                confidence=0.1,
             )
 
 

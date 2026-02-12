@@ -10,12 +10,11 @@ import os
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from backend.core.type_safety.path_validation import (
     PathValidationError,
     SafePath,
-    validate_and_sanitize_path,
 )
 from backend.core.type_safety.sentinels import MISSING, Sentinel, is_missing
 
@@ -70,10 +69,9 @@ class FileEditor:
         new_str: str | Sentinel | None = MISSING,
         insert_line: Optional[int] = None,
         enable_linting: bool = False,
+        dry_run: bool = False,
         **_: Any,
     ) -> ToolResult:
-        # Store command for use in handlers
-        self._current_command = command
         """Execute a file editor command.
 
         Args:
@@ -85,6 +83,7 @@ class FileEditor:
             new_str: Optional replacement string (for edit operations, use MISSING if not provided)
             insert_line: Optional line number to insert at (1-indexed)
             enable_linting: Whether to enable linting (currently not implemented)
+            dry_run: If True, compute preview result without writing changes
             **_: Additional keyword arguments (ignored)
 
         Returns:
@@ -93,6 +92,8 @@ class FileEditor:
         Raises:
             ToolError: If operation fails
         """
+        # Store command for use in handlers
+        self._current_command = command
         try:
             # Validate and resolve file path with security checks
             safe_path = self._resolve_path_safe(path)
@@ -102,13 +103,23 @@ class FileEditor:
                 return self._handle_view(file_path, view_range, path)
             if command in ("edit", "apply_edit"):
                 return self._handle_edit(
-                    file_path, file_text, old_str, new_str, insert_line
+                    file_path,
+                    file_text,
+                    old_str,
+                    new_str,
+                    insert_line,
+                    dry_run=dry_run,
                 )
             if command in ("write", "create"):
                 # Handle sentinels for write/create command
                 # "create" is an alias for "write" - both create or overwrite files
                 content = self._extract_content(file_text, new_str)
-                return self._handle_write(file_path, content, is_create=(command == "create"))
+                return self._handle_write(
+                    file_path,
+                    content,
+                    is_create=(command == "create"),
+                    dry_run=dry_run,
+                )
 
             raise ToolError(f"Unknown command: {command}")
 
@@ -130,27 +141,31 @@ class FileEditor:
             PathValidationError: If path validation fails
         """
         try:
-            # Use SafePath validation for security
             return SafePath.validate(
                 path,
                 workspace_root=str(self.workspace_root),
-                must_be_relative=True,  # Enforce workspace boundaries
+                must_be_relative=True,
             )
         except PathValidationError:
-            # If validation fails, try legacy resolution for backward compatibility
-            # but log a warning
+            allow_legacy = os.environ.get("FORGE_ALLOW_INSECURE_PATHS", "false").lower() in (
+                "1",
+                "true",
+                "yes",
+            )
+            if not allow_legacy:
+                raise
+
             from backend.core.logger import forge_logger as logger
 
             logger.warning(
-                f"Path validation failed for {path}, using legacy resolution. "
-                "This may be a security risk."
+                "Path validation failed for %s; falling back to legacy resolution because "
+                "FORGE_ALLOW_INSECURE_PATHS is enabled. This may be a security risk.",
+                path,
             )
-            # Fallback to basic path resolution (less secure)
             if os.path.isabs(path):
                 resolved = Path(path)
             else:
                 resolved = self.workspace_root / path.lstrip("/")
-            # Create SafePath from resolved path (bypasses validation)
             return SafePath(resolved, workspace_root=self.workspace_root)
 
     def _resolve_path(self, path: str) -> Path:
@@ -254,13 +269,16 @@ class FileEditor:
         old_str: str | Sentinel | None,
         new_str: str | Sentinel | None,
         insert_line: Optional[int],
+        *,
+        dry_run: bool = False,
     ) -> ToolResult:
         """Handle edit command - modify file content."""
         try:
             # Read existing content
-            old_content = ""
+            old_content: str | None = None
             if file_path.exists():
                 old_content = self._read_file(file_path)
+            old_content_str = old_content or ""
 
             # Extract actual values from sentinels (convert to str or None)
             file_text_val: str | None = None
@@ -279,22 +297,31 @@ class FileEditor:
             if insert_line is not None:
                 # Insert at specific line
                 content_to_insert = new_str_val or file_text_val or ""
-                new_content = self._insert_at_line(old_content, content_to_insert, insert_line)
+                new_content = self._insert_at_line(
+                    old_content_str, content_to_insert, insert_line
+                )
             elif old_str_val and new_str_val:
                 # Replace string
-                new_content = old_content.replace(old_str_val, new_str_val)
+                new_content = old_content_str.replace(old_str_val, new_str_val)
             elif file_text_val:
                 # Replace entire content
                 new_content = file_text_val
             elif new_str_val:
                 # Append new string
-                new_content = old_content + new_str_val
+                new_content = old_content_str + new_str_val
             else:
                 return ToolResult(
                     output="",
                     error="No content provided for edit operation",
                     old_content=old_content,
-                    new_content=old_content,
+                    new_content=old_content_str,
+                )
+
+            if dry_run:
+                return ToolResult(
+                    output="Preview generated (no changes applied)",
+                    old_content=old_content,
+                    new_content=new_content,
                 )
 
             # Backup original if in transaction
@@ -315,19 +342,35 @@ class FileEditor:
                 output="", error=f"Error editing file: {e}", old_content=None, new_content=None
             )
 
-    def _handle_write(self, file_path: Path, content: str, is_create: bool = False) -> ToolResult:
+    def _handle_write(
+        self,
+        file_path: Path,
+        content: str,
+        is_create: bool = False,
+        *,
+        dry_run: bool = False,
+    ) -> ToolResult:
         """Handle write command - write new file content.
         
         Args:
             file_path: Path to the file to write
             content: Content to write to the file
             is_create: If True, use "created" message instead of "written"
+            dry_run: If True, return preview without writing changes
         """
         try:
             old_content = None
             file_existed = file_path.exists()
             if file_existed:
                 old_content = self._read_file(file_path)
+
+            if dry_run:
+                output_msg = "Preview generated (no changes applied)"
+                return ToolResult(
+                    output=output_msg,
+                    old_content=old_content,
+                    new_content=content,
+                )
 
             # Backup original if in transaction
             if self._transaction_stack:
@@ -432,7 +475,7 @@ class FileEditor:
             yield self
             # All operations succeeded, commit (just remove backup layer)
             self._transaction_stack.pop()
-        except Exception as e:
+        except Exception:
             # Rollback all changes in this transaction
             self._rollback_transaction(backup)
             self._transaction_stack.pop()
@@ -457,5 +500,5 @@ class FileEditor:
             except Exception as e:
                 # Log but continue rollback for other files
                 from backend.core.logger import forge_logger as logger
-                logger.warning(f"Failed to rollback {file_path}: {e}")
+                logger.warning("Failed to rollback %s: %s", file_path, e)
 

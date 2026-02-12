@@ -76,6 +76,9 @@ export interface EditObservation extends ForgeObservationEvent<"edit"> {
     path: string;
     diff: string;
     impl_source: string;
+    old_content?: string | null;
+    new_content?: string | null;
+    preview?: boolean;
   };
 }
 

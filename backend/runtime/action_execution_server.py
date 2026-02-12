@@ -83,6 +83,7 @@ from backend.runtime.mcp.proxy import MCPProxyManager
 from backend.runtime.plugins import ALL_PLUGINS, Plugin
 from backend.runtime.utils import find_available_tcp_port
 from backend.runtime.utils.bash import BashSession
+from backend.runtime.utils.process_registry import TaskCancellationService
 from backend.runtime.utils.files import insert_lines, read_lines
 from backend.runtime.utils.memory_monitor import MemoryMonitor
 from backend.runtime.utils.runtime_init import init_user_and_working_directory
@@ -211,6 +212,7 @@ def _execute_file_editor(
     new_str: str | None = None,
     insert_line: int | str | None = None,
     enable_linting: bool = False,
+    dry_run: bool = False,
 ) -> tuple[str, tuple[str | None, str | None]]:
     """Execute file editor command and handle exceptions.
 
@@ -251,6 +253,7 @@ def _execute_file_editor(
             new_str=new_str if new_str is not None else MISSING,
             insert_line=insert_line,
             enable_linting=enable_linting,
+            dry_run=dry_run,
         )
     except ToolError as e:
         result = ToolResult(output="", error=str(e))
@@ -262,6 +265,44 @@ def _execute_file_editor(
         logger.warning("No output from file_editor for %s", path)
         return ("", (None, None))
     return (result.output, (result.old_content, result.new_content))
+
+
+def _truncate_large_text(value: str, max_chars: int, *, label: str) -> str:
+    """Truncate large text payloads to prevent oversized event observations."""
+    if max_chars <= 0 or len(value) <= max_chars:
+        return value
+    half = max_chars // 2
+    logger.warning(
+        "Truncating oversized %s payload from %s chars to %s chars",
+        label,
+        len(value),
+        max_chars,
+    )
+    return (
+        value[:half]
+        + "\n[... Truncated by Forge due to size ...]\n"
+        + value[-half:]
+    )
+
+
+def _get_max_edit_observation_chars() -> int:
+    """Read and validate max edit observation payload size from environment."""
+    raw_value = os.environ.get("FORGE_MAX_EDIT_OBS_CHARS", "200000")
+    try:
+        parsed = int(raw_value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Invalid FORGE_MAX_EDIT_OBS_CHARS=%r; using default 200000",
+            raw_value,
+        )
+        return 200000
+    if parsed <= 0:
+        logger.warning(
+            "Non-positive FORGE_MAX_EDIT_OBS_CHARS=%s; using default 200000",
+            parsed,
+        )
+        return 200000
+    return parsed
 
 
 class ActionExecutor:
@@ -302,6 +343,7 @@ class ActionExecutor:
             self.tool_registry = ToolRegistry()
         
         self.bash_session: BashSession | None = None
+        self.cancellation_service = TaskCancellationService(label=f"runtime:{work_dir}")
         self.lock = asyncio.Lock()
         self.plugins: dict[str, Plugin] = {}
         self.file_editor = FileEditor(workspace_root=self._initial_cwd)
@@ -461,6 +503,7 @@ class ActionExecutor:
                 os.environ.get("NO_CHANGE_TIMEOUT_SECONDS", 10)
             ),
             max_memory_mb=self.max_memory_gb * 1024 if self.max_memory_gb else None,
+            cancellation_service=self.cancellation_service,
         )
         
         # Initialize the session
@@ -468,6 +511,13 @@ class ActionExecutor:
         logger.info("Shell session initialized successfully")
         
         return shell_session
+
+    def hard_kill(self) -> None:
+        """Best-effort immediate termination of processes started by this runtime."""
+        try:
+            self.cancellation_service.cancel_all()
+        except Exception:
+            logger.debug("ActionExecutor hard_kill failed", exc_info=True)
 
     async def ainit(self) -> None:
         """Initialize action execution server asynchronously.
@@ -1053,6 +1103,15 @@ class ActionExecutor:
 
         """
         assert action.impl_source == FileEditSource.FILE_EDITOR
+        from backend.core.schemas import ActionConfirmationStatus
+
+        is_mutating_file_edit = action.command != "view"
+        is_preview = (
+            is_mutating_file_edit
+            and
+            getattr(action, "confirmation_state", None)
+            == ActionConfirmationStatus.AWAITING_CONFIRMATION
+        )
         
         # Handle directory viewing specially
         if action.command == "view":
@@ -1079,18 +1138,38 @@ class ActionExecutor:
             new_str=action.new_str,
             insert_line=action.insert_line,
             enable_linting=False,
+            dry_run=is_preview,
         )
+        if is_preview and not result_str.startswith("ERROR:"):
+            result_str = "Preview generated (no changes applied). Confirm to apply these edits."
+
+        max_edit_obs_chars = _get_max_edit_observation_chars()
+        safe_old_content = (
+            None
+            if old_content is None
+            else _truncate_large_text(old_content, max_edit_obs_chars, label="edit.old_content")
+        )
+        safe_new_content = (
+            None
+            if new_content is None
+            else _truncate_large_text(new_content, max_edit_obs_chars, label="edit.new_content")
+        )
+        diff_text = get_diff(
+            old=safe_old_content or "",
+            new=safe_new_content or "",
+            path=action.path,
+        )
+        safe_diff = _truncate_large_text(diff_text, max_edit_obs_chars, label="edit.diff")
+
         return FileEditObservation(
             content=result_str,
             path=action.path,
-            old_content=action.old_str,
-            new_content=action.new_str,
+            prev_exist=old_content is not None,
+            old_content=safe_old_content,
+            new_content=safe_new_content,
             impl_source=FileEditSource.FILE_EDITOR,
-            diff=get_diff(
-                old=old_content or "",
-                new=new_content or "",
-                path=action.path,
-            ),
+            diff=safe_diff,
+            preview=is_preview,
         )
     
     async def _handle_directory_view(self, full_path: str, display_path: str) -> FileEditObservation:

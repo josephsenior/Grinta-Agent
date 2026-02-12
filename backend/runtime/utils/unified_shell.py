@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from backend.events.action import CmdRunAction
     from backend.events.observation import Observation
     from backend.runtime.utils.tool_registry import ToolRegistry
+    from backend.runtime.utils.process_registry import TaskCancellationService
 
 
 class UnifiedShellSession(ABC):
@@ -69,6 +70,7 @@ def create_shell_session(
     username: str | None = None,
     no_change_timeout_seconds: int = 30,
     max_memory_mb: int | None = None,
+    cancellation_service: "TaskCancellationService | None" = None,
 ) -> UnifiedShellSession:
     """Factory function to create the appropriate shell session.
     
@@ -85,6 +87,11 @@ def create_shell_session(
     if tools is None:
         from backend.runtime.utils.tool_registry import ToolRegistry
         tools = ToolRegistry()
+
+    if cancellation_service is None:
+        from backend.runtime.utils.process_registry import TaskCancellationService
+
+        cancellation_service = TaskCancellationService(label="runtime")
     
     logger.info(f"Creating shell session for platform: {sys.platform}")
     logger.info(f"Detected shell: {tools.shell_type}")
@@ -100,6 +107,7 @@ def create_shell_session(
             username=username,
             no_change_timeout_seconds=no_change_timeout_seconds,
             max_memory_mb=max_memory_mb,
+            cancellation_service=cancellation_service,
         )
         # Type cast for mypy - WindowsPowershellSession implements UnifiedShellSession interface
         return session  # type: ignore[return-value]
@@ -114,6 +122,7 @@ def create_shell_session(
             username=username,
             no_change_timeout_seconds=no_change_timeout_seconds,
             max_memory_mb=max_memory_mb,
+            cancellation_service=cancellation_service,
         )
     
     # Unix without tmux: Use simple Bash session
@@ -126,6 +135,7 @@ def create_shell_session(
             username=username,
             no_change_timeout_seconds=no_change_timeout_seconds,
             max_memory_mb=max_memory_mb,
+            cancellation_service=cancellation_service,
         )
     
     # Fallback: Should not happen if tools are detected correctly

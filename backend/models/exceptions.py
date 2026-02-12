@@ -94,3 +94,21 @@ class Timeout(LLMError):
 class OpenAIError(LLMError):
     """OpenAI-specific error."""
     pass
+
+
+__all__ = [
+    "LLMError",
+    "APIConnectionError",
+    "APIError",
+    "AuthenticationError",
+    "BadRequestError",
+    "ContentPolicyViolationError",
+    "ContextWindowExceededError",
+    "InternalServerError",
+    "NotFoundError",
+    "OpenAIError",
+    "RateLimitError",
+    "ServiceUnavailableError",
+    "Timeout",
+    "is_context_window_error",
+]

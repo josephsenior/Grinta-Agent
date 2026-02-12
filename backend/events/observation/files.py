@@ -69,6 +69,7 @@ class FileEditObservation(Observation):
     new_content: str | None = None
     impl_source: FileEditSource = FileEditSource.LLM_BASED_EDIT
     diff: str | None = None
+    preview: bool = False
     _diff_cache: str | None = None
     observation: ClassVar[str] = ObservationType.EDIT
 
