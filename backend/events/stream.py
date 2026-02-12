@@ -203,6 +203,91 @@ class EventStream(EventStore):
         except Exception:
             logger.warning("Failed to register EventStream for global metrics", exc_info=True)
 
+        # Replay any incomplete writes from a previous crash
+        self._replay_pending_events()
+
+    # ------------------------------------------------------------------
+    # WAL replay — recover events left as .pending after a crash
+    # ------------------------------------------------------------------
+
+    def _replay_pending_events(self) -> None:
+        """Scan the events directory for ``.pending`` write-ahead markers.
+
+        If a ``.pending`` file exists but the corresponding event file is
+        missing, the event data is recovered from the marker and written to
+        the canonical location.  Stale markers whose event files already
+        exist are simply cleaned up.
+
+        This turns the lightweight WAL pattern into a full crash-recovery
+        mechanism: any event that was being written when the process died
+        can be replayed on the next startup.
+        """
+        try:
+            events_dir = get_conversation_events_dir(self.sid, self.user_id)
+            all_files = self.file_store.list(events_dir)
+        except FileNotFoundError:
+            return  # No events directory yet — nothing to replay
+        except Exception:
+            logger.debug(
+                "WAL replay: could not list events dir for %s",
+                self.sid,
+                exc_info=True,
+            )
+            return
+
+        pending_files = [f for f in all_files if f.endswith(".pending")]
+        if not pending_files:
+            return
+
+        recovered = 0
+        cleaned = 0
+        for pending_name in pending_files:
+            pending_path = f"{events_dir}{pending_name}"
+            # The canonical event path is the pending path minus ".pending"
+            event_path = pending_path.removesuffix(".pending")
+
+            try:
+                # Check whether the canonical event file was written
+                self.file_store.read(event_path)
+                # Event exists — the .pending marker is stale; clean it up
+                try:
+                    self.file_store.delete(pending_path)
+                    cleaned += 1
+                except Exception:
+                    pass  # Best-effort cleanup
+            except FileNotFoundError:
+                # Event file is missing — recover from the .pending marker
+                try:
+                    event_json = self.file_store.read(pending_path)
+                    self.file_store.write(event_path, event_json)
+                    self.file_store.delete(pending_path)
+                    recovered += 1
+                except Exception as exc:
+                    logger.warning(
+                        "WAL replay: failed to recover %s for session %s: %s",
+                        pending_path,
+                        self.sid,
+                        exc,
+                    )
+            except Exception:
+                # Could not determine state — leave the file alone
+                logger.debug(
+                    "WAL replay: skipping %s (read error)",
+                    pending_path,
+                    exc_info=True,
+                )
+
+        if recovered or cleaned:
+            logger.info(
+                "WAL replay for session %s: recovered=%d, cleaned=%d stale markers",
+                self.sid,
+                recovered,
+                cleaned,
+                extra={"session_id": self.sid, "user_id": self.user_id},
+            )
+            # Reset cur_id so it's recalculated from disk state
+            self._cur_id = None
+
     def close(self) -> None:
         """Close event stream, stopping queue processing and cleaning up subscribers."""
         self._stop_flag.set()

@@ -23,6 +23,7 @@ from backend.events.observation.files import (
 from backend.events.observation.mcp import MCPObservation
 from backend.events.observation.observation import Observation
 from backend.events.observation.reject import UserRejectObservation
+from backend.events.observation.status import StatusObservation
 from backend.events.observation.success import SuccessObservation
 from backend.events.observation.task_tracking import TaskTrackingObservation
 
@@ -43,6 +44,7 @@ __all__ = [
     "Observation",
     "RecallObservation",
     "RecallType",
+    "StatusObservation",
     "SuccessObservation",
     "TaskTrackingObservation",
     "UserRejectObservation",

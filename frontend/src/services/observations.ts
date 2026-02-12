@@ -102,6 +102,44 @@ function handleErrorObservation(message: ObservationMessage) {
   );
 }
 
+// Helper function to handle status observations (budget alerts, system notifications)
+function handleStatusObservation(message: ObservationMessage) {
+  const statusType = message.extras?.status_type as string | undefined;
+
+  if (statusType === "budget_alert") {
+    const pctUsed = Number(message.extras?.pct_used ?? 0) || undefined;
+    const threshold = Number(message.extras?.threshold ?? 0) || undefined;
+    const level =
+      threshold != null && threshold >= 0.9
+        ? "error"
+        : threshold != null && threshold >= 0.8
+          ? "error"
+          : "info";
+
+    store.dispatch(
+      setCurStatusMessage({
+        type: level,
+        message:
+          message.content ||
+          `Budget alert: ${pctUsed != null ? `${(pctUsed * 100).toFixed(1)}%` : ""} of budget used`,
+        status_update: true,
+      }),
+    );
+    return;
+  }
+
+  // Generic status notification
+  if (message.content) {
+    store.dispatch(
+      setCurStatusMessage({
+        type: "info",
+        message: message.content,
+        status_update: true,
+      }),
+    );
+  }
+}
+
 // Main observation handler using a strategy pattern
 const observationHandlers = {
   [ObservationType.RUN]: handleCommandOutput,
@@ -117,6 +155,7 @@ const observationHandlers = {
   [ObservationType.ERROR]: handleErrorObservation,
   [ObservationType.MCP]: () => {},
   [ObservationType.TASK_TRACKING]: () => {},
+  [ObservationType.STATUS]: handleStatusObservation,
 };
 
 // String-based observation handlers for backward compatibility

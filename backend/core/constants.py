@@ -629,6 +629,7 @@ class ObservationType(str, Enum):
     TASK_TRACKING = "task_tracking"
     SERVER_READY = "server_ready"
     RECALL_FAILURE = "recall_failure"
+    STATUS = "status"
 
 
 # Exit reasons

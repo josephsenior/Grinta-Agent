@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { AgentState } from "#/types/agent-state";
 
 export const agentSlice = createSlice({
@@ -7,7 +7,7 @@ export const agentSlice = createSlice({
     curAgentState: AgentState.LOADING,
   },
   reducers: {
-    setCurrentAgentState: (state, action) => {
+    setCurrentAgentState: (state, action: PayloadAction<AgentState>) => {
       state.curAgentState = action.payload;
     },
   },

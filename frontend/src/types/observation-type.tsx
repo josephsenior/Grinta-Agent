@@ -37,6 +37,9 @@ enum ObservationType {
 
   // Result of a task tracking operation
   TASK_TRACKING = "task_tracking",
+
+  // A system status notification (e.g. budget alerts)
+  STATUS = "status",
 }
 
 export default ObservationType;
