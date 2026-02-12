@@ -73,6 +73,41 @@ interface UseWsClient {
   send: (event: Record<string, unknown>) => void;
 }
 
+/**
+ * Stable context — only changes on connection status transitions.
+ * Most components only need `send` and `webSocketStatus`.
+ */
+interface WsStatusContext {
+  webSocketStatus: WebSocketStatus;
+  isLoadingMessages: boolean;
+  hydratedEventIds: Set<string>;
+  send: (event: Record<string, unknown>) => void;
+}
+
+/**
+ * Volatile context — changes on every WebSocket message.
+ * Only components rendering the event list should consume this.
+ */
+interface WsEventsContext {
+  events: Record<string, unknown>[];
+  parsedEvents: (ForgeAction | ForgeObservation)[];
+}
+
+const WsStatusCtx = React.createContext<WsStatusContext>({
+  webSocketStatus: "DISCONNECTED",
+  isLoadingMessages: true,
+  hydratedEventIds: new Set<string>(),
+  send: () => {
+    throw new Error("not connected");
+  },
+});
+
+const WsEventsCtx = React.createContext<WsEventsContext>({
+  events: [],
+  parsedEvents: [],
+});
+
+// Legacy unified context kept for backward-compat; delegates to the split contexts.
 const WsClientContext = React.createContext<UseWsClient>({
   webSocketStatus: "DISCONNECTED",
   isLoadingMessages: true,
@@ -667,31 +702,60 @@ export function WsClientProvider({
     [],
   );
 
-  const value = React.useMemo<UseWsClient>(
+  // Stable context — only changes on connection transitions
+  const statusValue = React.useMemo<WsStatusContext>(
     () => ({
       webSocketStatus,
       isLoadingMessages: messageRateHandler.isUnderThreshold,
-      events,
-      parsedEvents,
       hydratedEventIds: hydratedEventIdsRef.current,
       send,
     }),
-    [
-      webSocketStatus,
-      messageRateHandler.isUnderThreshold,
-      events,
-      parsedEvents,
-      send,
-    ],
+    [webSocketStatus, messageRateHandler.isUnderThreshold, send],
+  );
+
+  // Volatile context — changes on every event
+  const eventsValue = React.useMemo<WsEventsContext>(
+    () => ({ events, parsedEvents }),
+    [events, parsedEvents],
+  );
+
+  // Legacy unified value for backward-compat (useWsClient)
+  const value = React.useMemo<UseWsClient>(
+    () => ({ ...statusValue, ...eventsValue }),
+    [statusValue, eventsValue],
   );
 
   return (
-    <WsClientContext.Provider value={value}>
-      {children}
-    </WsClientContext.Provider>
+    <WsStatusCtx.Provider value={statusValue}>
+      <WsEventsCtx.Provider value={eventsValue}>
+        <WsClientContext.Provider value={value}>
+          {children}
+        </WsClientContext.Provider>
+      </WsEventsCtx.Provider>
+    </WsStatusCtx.Provider>
   );
 }
 
+/**
+ * Full context — re-renders on every WS event.
+ * Prefer `useWsStatus()` or `useWsEvents()` for better performance.
+ */
 export function useWsClient() {
   return React.useContext(WsClientContext);
+}
+
+/**
+ * Stable hook — only re-renders on connection status changes.
+ * Use when you only need `send`, `webSocketStatus`, or `isLoadingMessages`.
+ */
+export function useWsStatus() {
+  return React.useContext(WsStatusCtx);
+}
+
+/**
+ * Volatile hook — re-renders on every WebSocket message.
+ * Use only when you need the events/parsedEvents arrays.
+ */
+export function useWsEvents() {
+  return React.useContext(WsEventsCtx);
 }

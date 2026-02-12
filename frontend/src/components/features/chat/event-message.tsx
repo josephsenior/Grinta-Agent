@@ -29,7 +29,7 @@ import { getEventContent } from "./event-content-helpers/get-event-content";
 import { GenericEventMessage } from "./generic-event-message";
 import { FileList } from "../files/file-list";
 import { parseMessageFromEvent } from "./event-content-helpers/parse-message-from-event";
-import { useWsClient } from "#/context/ws-client-provider";
+import { useWsStatus } from "#/context/ws-client-provider";
 import { StreamingTerminal } from "../terminal/streaming-terminal";
 import { StreamingThought } from "./streaming-thought";
 import { CodeArtifact } from "./code-artifact";
@@ -814,7 +814,7 @@ function useEventMessageController({
   compactMode = false,
 }: EventMessageProps) {
   const curAgentState = useAgentState();
-  const { hydratedEventIds } = useWsClient();
+  const { hydratedEventIds } = useWsStatus();
 
   const shouldShowConfirmationButtons = useMemo(
     () => isLastMessage && isAwaitingUserConfirmation,

@@ -19,14 +19,16 @@ import uvicorn
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "3000"))
-    print(f"🚀 Starting Forge server on http://127.0.0.1:{port}")
+    host = os.environ.get("FORGE_HOST", os.environ.get("HOST", "127.0.0.1"))
+    reload_enabled = os.environ.get("FORGE_ENV", "development") != "production"
+    print(f"🚀 Starting Forge server on http://{host}:{port}")
     print("Press Ctrl+C to stop the server.\n")
     
     uvicorn.run(
         "backend.server.listen:app",
-        host="127.0.0.1",
+        host=host,
         port=port,
         log_level="info",
-        reload=True,
+        reload=reload_enabled,
         reload_excludes=["./workspace"],
     )

@@ -41,6 +41,15 @@ class ObservationService:
         if not (pending_action and pending_action.id == observation.cause):
             return
 
+        # Plugin hook: action_post
+        try:
+            from backend.core.plugin import get_plugin_registry
+            observation = await get_plugin_registry().dispatch_action_post(
+                pending_action, observation
+            )
+        except Exception:  # noqa: BLE001 — plugins must not break the pipeline
+            pass
+
         controller = self._context.get_controller()
         if controller.state.agent_state == AgentState.AWAITING_USER_CONFIRMATION:
             return

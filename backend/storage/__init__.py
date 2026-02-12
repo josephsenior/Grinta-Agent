@@ -1,18 +1,17 @@
-"""Factory helpers and exports for Forge file storage backends."""
+"""Factory helpers and exports for Forge file storage backends.
+
+Cloud backends (S3, Google Cloud) are imported lazily so that a vanilla
+``pip install forge-ai`` (without the ``cloud`` extra) does not crash at
+import time.
+"""
 
 from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING
 
-import httpx
-
-from backend.storage.batched_web_hook import BatchedWebHookFileStore
-from backend.storage.google_cloud import GoogleCloudFileStore
 from backend.storage.local import LocalFileStore
 from backend.storage.memory import InMemoryFileStore
-from backend.storage.s3 import S3FileStore
-from backend.storage.web_hook import WebHookFileStore
 
 if TYPE_CHECKING:
     from backend.storage.files import FileStore
@@ -39,6 +38,7 @@ def get_file_store(
 
     Raises:
         ValueError: If file_store_path is required but not provided for local storage.
+        ImportError: If a cloud backend is requested but its dependencies are not installed.
 
     """
     store: FileStore
@@ -48,12 +48,33 @@ def get_file_store(
             raise ValueError(msg)
         store = LocalFileStore(file_store_path)
     elif file_store_type == "s3":
+        try:
+            from backend.storage.s3 import S3FileStore
+        except ImportError as exc:
+            msg = (
+                "S3 file store requires the 'cloud' extra: "
+                "pip install forge-ai[cloud]"
+            )
+            raise ImportError(msg) from exc
         store = S3FileStore(file_store_path)
     elif file_store_type == "google_cloud":
+        try:
+            from backend.storage.google_cloud import GoogleCloudFileStore
+        except ImportError as exc:
+            msg = (
+                "Google Cloud file store requires the 'cloud' extra: "
+                "pip install forge-ai[cloud]"
+            )
+            raise ImportError(msg) from exc
         store = GoogleCloudFileStore(file_store_path)
     else:
         store = InMemoryFileStore()
     if file_store_web_hook_url:
+        import httpx
+
+        from backend.storage.batched_web_hook import BatchedWebHookFileStore
+        from backend.storage.web_hook import WebHookFileStore
+
         if file_store_web_hook_headers is None:
             file_store_web_hook_headers = {}
             if os.getenv("SESSION_API_KEY"):

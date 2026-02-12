@@ -3,7 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import React from "react";
 import { Command } from "#/state/command-slice";
 import { useRuntimeIsReady } from "#/hooks/use-runtime-is-ready";
-import { useWsClient } from "#/context/ws-client-provider";
+import { useWsStatus } from "#/context/ws-client-provider";
 import { getTerminalCommand } from "#/services/terminal-service";
 import { parseTerminalOutput } from "#/utils/parse-terminal-output";
 
@@ -45,7 +45,7 @@ const persistentLastCommandIndex = { current: 0 };
 export const useTerminal = ({
   commands,
 }: UseTerminalConfig = DEFAULT_TERMINAL_CONFIG) => {
-  const { send } = useWsClient();
+  const { send } = useWsStatus();
   const runtimeIsReady = useRuntimeIsReady();
   const terminal = React.useRef<Terminal | null>(null);
   const fitAddon = React.useRef<FitAddon | null>(null);

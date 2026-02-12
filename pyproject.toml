@@ -28,7 +28,6 @@ dependencies = [
   "diff-match-patch>=20241021,<20260000",
   "whatthepatch>=1.0.6,<2.0.0",
   "asyncpg>=0.30.0,<0.31.0",
-  "numpy>=2.3.2,<3.0.0",
   "aiohttp>=3.9.0,!=3.11.13",
   "requests>=2.32.4,<3.0.0",
   "urllib3>=2.5.0,<3.0.0",
@@ -52,6 +51,7 @@ dependencies = [
   "pygithub>=2.5.0,<3.0.0",
   "fastmcp>=2.13.0,<3.0.0",
   "mcp>=1.10.0,<2.0.0",
+  "httpx>=0.27,<1.0",
 ]
 
 [project.scripts]
@@ -71,6 +71,9 @@ cloud = [
 ]
 containers = [
   "docker>=7.1.0,<8.0.0",
+]
+browser = [
+  "numpy>=2.3.2,<3.0.0",
 ]
 telemetry = [
   "opentelemetry-api>=1.33.1,<2.0.0",
@@ -122,6 +125,7 @@ pre-commit = "4.2.0"
 build = "^1.2.2"
 types-setuptools = "^80.9.0.20250529"
 pytest = "^8.4.0"
+flake8 = ">=7.3.0,<8.0.0"
 grpcio = "^1.70.0"
 grpcio-tools = "^1.70.0"
 
@@ -145,7 +149,6 @@ optional = true
 
 [tool.poetry.group.runtime.dependencies]
 # Runtime dependencies
-flake8 = ">=7.3.0,<8.0.0"
 boto3-stubs = { extras = [ "s3" ], version = "^1.37.19" }
 pyarrow = "21.0.0"  # Transitive dependency, pinned here to avoid conflicts
 

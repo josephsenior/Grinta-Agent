@@ -24,7 +24,7 @@ import { useGSAPFadeIn, useGSAPSlideIn } from "#/hooks/use-gsap-animations";
 
 // Custom hooks
 import { useChatInterfaceState } from "./hooks/use-chat-interface-state";
-import { useWsClient } from "#/context/ws-client-provider";
+import { useWsStatus } from "#/context/ws-client-provider";
 import { useChatKeyboardShortcuts } from "./hooks/use-chat-keyboard-shortcuts";
 import { useChatMessageHandlers } from "./hooks/use-chat-message-handlers";
 import { useFilteredEvents } from "./utils/use-filtered-events";
@@ -268,7 +268,7 @@ function ChatInputSection({
   onBlur,
   t,
 }: ChatInputSectionProps) {
-  const { webSocketStatus } = useWsClient();
+  const { webSocketStatus } = useWsStatus();
   const inputRef = useGSAPSlideIn<HTMLDivElement>({
     direction: "up",
     distance: 30,

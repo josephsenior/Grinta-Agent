@@ -44,31 +44,16 @@ export interface StreamingState {
   // Streaming settings
   enableStreaming: boolean;
   streamSpeed: number; // ms per chunk
-  // Backwards-compatible map used by older tests and code
-  streams: Record<
-    string,
-    {
-      content: string;
-      isComplete: boolean;
-      isStreaming: boolean;
-      error: string | null;
-      startedAt: number;
-    }
-  >;
 }
 
 /** Maximum chunks retained per stream. Beyond this, oldest chunks are dropped. */
 const MAX_CHUNKS_PER_STREAM = 500;
-
-/** Maximum accumulated content length per stream (chars). */
-const MAX_STREAM_CONTENT_LENGTH = 500_000;
 
 const initialState: StreamingState = {
   activeStreams: {},
   chunks: {},
   progress: {},
   currentOperation: null,
-  streams: {},
   enableStreaming: true,
   streamSpeed: 16, // ~60fps for smooth streaming
 };
@@ -100,14 +85,6 @@ const streamingSlice = createSlice({
         startTime: Date.now(),
       };
       state.chunks[id] = [];
-      // Keep backward-compatible `streams` map used by older tests
-      state.streams[id] = {
-        content: "",
-        isComplete: false,
-        isStreaming: true,
-        error: null,
-        startedAt: Date.now(),
-      };
     },
 
     /**
@@ -137,26 +114,6 @@ const streamingSlice = createSlice({
       if (state.activeStreams[id]) {
         state.activeStreams[id].status = "streaming";
       }
-
-      // Back-compat: append to `streams` content
-      if (!state.streams[id]) {
-        state.streams[id] = {
-          content: chunk,
-          isComplete: false,
-          isStreaming: true,
-          error: null,
-          startedAt: Date.now(),
-        };
-      } else {
-        state.streams[id].content += chunk;
-        // Cap accumulated content to prevent unbounded string growth
-        if (state.streams[id].content.length > MAX_STREAM_CONTENT_LENGTH) {
-          state.streams[id].content = state.streams[id].content.slice(
-            -MAX_STREAM_CONTENT_LENGTH,
-          );
-        }
-        state.streams[id].isStreaming = true;
-      }
     },
 
     /**
@@ -177,11 +134,6 @@ const streamingSlice = createSlice({
         state.activeStreams[id].status = "complete";
         state.activeStreams[id].completeTime = Date.now();
       }
-
-      if (state.streams[id]) {
-        state.streams[id].isComplete = true;
-        state.streams[id].isStreaming = false;
-      }
     },
 
     /**
@@ -201,20 +153,6 @@ const streamingSlice = createSlice({
         state.activeStreams[id].error = error;
         state.activeStreams[id].completeTime = Date.now();
       }
-
-      if (!state.streams[id]) {
-        state.streams[id] = {
-          content: "",
-          isComplete: false,
-          isStreaming: false,
-          error,
-          startedAt: Date.now(),
-        };
-      } else {
-        state.streams[id].error = error;
-        state.streams[id].isStreaming = false;
-        state.streams[id].isComplete = false;
-      }
     },
 
     /**
@@ -232,7 +170,6 @@ const streamingSlice = createSlice({
       delete state.activeStreams[id];
       delete state.chunks[id];
       delete state.progress[id];
-      delete state.streams[id];
     },
 
     /**
@@ -347,10 +284,7 @@ export const selectStreamingEnabled = (state: { streaming: StreamingState }) =>
 export const selectStreamError = (
   state: { streaming: StreamingState },
   id: string,
-) =>
-  state.streaming.streams[id]?.error ??
-  state.streaming.activeStreams[id]?.error ??
-  null;
+) => state.streaming.activeStreams[id]?.error ?? null;
 
 // Backwards-compatible action alias used by older tests
 export const setStreamError = errorStream;

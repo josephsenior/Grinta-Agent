@@ -4,7 +4,16 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.git/
+.venv/
+.venv2/
+.hypothesis/
+.tox/
+.coverage
+htmlcov/
+coverage/
 node_modules/
+frontend/node_modules/
 frontend/build/
 *.egg-info/
 dist/
@@ -14,6 +23,10 @@ build/
 *.log
 workspace/
 backend/workspace/
+workspace/
 test_*.txt
 debug_*.txt
 debug_*.py
+debug_backups/
+tmp_*
+config.toml

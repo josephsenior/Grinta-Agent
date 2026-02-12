@@ -237,6 +237,15 @@ class AgentSession:
             )
             self._start_agent_execution(initial_message)
 
+            # Plugin hook: session_start
+            try:
+                from backend.core.plugin import get_plugin_registry
+                await get_plugin_registry().dispatch_session_start(
+                    self.sid, {"user_id": self.user_id}
+                )
+            except Exception:  # noqa: BLE001 — plugins must not break startup
+                pass
+
             startup_state["finished"] = True
 
         except Exception as e:
@@ -541,6 +550,15 @@ class AgentSession:
         if self._closed:
             return
         self._closed = True
+
+        # Plugin hook: session_end
+        try:
+            from backend.core.plugin import get_plugin_registry
+            await get_plugin_registry().dispatch_session_end(
+                self.sid, {"user_id": self.user_id}
+            )
+        except Exception:  # noqa: BLE001 — plugins must not break shutdown
+            pass
         while self._starting and should_continue():
             self.logger.debug(
                 f"Waiting for initialization to finish before closing session {self.sid}"

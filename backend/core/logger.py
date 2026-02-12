@@ -2,27 +2,19 @@
 
 from __future__ import annotations
 
-import copy
 import logging
 import os
-import re
 import sys
-import threading as _threading
 import traceback
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
-from typing import TYPE_CHECKING, Any, Literal, TextIO
+from typing import TYPE_CHECKING, Any, TextIO
 
 from pythonjsonlogger.json import JsonFormatter
-from termcolor import colored
 
 from backend.core.constants import (
     DEBUG,
     DEBUG_LLM,
-    DEBUG_LLM_PROMPT,
-    DEBUG_RUNTIME,
-    LOG_ALL_EVENTS,
-    LOG_COLORS,
     LOG_JSON,
     LOG_JSON_LEVEL_KEY,
     LOG_LEVEL,
@@ -30,8 +22,24 @@ from backend.core.constants import (
     OTEL_LOG_CORRELATION,
 )
 
+# Re-export formatter/filter classes from dedicated module for backward compat.
+from backend.core.log_formatters import (  # noqa: F401
+    ColoredFormatter,
+    ColorType,
+    EnhancedJSONFormatter,
+    NoColorFormatter,
+    OpenTelemetryTraceFilter,
+    SensitiveDataFilter,
+    StackInfoFilter,
+    TraceContextFilter,
+    _TRACE_LOCAL,
+    _fix_record,
+    file_formatter,
+    strip_ansi,
+)
+
 if TYPE_CHECKING:
-    from collections.abc import Mapping, MutableMapping
+    from collections.abc import MutableMapping
     from types import TracebackType
 
 # If DEBUG_LLM is set, optionally allow an interactive confirmation when explicitly
@@ -44,219 +52,7 @@ if DEBUG_LLM:
 if DEBUG:
     LOG_LEVEL = "DEBUG"
 DISABLE_COLOR_PRINTING = False
-ColorType = Literal[
-    "red",
-    "green",
-    "yellow",
-    "blue",
-    "magenta",
-    "cyan",
-    "light_grey",
-    "dark_grey",
-    "light_red",
-    "light_green",
-    "light_yellow",
-    "light_blue",
-    "light_magenta",
-    "light_cyan",
-    "white",
-]
-class StackInfoFilter(logging.Filter):
-    """Filter that adds stack trace information to error log records."""
 
-    def filter(self, record: logging.LogRecord) -> bool:
-        """Add stack trace to error-level records.
-
-        Args:
-            record: Log record to filter
-
-        Returns:
-            True (always pass record through)
-
-        """
-        if record.levelno >= logging.ERROR:
-            exc_info = sys.exc_info()
-            if exc_info and exc_info[0] is not None:
-                stack = traceback.format_stack()
-                stack = stack[:-3]
-                stack_str = "".join(stack)
-                record.stack_info = stack_str
-                record.exc_info = exc_info
-        return True
-
-
-class NoColorFormatter(logging.Formatter):
-    """Formatter for non-colored logging in files."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        """Format log record without ANSI color codes.
-
-        Args:
-            record: Log record to format
-
-        Returns:
-            Formatted log message without colors
-
-        """
-        new_record = _fix_record(record)
-        new_record.msg = strip_ansi(new_record.msg)
-        return super().format(new_record)
-
-
-class EnhancedJSONFormatter(JsonFormatter):
-    """Enhanced JSON formatter with request IDs and structured data.
-
-    Adds comprehensive context fields to all log entries for:
-    - Request tracing (request_id, conversation_id)
-    - Agent tracking (agent_type, action_type)
-    - Cost monitoring (model_used, tokens_consumed, cost_usd)
-    - Performance tracking (duration_ms)
-    - Debugging (location, thread_name, process_id)
-
-    Example log output:
-        {
-            "timestamp": "2025-11-04T10:15:30.123Z",
-            "level": "INFO",
-            "message": "Agent step completed",
-            "request_id": "req_abc123",
-            "conversation_id": "conv_456def",
-            "agent_type": "Orchestrator",
-            "action_type": "FileEditAction",
-            "model_used": "claude-sonnet-4-20250514",
-            "tokens_consumed": 1500,
-            "cost_usd": 0.015,
-            "duration_ms": 850,
-            "location": "agent_controller.py:123",
-            "function": "step"
-        }
-    """
-
-    def add_fields(self, log_record, record, message_dict):
-        """Add custom fields to JSON log output."""
-        super().add_fields(log_record, record, message_dict)
-
-        # Request tracing
-        request_id = getattr(record, "request_id", None)
-        if request_id:
-            log_record["request_id"] = request_id
-
-        conversation_id = getattr(record, "conversation_id", None)
-        if conversation_id:
-            log_record["conversation_id"] = conversation_id
-
-        # Add timestamp in ISO format
-        from datetime import datetime, timezone
-
-        log_record["timestamp"] = datetime.now(timezone.utc).isoformat()
-
-        # Agent tracking
-        agent_type = getattr(record, "agent_type", None)
-        if agent_type:
-            log_record["agent_type"] = agent_type
-
-        action_type = getattr(record, "action_type", None)
-        if action_type:
-            log_record["action_type"] = action_type
-
-        # Cost & performance monitoring
-        model_used = getattr(record, "model_used", None)
-        if model_used:
-            log_record["model_used"] = model_used
-
-        tokens_consumed = getattr(record, "tokens_consumed", None)
-        if tokens_consumed is not None:
-            log_record["tokens_consumed"] = tokens_consumed
-
-        cost_usd = getattr(record, "cost_usd", None)
-        if cost_usd is not None:
-            log_record["cost_usd"] = cost_usd
-
-        duration_ms = getattr(record, "duration_ms", None)
-        if duration_ms is not None:
-            log_record["duration_ms"] = duration_ms
-
-        # Thread/process info for debugging
-        log_record["thread_name"] = record.threadName
-        log_record["process_id"] = record.process
-
-        # Source location
-        log_record["location"] = f"{record.filename}:{record.lineno}"
-        log_record["function"] = record.funcName
-
-
-def strip_ansi(s: str) -> str:
-    """Remove ANSI escape sequences (terminal color/formatting codes) from string.
-
-    Removes ANSI escape sequences from str, as defined by ECMA-048 in
-    http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
-    # https://github.com/ewen-lbh/python-strip-ansi/blob/master/strip_ansi/__init__.py
-    """
-    pattern = re.compile("\\x1B\\[\\d+(;\\d+){0,2}m")
-    return pattern.sub("", s)
-
-
-class ColoredFormatter(logging.Formatter):
-    """Custom formatter that colorizes log messages based on type and severity."""
-
-    def _get_resolved_msg_type(self, record: logging.LogRecord) -> str:
-        """Resolve message type with event source prefix if applicable."""
-        msg_type = record.__dict__.get("msg_type", "")
-        if event_source := record.__dict__.get("event_source", ""):
-            new_msg_type = f"{event_source.upper()}_{msg_type}"
-            if new_msg_type in LOG_COLORS:
-                return new_msg_type
-        return msg_type
-
-    def _format_colored_message(self, record: logging.LogRecord, msg_type: str) -> str:
-        """Format message with colors."""
-        msg_type_color = colored(msg_type, LOG_COLORS[msg_type])
-        msg = colored(record.msg, LOG_COLORS[msg_type])
-        time_str = colored(self.formatTime(record, self.datefmt), LOG_COLORS[msg_type])
-        name_str = colored(record.name, LOG_COLORS[msg_type])
-        level_str = colored(record.levelname, LOG_COLORS[msg_type])
-
-        if msg_type in {"ERROR"} or DEBUG:
-            return f"{time_str} - {name_str}:{level_str}: {record.filename}:{record.lineno}\n{msg_type_color}\n{msg}"
-        return f"{time_str} - {msg_type_color}\n{msg}"
-
-    def _format_step_message(self, record: logging.LogRecord) -> str:
-        """Format STEP message."""
-        return f"\n\n==============\n{record.msg}\n" if LOG_ALL_EVENTS else record.msg
-
-    def format(self, record: logging.LogRecord) -> str:
-        """Format log record with color and special formatting for specific message types.
-
-        Args:
-            record: Log record to format
-
-        Returns:
-            Formatted log message string
-
-        """
-        msg_type = self._get_resolved_msg_type(record)
-
-        if msg_type in LOG_COLORS and (not DISABLE_COLOR_PRINTING):
-            return self._format_colored_message(record, msg_type)
-
-        if msg_type == "STEP":
-            return self._format_step_message(record)
-
-        new_record = _fix_record(record)
-        return super().format(new_record)
-
-
-def _fix_record(record: logging.LogRecord) -> logging.LogRecord:
-    new_record = copy.copy(record)
-    if getattr(new_record, "exc_info", None) is True:
-        new_record.exc_info = sys.exc_info()
-        new_record.stack_info = None
-    return new_record
-
-
-file_formatter = NoColorFormatter(
-    "%(asctime)s - %(name)s:%(levelname)s: %(filename)s:%(lineno)s - %(message)s",
-    datefmt="%H:%M:%S",
-)
 llm_formatter = logging.Formatter("%(message)s")
 
 
@@ -289,44 +85,26 @@ class RollingLogger:
         return DEBUG and sys.stdout.isatty()
 
     def start(self, message: str = "") -> None:
-        """Start rolling logger with optional initial message.
-
-        Args:
-            message: Initial message to display
-
-        """
+        """Start rolling logger with optional initial message."""
         if message:
             pass
         self._write("\n" * self.max_lines)
         self._flush()
 
     def add_line(self, line: str) -> None:
-        """Add new line to rolling display buffer.
-
-        Args:
-            line: Line to add (truncated to char_limit)
-
-        """
+        """Add new line to rolling display buffer."""
         self.log_lines.pop(0)
         self.log_lines.append(line[: self.char_limit])
         self.print_lines()
         self.all_lines += line + "\n"
 
     def write_immediately(self, line: str) -> None:
-        """Write line immediately without buffering.
-
-        Args:
-            line: Line to write to stdout
-
-        """
+        """Write line immediately without buffering."""
         self._write(line)
         self._flush()
 
     def print_lines(self) -> None:
-        """Display the last n log_lines in the console (not for file logging).
-
-        This will create the effect of a rolling display in the console.
-        """
+        """Display the last n log_lines in the console."""
         self.move_back()
         for line in self.log_lines:
             self.replace_current_line(line)
@@ -339,7 +117,7 @@ class RollingLogger:
         self._flush()
 
     def replace_current_line(self, line: str = "") -> None:
-        r"""'\\033[2K\\r' clears the line and moves the cursor to the beginning of the line."""
+        r"""'\\033[2K\\r' clears the line and moves the cursor to the beginning."""
         self._write("\x1b[2K" + line + "\n")
         self._flush()
 
@@ -352,118 +130,6 @@ class RollingLogger:
         if not self.is_enabled():
             return
         sys.stdout.flush()
-
-
-class SensitiveDataFilter(logging.Filter):
-    """Filter that redacts sensitive data from log messages."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        """Redact sensitive environment variables and patterns from log record.
-
-        Args:
-            record: Log record to filter
-
-        Returns:
-            True (always pass record through after redaction)
-
-        """
-        sensitive_values = []
-        for key, value in os.environ.items():
-            key_upper = key.upper()
-            if (
-                len(value) > 2
-                and value != "default"
-                and any(s in key_upper for s in ("SECRET", "_KEY", "_CODE", "_TOKEN"))
-            ):
-                sensitive_values.append(value)
-        msg = record.getMessage()
-        for sensitive_value in sensitive_values:
-            msg = msg.replace(sensitive_value, "******")
-        sensitive_patterns = [
-            "api_key",
-            "aws_access_key_id",
-            "aws_secret_access_key",
-            "e2b_api_key",
-            "github_token",
-            "jwt_secret",
-            "modal_api_token_id",
-            "modal_api_token_secret",
-            "llm_api_key",
-            "sandbox_env_github_token",
-            "runloop_api_key",
-            "daytona_api_key",
-        ]
-        env_vars = [attr.upper() for attr in sensitive_patterns]
-        sensitive_patterns.extend(env_vars)
-        for attr in sensitive_patterns:
-            pattern = f"{attr}='?([\\w-]+)'?"
-            msg = re.sub(pattern, f"{attr}='******'", msg)
-        record.msg = msg
-        record.args = ()
-        return True
-
-
-class TraceContextFilter(logging.Filter):
-    """Injects any keys from the thread-local trace context into log records.
-
-    Uses threading.local() so concurrent orchestrations running in different
-    threads won't clobber each other's trace context.
-    """
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        """Add trace context (request ID, session ID) to log record.
-
-        Args:
-            record: Log record to filter
-
-        Returns:
-            True (always passes record through)
-
-        """
-        try:
-            ctx = getattr(_TRACE_LOCAL, "context", None) or {}
-            for k, v in ctx.items():
-                if not hasattr(record, k):
-                    setattr(record, k, v)
-        except Exception:
-            pass
-        return True
-
-
-class OpenTelemetryTraceFilter(logging.Filter):
-    """Adds OpenTelemetry trace_id/span_id to log records when a current span exists.
-
-    This enables log-trace correlation in backends that index logs and traces together.
-    Does nothing if OpenTelemetry isn't installed or no active span is present.
-    """
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        try:  # Import inside filter to avoid hard dependency
-            from opentelemetry import trace as _otel_trace  # type: ignore
-
-            span: Any = _otel_trace.get_current_span()
-            # Some instrumentations return a NonRecordingSpan when no active span exists
-            if span is None:
-                return True
-            ctx = span.get_span_context()
-            if not getattr(ctx, "is_valid", False):
-                return True
-
-            # Hex-encode to standard 16/32-char lowercase
-            trace_id_hex = f"{ctx.trace_id:032x}"
-            span_id_hex = f"{ctx.span_id:016x}"
-
-            if not hasattr(record, "trace_id"):
-                setattr(record, "trace_id", trace_id_hex)
-            if not hasattr(record, "span_id"):
-                setattr(record, "span_id", span_id_hex)
-        except Exception:
-            # Swallow all errors to keep logging robust even if OTEL changes
-            pass
-        return True
-
-
-_TRACE_LOCAL: _threading.local = _threading.local()
 
 
 def set_trace_context(ctx: dict[str, object] | None) -> None:

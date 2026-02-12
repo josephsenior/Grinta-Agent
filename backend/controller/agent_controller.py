@@ -482,6 +482,13 @@ class AgentController:
         if hasattr(event, "hidden") and event.hidden:
             return
 
+        # Plugin hook: event_emitted
+        try:
+            from backend.core.plugin import get_plugin_registry
+            await get_plugin_registry().dispatch_event(event)
+        except Exception:  # noqa: BLE001 — plugins must not break the pipeline
+            pass
+
         self.state_tracker.add_history(event)
         if isinstance(event, Action):
             await self._handle_action(event)

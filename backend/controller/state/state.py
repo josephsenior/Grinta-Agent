@@ -348,6 +348,14 @@ class State:
         if stripped.startswith("{"):
             return State._from_json_str(stripped)
         # Legacy pickle/base64 — read but warn; next save will use JSON
+        import warnings
+
+        warnings.warn(
+            "Pickle state deserialization is deprecated and will be removed in v0.58. "
+            "Re-save the session to migrate to JSON format.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         logger.warning(
             "Loading legacy pickle state — will be migrated to JSON on next save"
         )

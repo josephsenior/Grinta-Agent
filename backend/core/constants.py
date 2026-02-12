@@ -1,6 +1,43 @@
 import os
-from enum import Enum
 from typing import Any
+
+# Re-export enums and provider configs from dedicated modules.
+# Consumers can continue to ``from backend.core.constants import ActionType``
+# or migrate to ``from backend.core.enums import ActionType`` at their leisure.
+from backend.core.enums import (  # noqa: F401
+    ActionConfirmationStatus,
+    ActionSecurityRisk,
+    ActionType,
+    AgentState,
+    AppMode,
+    CircuitState,
+    ContentType,
+    ErrorCategory,
+    ErrorSeverity,
+    EventSource,
+    EventVersion,
+    ExitReason,
+    FileEditSource,
+    FileReadSource,
+    ObservationType,
+    QuotaPlan,
+    RecallType,
+    RetryStrategy,
+    RuntimeStatus,
+)
+from backend.core.providers import (  # noqa: F401
+    DEFAULT_API_KEY_MIN_LENGTH,
+    PROVIDER_CONFIGURATIONS,
+    PROVIDER_FALLBACK_PATTERNS,
+    PROVIDER_KEYWORD_PATTERNS,
+    PROVIDER_PREFIX_PATTERNS,
+    UNKNOWN_PROVIDER_CONFIG,
+    VERIFIED_ANTHROPIC_MODELS,
+    VERIFIED_MISTRAL_MODELS,
+    VERIFIED_OPENAI_MODELS,
+    VERIFIED_PROVIDERS,
+    _LazyModelList,
+)
 
 """Central location for Forge core constants."""
 
@@ -79,57 +116,6 @@ DEFAULT_LLM_TEMPERATURE = 0.0
 DEFAULT_LLM_TOP_P = 1.0
 DEFAULT_LLM_CORRECT_NUM = 5
 
-# Verified models for CLI and configuration
-# Verified models for CLI and configuration — derived from catalog.toml.
-# Uses lazy loading to avoid circular imports (constants ← config ← models).
-VERIFIED_PROVIDERS = ["anthropic", "openai", "mistral"]
-
-
-def _get_verified(provider: str) -> list[str]:
-    """Lazily load verified models from the catalog."""
-    from backend.models.catalog_loader import get_verified_models
-    return get_verified_models(provider)
-
-
-class _LazyModelList:
-    """List-like wrapper that loads from catalog on first access."""
-
-    __slots__ = ("_provider", "_cached")
-
-    def __init__(self, provider: str) -> None:
-        self._provider = provider
-        self._cached: list[str] | None = None
-
-    def _ensure(self) -> list[str]:
-        if self._cached is None:
-            self._cached = _get_verified(self._provider)
-        return self._cached
-
-    def __iter__(self):
-        return iter(self._ensure())
-
-    def __contains__(self, item):
-        return item in self._ensure()
-
-    def __len__(self):
-        return len(self._ensure())
-
-    def __repr__(self):
-        return repr(self._ensure())
-
-    def __getitem__(self, idx):
-        return self._ensure()[idx]
-
-    def __eq__(self, other):
-        if isinstance(other, list):
-            return self._ensure() == other
-        return NotImplemented
-
-
-VERIFIED_OPENAI_MODELS: Any = _LazyModelList("openai")
-VERIFIED_ANTHROPIC_MODELS: Any = _LazyModelList("anthropic")
-VERIFIED_MISTRAL_MODELS: Any = _LazyModelList("mistral")
-
 # File upload configuration
 DEFAULT_MAX_FILE_UPLOAD_SIZE_MB = 100
 FILES_TO_IGNORE = [
@@ -183,138 +169,6 @@ DEFAULT_AGENT_SYSTEM_PROMPT_FILENAME = "system_prompt.j2"
 DEFAULT_AGENT_CLI_MODE = False
 DEFAULT_FORGE_MCP_CONFIG_CLS = "backend.core.config.mcp_config.ForgeMCPConfig"
 
-# Provider extraction patterns
-PROVIDER_PREFIX_PATTERNS = {
-    "openai": ["openai/", "gpt-"],
-    "anthropic": ["anthropic/", "claude-"],
-    "google": ["google/", "gemini/"],
-    "xai": ["xai/", "grok-"],
-}
-
-PROVIDER_KEYWORD_PATTERNS = {
-    "google": ["gemini"],
-    "xai": ["grok"],
-}
-
-PROVIDER_FALLBACK_PATTERNS = {
-    "openai": ["gpt"],
-    "anthropic": ["claude"],
-    "google": ["gemini"],
-    "xai": ["grok"],
-}
-# Provider and API Key constants
-DEFAULT_API_KEY_MIN_LENGTH = 10
-PROVIDER_CONFIGURATIONS = {
-    "openai": {
-        "name": "openai",
-        "env_var": "OPENAI_API_KEY",
-        "requires_protocol": True,
-        "supports_streaming": True,
-        "required_params": {"api_key", "model"},
-        "optional_params": {
-            "base_url",
-            "api_version",
-            "timeout",
-            "temperature",
-            "max_tokens",
-            "top_p",
-            "seed",
-            "drop_params",
-            "custom_llm_provider",
-        },
-        "forbidden_params": set(),
-        "api_key_prefixes": ["sk-"],
-        "api_key_min_length": 20,
-        "handles_own_routing": False,
-        "requires_custom_llm_provider": False,
-    },
-    "anthropic": {
-        "name": "anthropic",
-        "env_var": "ANTHROPIC_API_KEY",
-        "requires_protocol": True,
-        "supports_streaming": True,
-        "required_params": {"api_key", "model"},
-        "optional_params": {
-            "timeout",
-            "temperature",
-            "max_tokens",
-            "seed",
-            "drop_params",
-        },
-        "forbidden_params": {"custom_llm_provider"},
-        "api_key_prefixes": ["sk-ant-"],
-        "api_key_min_length": 20,
-        "handles_own_routing": False,
-        "requires_custom_llm_provider": False,
-    },
-    "google": {
-        "name": "google",
-        "env_var": "GEMINI_API_KEY",
-        "requires_protocol": False,
-        "supports_streaming": True,
-        "required_params": {"api_key", "model"},
-        "optional_params": {
-            "timeout",
-            "temperature",
-            "max_tokens",
-            "seed",
-            "drop_params",
-        },
-        "forbidden_params": {
-            "custom_llm_provider",
-            "base_url",
-        },
-        "api_key_prefixes": ["AIza"],
-        "api_key_min_length": 20,
-        "handles_own_routing": True,
-        "requires_custom_llm_provider": False,
-    },
-    "xai": {
-        "name": "xai",
-        "env_var": "XAI_API_KEY",
-        "requires_protocol": True,
-        "supports_streaming": True,
-        "required_params": {"api_key", "model"},
-        "optional_params": {
-            "base_url",
-            "timeout",
-            "temperature",
-            "max_tokens",
-            "seed",
-            "drop_params",
-        },
-        "forbidden_params": {"custom_llm_provider"},
-        "api_key_prefixes": ["xai-"],
-        "api_key_min_length": 20,
-        "handles_own_routing": False,
-        "requires_custom_llm_provider": False,
-    },
-}
-
-UNKNOWN_PROVIDER_CONFIG: dict[str, Any] = {
-    "name": "unknown",
-    "env_var": None,
-    "requires_protocol": True,
-    "supports_streaming": False,
-    "required_params": {"model"},
-    "optional_params": {
-        "api_key",
-        "base_url",
-        "timeout",
-        "temperature",
-        "max_tokens",
-        "top_p",
-        "seed",
-        "drop_params",
-        "api_version",
-    },
-    "forbidden_params": set(),
-    "api_key_prefixes": [],
-    "api_key_min_length": 10,
-    "handles_own_routing": False,
-    "requires_custom_llm_provider": False,
-}
-
 # Server constants
 API_VERSION_V1 = "v1"
 CURRENT_API_VERSION = API_VERSION_V1
@@ -323,16 +177,7 @@ ROOM_KEY_TEMPLATE = "room_{sid}"
 DEFAULT_SESSION_WAIT_TIME_BEFORE_CLOSE = 90
 DEFAULT_SESSION_WAIT_TIME_BEFORE_CLOSE_INTERVAL = 5
 
-# Quota and Plan constants
-class QuotaPlan(str, Enum):
-    """User quota plans."""
-
-    FREE = "free"
-    PRO = "pro"
-    ENTERPRISE = "enterprise"
-    UNLIMITED = "unlimited"
-
-
+# Quota and Plan constants (QuotaPlan enum in backend.core.enums)
 DEFAULT_QUOTA_HOUR_WINDOW = 3600
 DEFAULT_QUOTA_DAY_WINDOW = 86400
 DEFAULT_QUOTA_MONTH_WINDOW = 2592000
@@ -353,15 +198,7 @@ ENTERPRISE_PLAN_DAILY_LIMIT = 100.0
 ENTERPRISE_PLAN_MONTHLY_LIMIT = 2000.0
 ENTERPRISE_PLAN_BURST_LIMIT = 50.0
 
-# Circuit Breaker defaults
-class CircuitState(str, Enum):
-    """Circuit breaker states."""
-
-    CLOSED = "closed"  # Normal operation
-    OPEN = "open"  # Failing, reject requests
-    HALF_OPEN = "half_open"  # Testing if service recovered
-
-
+# Circuit Breaker defaults (CircuitState enum in backend.core.enums)
 DEFAULT_CIRCUIT_FAILURE_THRESHOLD = 5
 DEFAULT_CIRCUIT_SUCCESS_THRESHOLD = 2
 DEFAULT_CIRCUIT_TIMEOUT_SECONDS = 60
@@ -423,26 +260,7 @@ TASK_TRACKER_TOOL_NAME = "task_tracker"
 SECURITY_RISK_DESC = "The LLM's assessment of the safety risk of this action. See the SECURITY_RISK_ASSESSMENT section in the system prompt for risk level definitions."
 RISK_LEVELS = ["LOW", "MEDIUM", "HIGH"]
 
-# UX Presentation constants
-class ErrorSeverity(str, Enum):
-    """Error severity levels for UX presentation."""
-
-    INFO = "info"  # ℹ️ Informational (blue)
-    WARNING = "warning"  # ⚠️ Warning (yellow)
-    ERROR = "error"  # ❌ Error (red)
-    CRITICAL = "critical"  # 🚨 Critical (red + urgent)
-
-
-class ErrorCategory(str, Enum):
-    """Error categories for better UX grouping."""
-
-    USER_INPUT = "user_input"  # User made a mistake
-    SYSTEM = "system"  # System/infrastructure issue
-    RATE_LIMIT = "rate_limit"  # Rate limiting/quota
-    AUTHENTICATION = "authentication"  # Auth/permissions
-    NETWORK = "network"  # Network/connectivity
-    AI_MODEL = "ai_model"  # LLM/AI model issue
-    CONFIGURATION = "configuration"  # Config/setup issue
+# UX Presentation constants (ErrorSeverity, ErrorCategory enums in backend.core.enums)
 
 # Browser Gym constants
 BROWSER_EVAL_GET_GOAL_ACTION = "GET_EVAL_GOAL"
@@ -563,210 +381,8 @@ DEFAULT_INDENT_SIZES = {
 # Storage defaults
 DEFAULT_SECRETS_FILENAME = "user_secrets.json"
 
-# Message Content constants
-class ContentType(str, Enum):
-    """Content type enum for message content."""
-
-    TEXT = "text"
-    IMAGE_URL = "image_url"
-    __test__ = False
-
-
-# Action types
-class ActionType(str, Enum):
-    """Enum defining all possible agent action types."""
-
-    MESSAGE = "message"
-    SYSTEM = "system"
-    START = "start"
-    READ = "read"
-    WRITE = "write"
-    EDIT = "edit"
-    RUN = "run"
-    BROWSE = "browse"
-    BROWSE_INTERACTIVE = "browse_interactive"
-    MCP = "call_tool_mcp"
-    THINK = "think"
-    FINISH = "finish"
-    REJECT = "reject"
-    NULL = "null"
-    PAUSE = "pause"
-    RESUME = "resume"
-    STOP = "stop"
-    CHANGE_AGENT_STATE = "change_agent_state"
-    PUSH = "push"
-    SEND_PR = "send_pr"
-    RECALL = "recall"
-    CONDENSATION = "condensation"
-    CONDENSATION_REQUEST = "condensation_request"
-    TASK_TRACKING = "task_tracking"
-    STREAMING_CHUNK = "streaming_chunk"
-
-
-# Agent lifecycle states
-class AgentState(str, Enum):
-    """Enum defining all possible agent lifecycle states."""
-
-    LOADING = "loading"
-    RUNNING = "running"
-    AWAITING_USER_INPUT = "awaiting_user_input"
-    PAUSED = "paused"
-    STOPPED = "stopped"
-    FINISHED = "finished"
-    REJECTED = "rejected"
-    ERROR = "error"
-    AWAITING_USER_CONFIRMATION = "awaiting_user_confirmation"
-    USER_CONFIRMED = "user_confirmed"
-    USER_REJECTED = "user_rejected"
-    RATE_LIMITED = "rate_limited"
-
-
-# Observation types
-class ObservationType(str, Enum):
-    """Enum defining all possible observation types."""
-
-    READ = "read"
-    WRITE = "write"
-    EDIT = "edit"
-    BROWSE = "browse"
-    RUN = "run"
-    CHAT = "chat"
-    MESSAGE = "message"
-    ERROR = "error"
-    SUCCESS = "success"
-    NULL = "null"
-    THINK = "think"
-    AGENT_STATE_CHANGED = "agent_state_changed"
-    USER_REJECTED = "user_rejected"
-    CONDENSE = "condense"
-    RECALL = "recall"
-    MCP = "mcp"
-    DOWNLOAD = "download"
-    TASK_TRACKING = "task_tracking"
-    SERVER_READY = "server_ready"
-    RECALL_FAILURE = "recall_failure"
-    STATUS = "status"
-
-
-# Exit reasons
-class ExitReason(str, Enum):
-    """Enum defining reasons why agent execution ended.
-
-    Used to distinguish between normal completion, interruption, and errors.
-    """
-
-    INTENTIONAL = "intentional"
-    INTERRUPTED = "interrupted"
-    ERROR = "error"
-    __test__ = False
-
-
-# Action confirmation status
-class ActionConfirmationStatus(str, Enum):
-    """Status of action confirmation in confirmation mode."""
-
-    CONFIRMED = "confirmed"
-    REJECTED = "rejected"
-    AWAITING_CONFIRMATION = "awaiting_confirmation"
-
-
-# Action security risk level
-class ActionSecurityRisk(int, Enum):
-    """Security risk level for actions (from security analyzer)."""
-
-    UNKNOWN = -1
-    LOW = 0
-    MEDIUM = 1
-    HIGH = 2
-
-
-# App deployment modes
-class AppMode(str, Enum):
-    """Enumerate supported deployment modes for the Forge server."""
-
-    OSS = "oss"
-    SAAS = "saas"
-    __test__ = False
-
-
-# Event schema versions
-class EventVersion(str, Enum):
-    """Schema version for event serialization."""
-
-    V1 = "1.0.0"
-    V2 = "2.0.0"  # Reserved for future use
-
-
-# Event source categories
-class EventSource(str, Enum):
-    """Canonical originator categories for events."""
-
-    AGENT = "agent"
-    USER = "user"
-    ENVIRONMENT = "environment"
-    __test__ = False
-
-
-# File edit subsystems
-class FileEditSource(str, Enum):
-    """Enumerates subsystems that can perform file edit operations."""
-
-    LLM_BASED_EDIT = "llm_based_edit"
-    FILE_EDITOR = "file_editor"
-    __test__ = False
-
-
-# File read subsystems
-class FileReadSource(str, Enum):
-    """Enumerates subsystems that can read files during execution."""
-
-    FILE_EDITOR = "file_editor"
-    DEFAULT = "default"
-    __test__ = False
-
-
-# Playbook recall types
-class RecallType(str, Enum):
-    """The type of information that can be retrieved from playbooks."""
-
-    WORKSPACE_CONTEXT = "workspace_context"
-    KNOWLEDGE = "knowledge"
-    __test__ = False
-
-
-# Failure retry strategies
-class RetryStrategy(str, Enum):
-    """Retry strategies for different failure scenarios."""
-
-    EXPONENTIAL = "exponential"  # Exponential backoff with jitter
-    LINEAR = "linear"  # Linear backoff
-    FIXED = "fixed"  # Fixed delay
-    IMMEDIATE = "immediate"  # No delay between retries
-
-
-# Runtime lifecycle states
-class RuntimeStatus(str, Enum):
-    """Lifecycle states emitted by runtime implementations."""
-
-    UNKNOWN = "UNKNOWN"
-    STOPPED = "STATUS$STOPPED"
-    BUILDING_RUNTIME = "STATUS$BUILDING_RUNTIME"
-    STARTING_RUNTIME = "STATUS$STARTING_RUNTIME"
-    RUNTIME_STARTED = "STATUS$RUNTIME_STARTED"
-    SETTING_UP_WORKSPACE = "STATUS$SETTING_UP_WORKSPACE"
-    SETTING_UP_GIT_HOOKS = "STATUS$SETTING_UP_GIT_HOOKS"
-    READY = "STATUS$READY"
-    ERROR = "STATUS$ERROR"
-    ERROR_RUNTIME_DISCONNECTED = "STATUS$ERROR_RUNTIME_DISCONNECTED"
-    ERROR_LLM_AUTHENTICATION = "STATUS$ERROR_LLM_AUTHENTICATION"
-    ERROR_LLM_SERVICE_UNAVAILABLE = "STATUS$ERROR_LLM_SERVICE_UNAVAILABLE"
-    ERROR_LLM_INTERNAL_SERVER_ERROR = "STATUS$ERROR_LLM_INTERNAL_SERVER_ERROR"
-    ERROR_LLM_OUT_OF_CREDITS = "STATUS$ERROR_LLM_OUT_OF_CREDITS"
-    ERROR_LLM_CONTENT_POLICY_VIOLATION = "STATUS$ERROR_LLM_CONTENT_POLICY_VIOLATION"
-    AGENT_RATE_LIMITED_STOPPED_MESSAGE = (
-        "CHAT_INTERFACE$AGENT_RATE_LIMITED_STOPPED_MESSAGE"
-    )
-    GIT_PROVIDER_AUTHENTICATION_ERROR = "STATUS$GIT_PROVIDER_AUTHENTICATION_ERROR"
-    LLM_RETRY = "STATUS$LLM_RETRY"
-    ERROR_MEMORY = "STATUS$ERROR_MEMORY"
-    __test__ = False
+# All enum classes (ContentType, ActionType, AgentState, ObservationType,
+# ExitReason, ActionConfirmationStatus, ActionSecurityRisk, AppMode,
+# EventVersion, EventSource, FileEditSource, FileReadSource, RecallType,
+# RetryStrategy, RuntimeStatus) are defined in backend.core.enums and
+# re-exported above for backward compatibility.

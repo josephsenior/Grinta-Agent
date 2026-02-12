@@ -1,4 +1,4 @@
-import { useWsClient } from "#/context/ws-client-provider";
+import { useWsStatus } from "#/context/ws-client-provider";
 
 /**
  * Thin banner shown at the top of the chat area when the WebSocket is
@@ -6,7 +6,7 @@ import { useWsClient } from "#/context/ws-client-provider";
  * connection is re-established.
  */
 export function ConnectionStatusBanner() {
-  const { webSocketStatus } = useWsClient();
+  const { webSocketStatus } = useWsStatus();
 
   if (webSocketStatus === "CONNECTED") return null;
 

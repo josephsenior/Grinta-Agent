@@ -23,6 +23,13 @@ class Plugin:
     async def run(self, action: Action) -> Observation:
         """Run the plugin for a given action."""
 
+    async def shutdown(self) -> None:
+        """Shutdown the plugin, releasing any held resources.
+
+        Override in subclasses that allocate resources during
+        ``initialize()`` or ``run()``.  The default is a no-op.
+        """
+
 
 @dataclass
 class PluginRequirement:

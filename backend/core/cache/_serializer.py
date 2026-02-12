@@ -59,7 +59,14 @@ def deserialize_model(raw: bytes, model_class: type[T]) -> T:
         # Legacy pickle data still in Redis — tolerate but warn
         import logging
         import pickle  # noqa: S403
+        import warnings
 
+        warnings.warn(
+            "Pickle deserialization is deprecated and will be removed in v0.58. "
+            "Re-save cached data to migrate to JSON format.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         logging.getLogger(__name__).warning(
             "Deserializing legacy pickle cache entry for %s — "
             "will be replaced with JSON on next write",

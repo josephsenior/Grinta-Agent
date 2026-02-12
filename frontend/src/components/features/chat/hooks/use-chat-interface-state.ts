@@ -6,7 +6,7 @@ import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
 import { useAgentState } from "#/hooks/use-agent-state";
 import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
-import { useWsClient } from "#/context/ws-client-provider";
+import { useWsStatus, useWsEvents } from "#/context/ws-client-provider";
 import { useScrollToBottom } from "#/hooks/use-scroll-to-bottom";
 import { useConfig } from "#/hooks/query/use-config";
 import { useActiveConversation } from "#/hooks/query/use-active-conversation";
@@ -22,7 +22,8 @@ export function useChatInterfaceState() {
   // Core hooks
   useActiveConversation();
   const { getErrorMessage } = useWSErrorMessage();
-  const { send, isLoadingMessages, parsedEvents } = useWsClient();
+  const { send, isLoadingMessages } = useWsStatus();
+  const { parsedEvents } = useWsEvents();
   const { setOptimisticUserMessage, getOptimisticUserMessage } =
     useOptimisticUserMessage();
   const { t } = useTranslation();

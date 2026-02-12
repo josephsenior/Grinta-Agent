@@ -77,6 +77,13 @@ class ActionExecutionService:
             raise
 
     async def execute_action(self, action: "Action") -> None:
+        # Plugin hook: action_pre
+        try:
+            from backend.core.plugin import get_plugin_registry
+            action = await get_plugin_registry().dispatch_action_pre(action)
+        except Exception:  # noqa: BLE001 — plugins must not break the pipeline
+            pass
+
         controller = self._context.get_controller()
         ctx: ToolInvocationContext | None = None
         pipeline = getattr(controller, "tool_pipeline", None)

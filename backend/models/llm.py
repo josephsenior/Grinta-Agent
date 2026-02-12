@@ -402,6 +402,13 @@ class LLM(RetryMixin, DebugMixin):
     async def acompletion(self, *args, **kwargs) -> Any:
         """Asynchronous completion call with cancellation support."""
         messages = self._extract_messages(args, kwargs)
+
+        # Plugin hook: llm_pre
+        try:
+            from backend.core.plugin import get_plugin_registry
+            messages = await get_plugin_registry().dispatch_llm_pre(messages)
+        except Exception:  # noqa: BLE001 — plugins must not break LLM calls
+            pass
         
         # Merge default kwargs
         call_kwargs = self._get_call_kwargs(is_stream=False, **kwargs)
@@ -424,6 +431,14 @@ class LLM(RetryMixin, DebugMixin):
             response = await self.client.acompletion(messages=messages, **kwargs)
             self._record_response_metrics(response, time.time() - start_time)
             self.log_response(response.to_dict())
+
+            # Plugin hook: llm_post
+            try:
+                from backend.core.plugin import get_plugin_registry
+                response = await get_plugin_registry().dispatch_llm_post(response)
+            except Exception:  # noqa: BLE001 — plugins must not break LLM calls
+                pass
+
             return response
 
         return await _acompletion_with_retry(**call_kwargs)
