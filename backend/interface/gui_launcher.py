@@ -45,7 +45,7 @@ def launch_gui_server(mount_cwd: bool = False, gpu: bool = False) -> None:
             sys.executable,
             "-m",
             "uvicorn",
-            "forge.server.listen:app",
+            "backend.server.listen:app",
             "--host",
             "0.0.0.0",
             "--port",

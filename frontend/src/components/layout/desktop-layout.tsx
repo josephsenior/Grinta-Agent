@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Settings, Command, X, PanelLeft, Home } from "lucide-react";
-import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 import { useDeleteConversation } from "#/hooks/mutation/use-delete-conversation";
@@ -9,7 +8,7 @@ import { downloadTrajectory } from "#/utils/download-trajectory";
 import { useWsClient } from "#/context/ws-client-provider";
 import { generateAgentStateChangeEvent } from "#/services/agent-state-service";
 import { AgentState } from "#/types/agent-state";
-import { RootState } from "#/store";
+import { useAgentState } from "#/hooks/use-agent-state";
 import { useGetTrajectory } from "#/hooks/mutation/use-get-trajectory";
 import {
   displayErrorToast,
@@ -97,7 +96,7 @@ function CommandPalette({
 
   // Hooks for agent control
   const { send } = useWsClient();
-  const { curAgentState } = useSelector((state: RootState) => state.agent);
+  const curAgentState = useAgentState();
 
   // Keyboard shortcut helper
   const getShortcut = (keys: string) => {

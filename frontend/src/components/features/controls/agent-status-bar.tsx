@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { showErrorToast } from "#/utils/error-handler";
 import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
+import { useAgentState } from "#/hooks/use-agent-state";
 import { useWsClient } from "#/context/ws-client-provider";
 import { useBrowserNotification } from "#/hooks/use-browser-notification";
 import { browserTab } from "#/utils/browser-tab";
@@ -18,7 +19,7 @@ const notificationStates = [
 
 export function AgentStatusBar() {
   const { t, i18n } = useTranslation();
-  const { curAgentState } = useSelector((state: RootState) => state.agent);
+  const curAgentState = useAgentState();
   const { curStatusMessage } = useSelector((state: RootState) => state.status);
   const { webSocketStatus } = useWsClient();
   const { data: conversation } = useActiveConversation();

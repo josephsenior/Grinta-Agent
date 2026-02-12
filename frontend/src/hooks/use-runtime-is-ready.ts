@@ -1,6 +1,5 @@
-import { useSelector } from "react-redux";
-import { RootState } from "#/store";
 import { RUNTIME_INACTIVE_STATES } from "#/types/agent-state";
+import { useAgentState } from "#/hooks/use-agent-state";
 import { useActiveConversation } from "./query/use-active-conversation";
 
 /**
@@ -10,7 +9,7 @@ import { useActiveConversation } from "./query/use-active-conversation";
  */
 export const useRuntimeIsReady = (): boolean => {
   const { data: conversation } = useActiveConversation();
-  const { curAgentState } = useSelector((state: RootState) => state.agent);
+  const curAgentState = useAgentState();
 
   // Test-only: if running under Playwright, consider the runtime ready to
   // avoid flaky waits for socket-driven startup events. This flag is set by

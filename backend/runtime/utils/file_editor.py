@@ -168,22 +168,6 @@ class FileEditor:
                 resolved = self.workspace_root / path.lstrip("/")
             return SafePath(resolved, workspace_root=self.workspace_root)
 
-    def _resolve_path(self, path: str) -> Path:
-        """Resolve file path relative to workspace root (legacy method).
-
-        DEPRECATED: Use _resolve_path_safe() instead for security validation.
-        This method is kept for backward compatibility.
-
-        Args:
-            path: File path to resolve
-
-        Returns:
-            Resolved Path object
-        """
-        if os.path.isabs(path):
-            return Path(path)
-        return self.workspace_root / path.lstrip("/")
-
     def _extract_content(
         self, file_text: str | Sentinel | None, new_str: str | Sentinel | None
     ) -> str:

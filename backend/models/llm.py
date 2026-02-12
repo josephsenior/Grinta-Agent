@@ -136,25 +136,6 @@ def _map_provider_exception(exc: Exception, model: str) -> Exception:
     return APIError(str(exc), model=model)
 
 
-# Create a standalone retry decorator for class-level decorators
-def retry_decorator(**kwargs: Any) -> Callable:
-    """Create a retry decorator for LLM completion calls."""
-    num_retries = kwargs.get("num_retries", 3)
-    retry_exceptions = kwargs.get("retry_exceptions", (Exception,))
-    retry_min_wait = kwargs.get("retry_min_wait", 1.0)
-    retry_max_wait = kwargs.get("retry_max_wait", 60.0)
-    retry_multiplier = kwargs.get("retry_multiplier", 2.0)
-
-    return retry(
-        stop=stop_after_attempt(num_retries) | stop_if_should_exit(),
-        reraise=True,
-        retry=retry_if_exception_type(retry_exceptions),
-        wait=wait_exponential(
-            multiplier=retry_multiplier, min=retry_min_wait, max=retry_max_wait
-        ),
-    )
-
-
 __all__ = ["LLM", "_map_provider_exception"]
 
 LLM_RETRY_EXCEPTIONS: tuple[type[Exception], ...] = (
@@ -340,6 +321,52 @@ class LLM(RetryMixin, DebugMixin):
             
         return call_kwargs
 
+    def _record_response_metrics(self, response: Any, latency: float) -> None:
+        """Record latency, cost, and token usage from an LLM response.
+
+        Centralises the metrics-extraction logic shared by ``completion()``
+        and ``acompletion()`` so it is defined in exactly one place.
+        """
+        self.metrics.add_response_latency(latency, response.id)
+        if not response.usage:
+            return
+
+        usage = response.usage
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+
+        cost = self.client.get_completion_cost(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            config=self.config,
+        )
+        self.metrics.add_cost(cost)
+
+        # Extract cache tokens from provider-specific nested structures
+        cache_read = usage.get("cache_read_tokens", 0)
+        cache_write = usage.get("cache_write_tokens", 0)
+
+        if not cache_read and "prompt_tokens_details" in usage:
+            details: Any = usage["prompt_tokens_details"]
+            if hasattr(details, "cached_tokens"):
+                cache_read = details.cached_tokens
+            elif isinstance(details, dict):
+                cache_read = details.get("cached_tokens", 0)
+
+        if not cache_write and "model_extra" in usage:
+            extra: Any = usage["model_extra"]
+            if isinstance(extra, dict):
+                cache_write = extra.get("cache_creation_input_tokens", 0)
+
+        self.metrics.add_token_usage(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            cache_read_tokens=cache_read,
+            cache_write_tokens=cache_write,
+            context_window=0,
+            response_id=response.id,
+        )
+
     def completion(self, *args, **kwargs) -> Any:
         """Synchronous completion call."""
         messages = self._extract_messages(args, kwargs)
@@ -360,45 +387,7 @@ class LLM(RetryMixin, DebugMixin):
             try:
                 self.log_prompt(messages)
                 response = self.client.completion(messages=messages, **kwargs)
-                latency = time.time() - start_time
-                
-                # Update metrics
-                self.metrics.add_response_latency(latency, response.id)
-                if response.usage:
-                    # Add cost to metrics
-                    cost = self.client.get_completion_cost(
-                        prompt_tokens=response.usage.get("prompt_tokens", 0),
-                        completion_tokens=response.usage.get("completion_tokens", 0),
-                        config=self.config
-                    )
-                    self.metrics.add_cost(cost)
-
-                    # Extract cache tokens
-                    cache_read = response.usage.get("cache_read_tokens", 0)
-                    cache_write = response.usage.get("cache_write_tokens", 0)
-                    
-                    # Handle nested usage details (like from OpenAI/Anthropic mocks in tests)
-                    if not cache_read and "prompt_tokens_details" in response.usage:
-                        details: Any = response.usage["prompt_tokens_details"]
-                        if hasattr(details, "cached_tokens"):
-                            cache_read = details.cached_tokens
-                        elif isinstance(details, dict):
-                            cache_read = details.get("cached_tokens", 0)
-                            
-                    if not cache_write and "model_extra" in response.usage:
-                        extra: Any = response.usage["model_extra"]
-                        if isinstance(extra, dict):
-                            cache_write = extra.get("cache_creation_input_tokens", 0)
-
-                    self.metrics.add_token_usage(
-                        prompt_tokens=response.usage.get("prompt_tokens", 0),
-                        completion_tokens=response.usage.get("completion_tokens", 0),
-                        cache_read_tokens=cache_read,
-                        cache_write_tokens=cache_write,
-                        context_window=0, # Not easily available from direct clients yet
-                        response_id=response.id
-                    )
-                
+                self._record_response_metrics(response, time.time() - start_time)
                 self.log_response(response.to_dict())
                 return response
             except Exception as e:
@@ -433,45 +422,7 @@ class LLM(RetryMixin, DebugMixin):
 
             self.log_prompt(messages)
             response = await self.client.acompletion(messages=messages, **kwargs)
-            latency = time.time() - start_time
-            
-            # Update metrics
-            self.metrics.add_response_latency(latency, response.id)
-            if response.usage:
-                # Add cost to metrics
-                cost = self.client.get_completion_cost(
-                    prompt_tokens=response.usage.get("prompt_tokens", 0),
-                    completion_tokens=response.usage.get("completion_tokens", 0),
-                    config=self.config
-                )
-                self.metrics.add_cost(cost)
-
-                # Extract cache tokens
-                cache_read = response.usage.get("cache_read_tokens", 0)
-                cache_write = response.usage.get("cache_write_tokens", 0)
-                
-                # Handle nested usage details
-                if not cache_read and "prompt_tokens_details" in response.usage:
-                    details: Any = response.usage["prompt_tokens_details"]
-                    if hasattr(details, "cached_tokens"):
-                        cache_read = details.cached_tokens
-                    elif isinstance(details, dict):
-                        cache_read = details.get("cached_tokens", 0)
-                        
-                if not cache_write and "model_extra" in response.usage:
-                    extra: Any = response.usage["model_extra"]
-                    if isinstance(extra, dict):
-                        cache_write = extra.get("cache_creation_input_tokens", 0)
-
-                self.metrics.add_token_usage(
-                    prompt_tokens=response.usage.get("prompt_tokens", 0),
-                    completion_tokens=response.usage.get("completion_tokens", 0),
-                    cache_read_tokens=cache_read,
-                    cache_write_tokens=cache_write,
-                    context_window=0, # Not easily available from direct clients yet
-                    response_id=response.id
-                )
-            
+            self._record_response_metrics(response, time.time() - start_time)
             self.log_response(response.to_dict())
             return response
 

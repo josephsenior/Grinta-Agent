@@ -50,6 +50,18 @@ class ConversationInstructions:
     content: str = ""
 
 
+class _UninitializedPromptManager:
+    """Sentinel indicating a prompt manager hasn't been initialized yet.
+
+    Provides better type safety than ``None`` for lazy-init patterns
+    used by engines like locator and auditor.
+    """
+
+
+UNINITIALIZED_PROMPT_MANAGER = _UninitializedPromptManager()
+"""Module-level sentinel instance — import this instead of duplicating the class."""
+
+
 class PromptManager:
     """Manages prompt templates and includes information from the user's workspace micro-agents and global micro-agents.
 
@@ -180,3 +192,35 @@ class PromptManager:
                 state.iteration_flag.max_value - state.iteration_flag.current_value
             } turns left to complete the task. When finished reply with <finish></finish>."
             latest_user_message.content.append(TextContent(text=reminder_text))
+
+
+class OrchestratorPromptManager(PromptManager):
+    """PromptManager subclass that injects orchestrator-specific defaults.
+
+    Replaces the previous ``setattr`` monkey-patch in ``orchestrator.py``
+    with a proper override, preserving type-safety and IDE navigability.
+    """
+
+    _IDENTITY_PREFIX = "You are Forge agent.\n"
+
+    def __init__(
+        self,
+        prompt_dir: str | None,
+        system_prompt_filename: str = "system_prompt.j2",
+        *,
+        config: object | None = None,
+    ) -> None:
+        super().__init__(prompt_dir, system_prompt_filename)
+        self._config = config
+
+    def get_system_message(self, **context: object) -> str:
+        """Render with orchestrator defaults (config, cli_mode, identity prefix)."""
+        if self._config is not None:
+            context.setdefault("config", self._config)
+            context.setdefault(
+                "cli_mode", getattr(self._config, "cli_mode", False)
+            )
+        content = super().get_system_message(**context)
+        if self._IDENTITY_PREFIX.strip() not in content:
+            content = self._IDENTITY_PREFIX + content
+        return content

@@ -250,6 +250,30 @@ class EventStream(EventStore):
         except Exception:
             logger.warning("Failed to register EventStream for global metrics", exc_info=True)
 
+        # Optional SQLite accelerator for long sessions
+        self._sqlite_store: Any = None
+        if str(os.getenv("FORGE_SQLITE_EVENTS", "false")).lower() in ("1", "true", "yes"):
+            try:
+                from backend.storage.sqlite_event_store import SQLiteEventStore
+
+                events_dir = get_conversation_events_dir(self.sid, self.user_id)
+                db_path = os.path.join(
+                    self.file_store.get_base_path() if hasattr(self.file_store, "get_base_path") else ".",
+                    events_dir,
+                    "events.db",
+                )
+                self._sqlite_store = SQLiteEventStore(db_path=db_path)
+                logger.info(
+                    "SQLite event accelerator enabled for session %s",
+                    self.sid,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to initialise SQLite event store, using file-based fallback: %s",
+                    exc,
+                )
+                self._sqlite_store = None
+
         # Replay any incomplete writes from a previous crash
         self._replay_pending_events()
 
@@ -354,6 +378,12 @@ class EventStream(EventStore):
         self._subscribers.clear()
         if self._durable_writer:
             self._durable_writer.stop()
+        if self._sqlite_store is not None:
+            try:
+                self._sqlite_store.close()
+            except Exception:
+                logger.debug("Error closing SQLite event store", exc_info=True)
+            self._sqlite_store = None
 
     def get_backpressure_snapshot(self) -> dict[str, int]:
         """Return a lightweight snapshot of enqueue/drop stats.
@@ -613,6 +643,18 @@ class EventStream(EventStore):
         event_id: int,
         cache_payload: tuple[str, str] | None,
     ) -> None:
+        # SQLite accelerator — fast single-write, bypass filesystem entirely
+        if self._sqlite_store is not None:
+            try:
+                self._sqlite_store.write_event(event_id, payload)
+                return
+            except Exception as exc:
+                logger.warning(
+                    "SQLite write failed for event %d, falling back to file: %s",
+                    event_id,
+                    exc,
+                )
+
         filename = self._get_filename_for_id(event_id, self.user_id)
         is_critical = self._is_critical_payload(payload)
 

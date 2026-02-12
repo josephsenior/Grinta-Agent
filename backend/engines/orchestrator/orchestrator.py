@@ -18,7 +18,7 @@ from backend.models.llm_registry import LLMRegistry
 from backend.runtime.plugins import (
     PluginRequirement,
 )
-from backend.utils.prompt import PromptManager
+from backend.utils.prompt import OrchestratorPromptManager, PromptManager
 
 from backend.runtime.plugins.agent_skills import AgentSkillsRequirement
 
@@ -105,23 +105,11 @@ class Orchestrator(Agent):
         if not os.path.exists(os.path.join(prompt_dir, system_prompt)):
             system_prompt = "system_prompt.j2"
 
-        prompt_manager = PromptManager(
+        return OrchestratorPromptManager(
             prompt_dir=prompt_dir,
             system_prompt_filename=system_prompt,
+            config=self.config,
         )
-
-        original_get_system_message = prompt_manager.get_system_message
-
-        def get_system_message_with_defaults(**context: Any) -> str:
-            context.setdefault("config", self.config)
-            context.setdefault("cli_mode", getattr(self.config, "cli_mode", False))
-            content = original_get_system_message(**context)
-            if "You are Forge agent" not in content:
-                content = "You are Forge agent.\n" + content
-            return content
-
-        setattr(prompt_manager, "get_system_message", get_system_message_with_defaults)
-        return prompt_manager
 
 
 

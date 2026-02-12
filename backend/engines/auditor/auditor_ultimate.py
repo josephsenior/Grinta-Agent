@@ -21,16 +21,11 @@ from backend.engines.auditor import function_calling as readonly_function_callin
 from backend.engines.auditor.tools.file_cache import FileCache
 from backend.core.config import AgentConfig
 from backend.core.logger import forge_logger as logger
-from backend.utils.prompt import PromptManager
-
-
-# Sentinel object for uninitialized prompt manager (better than None for type safety)
-class _UninitializedPromptManager:
-    """Sentinel object indicating prompt manager hasn't been initialized yet."""
-    pass
-
-
-_UNINITIALIZED = _UninitializedPromptManager()
+from backend.utils.prompt import (
+    PromptManager,
+    UNINITIALIZED_PROMPT_MANAGER as _UNINITIALIZED,
+    _UninitializedPromptManager,
+)
 
 
 class UltimateAuditor(Orchestrator):

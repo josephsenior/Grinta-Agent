@@ -1,29 +1,30 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Bell, Check, X, AlertCircle, Info, CheckCircle } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { cn } from "#/utils/utils";
-import type { RootState } from "#/store";
+import type { Notification } from "#/api/notifications";
 import {
-  markAsRead,
-  markAllAsRead,
-  removeNotification,
-  type Notification,
-} from "#/state/notifications-slice";
+  useNotifications,
+  useUnreadCount,
+  useMarkNotificationAsRead,
+  useMarkAllNotificationsAsRead,
+  useDeleteNotification,
+} from "#/hooks/query/use-notifications";
 
 export function NotificationsCenter() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const notifications = useSelector(
-    (state: RootState) => state.notifications.notifications,
-  );
+  const { data: notificationsData } = useNotifications(1, 20);
+  const { data: unreadCount = 0 } = useUnreadCount();
+  const markAsReadMutation = useMarkNotificationAsRead();
+  const markAllAsReadMutation = useMarkAllNotificationsAsRead();
+  const deleteMutation = useDeleteNotification();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const notifications: Notification[] = notificationsData?.data ?? [];
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -45,7 +46,7 @@ export function NotificationsCenter() {
     return undefined;
   }, [isOpen]);
 
-  const getIcon = (type: Notification["type"]) => {
+  const getIcon = (type: string) => {
     switch (type) {
       case "success":
         return CheckCircle;
@@ -58,7 +59,7 @@ export function NotificationsCenter() {
     }
   };
 
-  const getIconColor = (type: Notification["type"]) => {
+  const getIconColor = (type: string) => {
     switch (type) {
       case "success":
         return "text-success-400";
@@ -71,9 +72,9 @@ export function NotificationsCenter() {
     }
   };
 
-  const formatTimestamp = (timestamp: number) => {
+  const formatTimestamp = (dateStr: string) => {
     const now = Date.now();
-    const diff = now - timestamp;
+    const diff = now - new Date(dateStr).getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -82,7 +83,7 @@ export function NotificationsCenter() {
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
-    return new Date(timestamp).toLocaleDateString();
+    return new Date(dateStr).toLocaleDateString();
   };
 
   return (
@@ -116,7 +117,7 @@ export function NotificationsCenter() {
               <button
                 type="button"
                 onClick={() => {
-                  dispatch(markAllAsRead());
+                  markAllAsReadMutation.mutate();
                 }}
                 className="text-xs text-white/60 hover:text-white transition-colors"
               >
@@ -170,26 +171,26 @@ export function NotificationsCenter() {
                           </p>
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-white/40">
-                              {formatTimestamp(notification.timestamp)}
+                              {formatTimestamp(notification.created_at)}
                             </span>
                             <div className="flex items-center gap-2">
-                              {notification.action && (
+                              {notification.action_url && (
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    notification.action?.onClick();
+                                    navigate(notification.action_url!);
                                     setIsOpen(false);
                                   }}
                                   className="text-xs text-brand-400 hover:text-brand-300 font-medium"
                                 >
-                                  {notification.action.label}
+                                  View
                                 </button>
                               )}
                               {!notification.read && (
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    dispatch(markAsRead(notification.id))
+                                    markAsReadMutation.mutate(notification.id)
                                   }
                                   className="p-1 rounded hover:bg-white/10 transition-colors"
                                   aria-label="Mark as read"
@@ -200,7 +201,7 @@ export function NotificationsCenter() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  dispatch(removeNotification(notification.id))
+                                  deleteMutation.mutate(notification.id)
                                 }
                                 className="p-1 rounded hover:bg-white/10 transition-colors"
                                 aria-label="Dismiss"

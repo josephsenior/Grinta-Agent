@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import React, { useMemo, useCallback } from "react";
 import { DiffEditor } from "@monaco-editor/react";
-import { useSelector } from "react-redux";
 import { ConfirmationButtons } from "#/components/shared/buttons/confirmation-buttons";
 import { ForgeAction } from "#/types/core/actions";
 import {
@@ -37,8 +36,8 @@ import { CodeArtifact } from "./code-artifact";
 import { StreamingCodeArtifact } from "./streaming-code-artifact";
 
 import { useConfig } from "#/hooks/query/use-config";
-import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
+import { useAgentState } from "#/hooks/use-agent-state";
 
 // Detect important commands that should be shown even when technical details are hidden
 const isImportantCommand = (cmd?: string | null): boolean => {
@@ -814,7 +813,7 @@ function useEventMessageController({
   hideAvatar = false,
   compactMode = false,
 }: EventMessageProps) {
-  const { curAgentState } = useSelector((state: RootState) => state.agent);
+  const curAgentState = useAgentState();
   const { hydratedEventIds } = useWsClient();
 
   const shouldShowConfirmationButtons = useMemo(

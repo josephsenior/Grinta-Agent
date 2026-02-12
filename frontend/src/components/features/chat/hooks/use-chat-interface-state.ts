@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
+import { useAgentState } from "#/hooks/use-agent-state";
 import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
 import { useWsClient } from "#/context/ws-client-provider";
 import { useScrollToBottom } from "#/hooks/use-scroll-to-bottom";
@@ -30,7 +31,7 @@ export function useChatInterfaceState() {
   const { mutateAsync: uploadFiles } = useUploadFiles();
 
   // State selectors
-  const { curAgentState } = useSelector((state: RootState) => state.agent);
+  const curAgentState = useAgentState();
   const { selectedRepository, replayJson } = useSelector(
     (state: RootState) => state.initialQuery,
   );
