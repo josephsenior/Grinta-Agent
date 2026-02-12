@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from backend._canonical import CanonicalModelMetaclass
 
@@ -12,11 +14,24 @@ class SecurityConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     Attributes:
         confirmation_mode: Whether to enable confirmation mode.
         security_analyzer: The security analyzer to use.
+        enforce_security: Whether the security analyzer should block/confirm risky actions.
+        block_high_risk: Whether HIGH-risk actions should be blocked outright (True)
+            or require user confirmation (False, the default).
 
     """
 
     confirmation_mode: bool = Field(default=False)
     security_analyzer: str | None = Field(default=None)
+    enforce_security: bool = Field(
+        default=True,
+        description="When True, HIGH-risk actions are blocked or require confirmation. "
+        "When False, the analyzer only logs classifications.",
+    )
+    block_high_risk: bool = Field(
+        default=False,
+        description="When True, HIGH-risk actions are rejected outright. "
+        "When False, they require user confirmation.",
+    )
     model_config = ConfigDict(extra="forbid")
 
     @classmethod

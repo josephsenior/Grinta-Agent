@@ -31,6 +31,7 @@ from typing_extensions import Self
 
 from backend.core.exceptions import AgentRuntimeDisconnectedError
 from backend.core.logger import forge_logger as logger
+from backend.core.constants import ActionSecurityRisk
 from backend.events import EventSource, EventStream, EventStreamSubscriber
 from backend.events.action import (
     Action,
@@ -287,7 +288,7 @@ class Runtime(
             )
             self._cleanup_processes()
         except Exception as e:
-            logger.error(f"Failed to cleanup processes: {e}")
+            logger.error("Failed to cleanup processes: %s", e)
 
     def _should_cleanup_processes(self) -> bool:
         return hasattr(self, "process_manager") and self.process_manager.count() > 0
@@ -591,6 +592,11 @@ class Runtime(
         if confirmation_result is not None:
             return confirmation_result
 
+        # Security enforcement — classify risk and gate dangerous actions
+        enforcement_result = self._enforce_security(action)
+        if enforcement_result is not None:
+            return enforcement_result
+
         # Validate action type and runtime support
         validation_result = self._validate_action(action)
         if validation_result is not None:
@@ -694,7 +700,7 @@ Please retry the file creation."""
             return None
 
         except Exception as e:
-            logger.warning(f"Verification error for {action.path}: {e}")
+            logger.warning("Verification error for %s: %s", action.path, e)
             # Don't fail the action due to verification errors
             return None
 
@@ -717,6 +723,66 @@ Please retry the file creation."""
         ):
             return UserRejectObservation(
                 "Action has been rejected by the user! Waiting for further user input."
+            )
+
+        return None
+
+    def _enforce_security(self, action: Action) -> Observation | None:
+        """Evaluate action risk via SecurityAnalyzer and enforce policy.
+
+        Returns:
+            * ``None`` — action may proceed.
+            * ``ErrorObservation`` — action is blocked (HIGH risk + ``block_high_risk``).
+            * ``NullObservation`` — action needs user confirmation (HIGH risk, not blocking).
+        """
+        if self.security_analyzer is None:
+            return None
+
+        sec_cfg = self.config.security
+        if not sec_cfg.enforce_security:
+            return None
+
+        import asyncio
+
+        try:
+            loop = asyncio.get_running_loop()
+            import concurrent.futures
+            # security_risk is async — run it in the current loop when possible
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                risk = loop.run_in_executor(pool, lambda: asyncio.run(self.security_analyzer.security_risk(action)))  # type: ignore[union-attr]
+                risk = asyncio.get_event_loop().run_until_complete(risk)  # type: ignore[assignment]
+        except RuntimeError:
+            risk = asyncio.run(self.security_analyzer.security_risk(action))  # type: ignore[union-attr]
+
+        if risk >= ActionSecurityRisk.HIGH:
+            action_desc = f"{action.action}: {str(action)[:120]}"
+            if sec_cfg.block_high_risk:
+                logger.warning(
+                    "Security BLOCKED high-risk action: %s (risk=%s)",
+                    action_desc,
+                    risk.name,
+                )
+                return ErrorObservation(
+                    f"Action blocked by security policy (risk={risk.name}). "
+                    f"Action: {action_desc}"
+                )
+            # Require user confirmation for HIGH-risk actions
+            if (
+                hasattr(action, "confirmation_state")
+                and action.confirmation_state != ActionConfirmationStatus.CONFIRMED
+            ):
+                logger.info(
+                    "Security: requiring confirmation for high-risk action: %s",
+                    action_desc,
+                )
+                action.confirmation_state = ActionConfirmationStatus.AWAITING_CONFIRMATION  # type: ignore[union-attr]
+                return NullObservation("")
+
+        elif risk >= ActionSecurityRisk.MEDIUM:
+            logger.info(
+                "Security: medium-risk action allowed: %s (risk=%s)",
+                action.action,
+                risk.name,
             )
 
         return None

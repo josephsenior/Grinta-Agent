@@ -115,6 +115,25 @@ class OpenAIClient(DirectLLMClient):
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
+    @staticmethod
+    def _extract_openai_tool_calls(message: Any) -> Optional[List[Dict[str, Any]]]:
+        """Extract tool_calls from an OpenAI ChatCompletionMessage."""
+        raw = getattr(message, "tool_calls", None)
+        if not raw:
+            return None
+        result: List[Dict[str, Any]] = []
+        for tc in raw:
+            entry: Dict[str, Any] = {
+                "id": tc.id,
+                "type": tc.type,
+                "function": {
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                },
+            }
+            result.append(entry)
+        return result or None
+
     def completion(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
         if "model" not in kwargs:
             kwargs["model"] = self.model_name
@@ -122,8 +141,10 @@ class OpenAIClient(DirectLLMClient):
             messages=messages,  # type: ignore[arg-type]
             **kwargs
         )
+        msg = response.choices[0].message
+        tool_calls = self._extract_openai_tool_calls(msg)
         return LLMResponse(
-            content=response.choices[0].message.content or "",
+            content=msg.content or "",
             model=response.model,
             usage={
                 "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
@@ -131,7 +152,8 @@ class OpenAIClient(DirectLLMClient):
                 "total_tokens": response.usage.total_tokens if response.usage else 0,
             },
             id=response.id,
-            finish_reason=response.choices[0].finish_reason
+            finish_reason=response.choices[0].finish_reason,
+            tool_calls=tool_calls,
         )
 
     async def acompletion(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
@@ -141,8 +163,10 @@ class OpenAIClient(DirectLLMClient):
             messages=messages,  # type: ignore[arg-type]
             **kwargs
         )
+        msg = response.choices[0].message
+        tool_calls = self._extract_openai_tool_calls(msg)
         return LLMResponse(
-            content=response.choices[0].message.content or "",
+            content=msg.content or "",
             model=response.model,
             usage={
                 "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
@@ -150,7 +174,8 @@ class OpenAIClient(DirectLLMClient):
                 "total_tokens": response.usage.total_tokens if response.usage else 0,
             },
             id=response.id,
-            finish_reason=response.choices[0].finish_reason
+            finish_reason=response.choices[0].finish_reason,
+            tool_calls=tool_calls,
         )
 
     async def astream(self, messages: List[Dict[str, Any]], **kwargs) -> AsyncIterator[Dict[str, Any]]:  # type: ignore[override,misc]
@@ -172,21 +197,49 @@ class AnthropicClient(DirectLLMClient):
         self.client = Anthropic(api_key=api_key)
         self.async_client = AsyncAnthropic(api_key=api_key)
 
-    def completion(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
-        # Anthropic doesn't support 'system' role in messages list, but as a top-level param
+    @staticmethod
+    def _extract_anthropic_tool_calls(content_blocks: list) -> tuple[str, Optional[List[Dict[str, Any]]]]:
+        """Extract text and tool_use blocks from Anthropic response content.
+
+        Returns:
+            (text_content, tool_calls_or_None)
+        """
+        text_parts: list[str] = []
+        tool_calls: List[Dict[str, Any]] = []
+        for block in content_blocks:
+            block_type = getattr(block, "type", None)
+            if block_type == "text":
+                text_parts.append(block.text)
+            elif block_type == "tool_use":
+                tool_calls.append({
+                    "id": block.id,
+                    "type": "function",
+                    "function": {
+                        "name": block.name,
+                        "arguments": json.dumps(block.input) if isinstance(block.input, dict) else str(block.input),
+                    },
+                })
+        return "\n".join(text_parts), tool_calls or None
+
+    def _prepare_anthropic_kwargs(self, messages: List[Dict[str, Any]], kwargs: Dict[str, Any]) -> tuple[list, Dict[str, Any]]:
+        """Extract system message and set model for Anthropic calls."""
         system_msg = next((m["content"] for m in messages if m["role"] == "system"), None)
-        filtered_messages = [m for m in messages if m["role"] != "system"]
-        
+        filtered = [m for m in messages if m["role"] != "system"]
         if "model" not in kwargs:
             kwargs["model"] = self.model_name
-            
+        if system_msg is not None:
+            kwargs["system"] = system_msg
+        return filtered, kwargs
+
+    def completion(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
+        filtered, kwargs = self._prepare_anthropic_kwargs(messages, kwargs)
         response = self.client.messages.create(
-            messages=filtered_messages,  # type: ignore[arg-type]
-            system=system_msg,  # type: ignore[arg-type]
+            messages=filtered,  # type: ignore[arg-type]
             **kwargs
         )
+        content, tool_calls = self._extract_anthropic_tool_calls(response.content)
         return LLMResponse(
-            content=response.content[0].text,  # type: ignore[union-attr]
+            content=content,
             model=response.model,
             usage={
                 "prompt_tokens": response.usage.input_tokens,
@@ -194,23 +247,19 @@ class AnthropicClient(DirectLLMClient):
                 "total_tokens": response.usage.input_tokens + response.usage.output_tokens,
             },
             id=response.id,
-            finish_reason=response.stop_reason or "stop"
+            finish_reason=response.stop_reason or "stop",
+            tool_calls=tool_calls,
         )
 
     async def acompletion(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
-        system_msg = next((m["content"] for m in messages if m["role"] == "system"), None)
-        filtered_messages = [m for m in messages if m["role"] != "system"]
-        
-        if "model" not in kwargs:
-            kwargs["model"] = self.model_name
-            
+        filtered, kwargs = self._prepare_anthropic_kwargs(messages, kwargs)
         response = await self.async_client.messages.create(
-            messages=filtered_messages,  # type: ignore[arg-type]
-            system=system_msg,  # type: ignore[arg-type]
+            messages=filtered,  # type: ignore[arg-type]
             **kwargs
         )
+        content, tool_calls = self._extract_anthropic_tool_calls(response.content)
         return LLMResponse(
-            content=response.content[0].text,  # type: ignore[union-attr]
+            content=content,
             model=response.model,
             usage={
                 "prompt_tokens": response.usage.input_tokens,
@@ -218,7 +267,8 @@ class AnthropicClient(DirectLLMClient):
                 "total_tokens": response.usage.input_tokens + response.usage.output_tokens,
             },
             id=response.id,
-            finish_reason=response.stop_reason or "stop"
+            finish_reason=response.stop_reason or "stop",
+            tool_calls=tool_calls,
         )
 
     async def astream(self, messages: List[Dict[str, Any]], **kwargs) -> AsyncIterator[Dict[str, Any]]:  # type: ignore[override,misc]
@@ -262,119 +312,111 @@ class GeminiClient(DirectLLMClient):
         genai.configure(api_key=api_key)
         self.api_key = api_key
 
-    def _convert_messages(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        # Gemini uses 'user' and 'model' roles
-        gemini_messages = []
-        for m in messages:
-            role = "user" if m["role"] in ["user", "system"] else "model"
-            gemini_messages.append({"role": role, "parts": [m["content"]]})
-        return gemini_messages
+    def _convert_messages(self, messages: List[Dict[str, Any]]) -> tuple[Optional[str], List[Dict[str, Any]]]:
+        """Convert messages to Gemini format, extracting system instruction.
 
-    def completion(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
-        model_name = kwargs.pop("model", self.model_name)
-        # Handle model names that might have prefixes
+        Returns:
+            (system_instruction_or_None, gemini_history_messages)
+        """
+        system_instruction: Optional[str] = None
+        gemini_messages: List[Dict[str, Any]] = []
+        for m in messages:
+            if m["role"] == "system":
+                system_instruction = m["content"]
+                continue
+            role = "user" if m["role"] == "user" else "model"
+            gemini_messages.append({"role": role, "parts": [m["content"]]})
+        return system_instruction, gemini_messages
+
+    @staticmethod
+    def _extract_gemini_generation_config(kwargs: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+        """Pop generation-config keys from *kwargs* and return (model_name, gen_config)."""
+        model_name = kwargs.pop("model", "")
         if "/" in model_name:
             model_name = model_name.split("/")[-1]
-            
-        # Extract generation config from kwargs
-        generation_config = {}
-        if "temperature" in kwargs:
-            generation_config["temperature"] = kwargs.pop("temperature")
-        if "top_p" in kwargs:
-            generation_config["top_p"] = kwargs.pop("top_p")
-        if "top_k" in kwargs:
-            generation_config["top_k"] = kwargs.pop("top_k")
-        if "max_tokens" in kwargs:
-            generation_config["max_output_tokens"] = kwargs.pop("max_tokens")
-        if "stop" in kwargs:
-            generation_config["stop_sequences"] = kwargs.pop("stop")
-            
-        model = genai.GenerativeModel(model_name, generation_config=generation_config)  # type: ignore[arg-type]
-        gemini_messages = self._convert_messages(messages)
-        
-        # Last message is the prompt
-        prompt = gemini_messages[-1]["parts"][0]
-        history = gemini_messages[:-1]
-        
+        gen_cfg: Dict[str, Any] = {}
+        for src, dst in [
+            ("temperature", "temperature"),
+            ("top_p", "top_p"),
+            ("top_k", "top_k"),
+            ("max_tokens", "max_output_tokens"),
+            ("stop", "stop_sequences"),
+        ]:
+            if src in kwargs:
+                gen_cfg[dst] = kwargs.pop(src)
+        return model_name, gen_cfg
+
+    @staticmethod
+    def _extract_gemini_tool_calls(response: Any) -> Optional[List[Dict[str, Any]]]:
+        """Extract function call parts from a Gemini response."""
+        tool_calls: List[Dict[str, Any]] = []
+        for candidate in getattr(response, "candidates", []):
+            for part in getattr(candidate, "content", {}).get("parts", []):
+                fc = getattr(part, "function_call", None)
+                if fc is None:
+                    continue
+                tool_calls.append({
+                    "id": f"gemini-{len(tool_calls)}",
+                    "type": "function",
+                    "function": {
+                        "name": fc.name,
+                        "arguments": json.dumps(dict(fc.args)) if fc.args else "{}",
+                    },
+                })
+        return tool_calls or None
+
+    @staticmethod
+    def _gemini_usage(response: Any) -> Dict[str, int]:
+        """Extract token usage from a Gemini response."""
+        meta = getattr(response, "usage_metadata", None)
+        return {
+            "prompt_tokens": getattr(meta, "prompt_token_count", 0) if meta else 0,
+            "completion_tokens": getattr(meta, "candidates_token_count", 0) if meta else 0,
+            "total_tokens": getattr(meta, "total_token_count", 0) if meta else 0,
+        }
+
+    def _build_gemini_chat(self, messages: List[Dict[str, Any]], kwargs: Dict[str, Any]):
+        """Shared setup for Gemini completion / acompletion / astream."""
+        model_name, gen_cfg = self._extract_gemini_generation_config(kwargs)
+        model_name = model_name or self.model_name
+        if "/" in model_name:
+            model_name = model_name.split("/")[-1]
+        system_instruction, gemini_messages = self._convert_messages(messages)
+        model_kwargs: Dict[str, Any] = {"generation_config": gen_cfg} if gen_cfg else {}
+        if system_instruction:
+            model_kwargs["system_instruction"] = system_instruction
+        model = genai.GenerativeModel(model_name, **model_kwargs)  # type: ignore[arg-type]
+        prompt = gemini_messages[-1]["parts"][0] if gemini_messages else ""
+        history = gemini_messages[:-1] if gemini_messages else []
         chat = model.start_chat(history=history)  # type: ignore[arg-type]
+        return model_name, chat, prompt
+
+    def completion(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
+        model_name, chat, prompt = self._build_gemini_chat(messages, kwargs)
         response = chat.send_message(prompt, **kwargs)
-        
         return LLMResponse(
             content=response.text,
             model=model_name,
-            usage={
-                "prompt_tokens": response.usage_metadata.prompt_token_count if hasattr(response, "usage_metadata") else 0,
-                "completion_tokens": response.usage_metadata.candidates_token_count if hasattr(response, "usage_metadata") else 0,
-                "total_tokens": response.usage_metadata.total_token_count if hasattr(response, "usage_metadata") else 0,
-            },
+            usage=self._gemini_usage(response),
             id="",
-            finish_reason="stop"
+            finish_reason="stop",
+            tool_calls=self._extract_gemini_tool_calls(response),
         )
 
     async def acompletion(self, messages: List[Dict[str, Any]], **kwargs) -> LLMResponse:
-        model_name = kwargs.pop("model", self.model_name)
-        if "/" in model_name:
-            model_name = model_name.split("/")[-1]
-
-        # Extract generation config from kwargs
-        generation_config = {}
-        if "temperature" in kwargs:
-            generation_config["temperature"] = kwargs.pop("temperature")
-        if "top_p" in kwargs:
-            generation_config["top_p"] = kwargs.pop("top_p")
-        if "top_k" in kwargs:
-            generation_config["top_k"] = kwargs.pop("top_k")
-        if "max_tokens" in kwargs:
-            generation_config["max_output_tokens"] = kwargs.pop("max_tokens")
-        if "stop" in kwargs:
-            generation_config["stop_sequences"] = kwargs.pop("stop")
-
-        model = genai.GenerativeModel(model_name, generation_config=generation_config)  # type: ignore[arg-type]
-        gemini_messages = self._convert_messages(messages)
-        
-        prompt = gemini_messages[-1]["parts"][0]
-        history = gemini_messages[:-1]
-        
-        chat = model.start_chat(history=history)  # type: ignore[arg-type]
+        model_name, chat, prompt = self._build_gemini_chat(messages, kwargs)
         response = await chat.send_message_async(prompt, **kwargs)
-        
         return LLMResponse(
             content=response.text,
             model=model_name,
-            usage={
-                "prompt_tokens": response.usage_metadata.prompt_token_count if hasattr(response, "usage_metadata") else 0,
-                "completion_tokens": response.usage_metadata.candidates_token_count if hasattr(response, "usage_metadata") else 0,
-                "total_tokens": response.usage_metadata.total_token_count if hasattr(response, "usage_metadata") else 0,
-            },
+            usage=self._gemini_usage(response),
             id="",
-            finish_reason="stop"
+            finish_reason="stop",
+            tool_calls=self._extract_gemini_tool_calls(response),
         )
 
     async def astream(self, messages: List[Dict[str, Any]], **kwargs) -> AsyncIterator[Dict[str, Any]]:  # type: ignore[override,misc]
-        model_name = kwargs.pop("model", self.model_name)
-        if "/" in model_name:
-            model_name = model_name.split("/")[-1]
-
-        # Extract generation config from kwargs
-        generation_config = {}
-        if "temperature" in kwargs:
-            generation_config["temperature"] = kwargs.pop("temperature")
-        if "top_p" in kwargs:
-            generation_config["top_p"] = kwargs.pop("top_p")
-        if "top_k" in kwargs:
-            generation_config["top_k"] = kwargs.pop("top_k")
-        if "max_tokens" in kwargs:
-            generation_config["max_output_tokens"] = kwargs.pop("max_tokens")
-        if "stop" in kwargs:
-            generation_config["stop_sequences"] = kwargs.pop("stop")
-
-        model = genai.GenerativeModel(model_name, generation_config=generation_config)  # type: ignore[arg-type]
-        gemini_messages = self._convert_messages(messages)
-        
-        prompt = gemini_messages[-1]["parts"][0]
-        history = gemini_messages[:-1]
-        
-        chat = model.start_chat(history=history)  # type: ignore[arg-type]
+        model_name, chat, prompt = self._build_gemini_chat(messages, kwargs)
         response = await chat.send_message_async(prompt, stream=True, **kwargs)
         
         async for chunk in response:

@@ -218,6 +218,7 @@ class AgentController:
         self.circuit_breaker_service = CircuitBreakerService(self._controller_context)
         self.stuck_service = StuckDetectionService(self)
         self.task_validation_service = TaskValidationService(self._controller_context)
+        self._step_task: asyncio.Task[None] | None = None
 
         self.lifecycle_service.initialize_core_attributes(
             sid,
@@ -360,8 +361,9 @@ class AgentController:
         """Trigger agent to take one step asynchronously.
 
         Creates async task for step execution with exception handling.
+        Keeps a strong reference to prevent GC of the running task.
         """
-        asyncio.create_task(self._step_with_exception_handling())
+        self._step_task = asyncio.create_task(self._step_with_exception_handling())
 
     async def _step_with_exception_handling(self) -> None:
         """Execute agent step with comprehensive exception handling.
@@ -372,25 +374,18 @@ class AgentController:
         try:
             await self._step()
         except Exception as e:
-            # CRITICAL DEBUG: Log the exact exception type and module
             self.log(
                 "error",
-                f"EXCEPTION CAUGHT - Type: {type(e).__name__}, Module: {type(e).__module__}, Value: {e}",
+                "Error while running the agent (session %s): %s",
+                extra={"exception_type": type(e).__name__},
             )
-            self.log(
-                "error",
-                f"Exception is APIConnectionError: {isinstance(e, APIConnectionError)}",
-            )
-            self.log(
-                "error",
-                f"Exception isinstance check: APIConnectionError={isinstance(e, APIConnectionError)}, APIError={isinstance(e, APIError)}",
-            )
-            self.log(
-                "error",
-                f"Error while running the agent (session ID: {self.id}): {e}. Traceback: {traceback.format_exc()}",
+            logger.debug(
+                "Agent step exception traceback (session %s): %s",
+                self.id,
+                traceback.format_exc(),
             )
 
-            # Check if this is a known LLM exception that should be passed through directly
+            # Known LLM exceptions are passed through directly
             reported: Exception
             if isinstance(
                 e,
@@ -410,25 +405,13 @@ class AgentController:
                 ),
             ):
                 reported = e
-                self.log(
-                    "info", f"✅ PASSING THROUGH LLM EXCEPTION: {type(e).__name__}: {e}"
-                )
             else:
                 reported = RuntimeError(
                     f"There was an unexpected error while running the agent: {
                         e.__class__.__name__
                     }. You can refresh the page or ask the agent to try again.",
                 )
-                self.log(
-                    "warning",
-                    f"❌ WRAPPING EXCEPTION: {type(e).__name__} -> RuntimeError",
-                )
 
-            # CRITICAL DEBUG: Log what we're about to pass to _react_to_exception
-            self.log(
-                "error",
-                f"ABOUT TO CALL _react_to_exception with: {type(reported).__name__}: {reported}",
-            )
             await self._react_to_exception(reported)
 
     def _should_step_for_action(self, event: Action) -> bool:
@@ -491,15 +474,6 @@ class AgentController:
         """
         if hasattr(event, "hidden") and event.hidden:
             return
-
-        # DUPLICATE MESSAGE DETECTION: Log every MessageAction to detect duplicates
-        if isinstance(event, MessageAction):
-            event_id = getattr(event, "id", "NO_ID")
-            self.log(
-                "warning",
-                f"🔍 PROCESSING MessageAction: id={event_id}, source={event.source}, content={event.content[:50]}...",
-                extra={"msg_type": "MESSAGE_RECEIVED"},
-            )
 
         self.state_tracker.add_history(event)
         if isinstance(event, Action):
@@ -881,4 +855,4 @@ class AgentController:
                     cost=cost
                 )
         except Exception as e:
-            logger.debug(f"Audit log failed: {e}")
+            logger.debug("Audit log failed: %s", e)
