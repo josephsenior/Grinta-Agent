@@ -380,7 +380,12 @@ async def connect(connection_id: str, environ: dict, *args) -> None:
             connection_id,
         )
     except SocketIOConnectionRefusedError:
-        asyncio.create_task(sio.disconnect(connection_id))
+        from backend.utils.async_utils import create_tracked_task
+
+        create_tracked_task(
+            sio.disconnect(connection_id),
+            name="socket-disconnect-on-error",
+        )
         raise
     except Exception:
         import traceback

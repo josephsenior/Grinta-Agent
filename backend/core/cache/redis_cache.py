@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import json
 import os
-import pickle
 from collections.abc import Mapping
 from typing import Any, Optional, cast
 from datetime import timedelta
 
+from backend.core.cache._serializer import _json_fallback
 from backend.core.logger import forge_logger as logger
 
 # Optional Redis dependency (graceful degradation)
@@ -161,12 +161,20 @@ class DistributedCache:
 
             self.stats["hits"] += 1
 
-            # Deserialize (supports both JSON and pickle)
+            # Deserialize (supports both JSON and legacy pickle)
             try:
                 decoded = cast(bytes, data).decode("utf-8")
                 return json.loads(decoded)
             except (json.JSONDecodeError, UnicodeDecodeError):
-                return pickle.loads(cast(bytes, data))
+                # Legacy pickle data still in Redis — read it but warn
+                import pickle  # noqa: S403
+
+                logger.warning(
+                    "Deserializing legacy pickle cache key %s — "
+                    "will be replaced with JSON on next write",
+                    key,
+                )
+                return pickle.loads(cast(bytes, data))  # nosec B301
 
         except Exception as e:
             logger.error(f"Redis GET error for {key}: {e}")
@@ -195,12 +203,16 @@ class DistributedCache:
             redis_key = self._make_key(key)
             ttl = ttl if ttl is not None else self.ttl_seconds
 
-            # Serialize (try JSON first, fallback to pickle)
+            # Serialize as JSON (handles Pydantic models, enums, SecretStr)
             try:
-                data = json.dumps(value)
+                data = json.dumps(value, default=_json_fallback)
                 payload: bytes = data.encode("utf-8")
             except (TypeError, ValueError):
-                payload = pickle.dumps(value)
+                logger.warning(
+                    "JSON serialization failed for cache key %s — value not cached",
+                    key,
+                )
+                return False
 
             self.client.setex(redis_key, timedelta(seconds=ttl), payload)
 

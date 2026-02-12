@@ -553,8 +553,10 @@ def get_process_manager_health_snapshot() -> Dict[str, Any]:
                 runtime = getattr(session, "runtime", None)
                 process_manager = getattr(runtime, "process_manager", None)
                 if process_manager and hasattr(process_manager, "get_running_processes"):
-                    with contextlib.suppress(Exception):
+                    try:
                         active_processes.extend(process_manager.get_running_processes())
+                    except Exception:
+                        logger.debug("Failed to collect processes from session", exc_info=True)
     return _get_process_manager_health_snapshot(active_processes=active_processes)
 
 

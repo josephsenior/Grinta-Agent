@@ -6,7 +6,7 @@ import base64
 import contextlib
 import json
 import os
-import pickle  # nosec B403 - Fallback for reading legacy sessions
+import pickle  # nosec B403 — read-only legacy support, never used for writes
 import time
 from dataclasses import asdict, dataclass, field
 from enum import Enum
@@ -143,10 +143,12 @@ class State:
         try:
             encoded = self._to_json_str()
         except Exception:
-            # Fallback to pickle — should rarely happen
-            logger.warning("JSON serialization failed, falling back to pickle")
-            pickled = pickle.dumps(self)  # nosec B301
-            encoded = base64.b64encode(pickled).decode("utf-8")
+            logger.exception(
+                "JSON serialization of agent state failed for sid %s — "
+                "this is a bug; investigate which field is not JSON-safe",
+                sid,
+            )
+            raise
         logger.debug("Saving state to session %s:%s", sid, self.agent_state)
         try:
             primary = get_conversation_agent_state_filename(sid, user_id)
@@ -157,8 +159,10 @@ class State:
 
             if user_id:
                 filename = get_conversation_agent_state_filename(sid)
-                with contextlib.suppress(Exception):
+                try:
                     file_store.delete(filename)
+                except Exception:
+                    logger.debug("Failed to delete legacy state file %s", filename)
         except Exception as e:
             logger.error("Failed to save state to session: %s", e)
             raise
@@ -196,11 +200,13 @@ class State:
                 reverse=True,
             )
             for old_file in json_files[MAX_STATE_CHECKPOINTS:]:
-                with contextlib.suppress(Exception):
+                try:
                     file_store.delete(f"{ckpt_dir}{old_file}")
+                except Exception:
+                    logger.debug("Failed to prune old checkpoint %s", old_file)
         except Exception:
-            # list() may fail if directory is new — that's fine
-            pass
+            # list() may fail if directory doesn't exist yet — that's fine
+            logger.debug("Could not list checkpoint dir %s (may not exist yet)", ckpt_dir)
 
     @staticmethod
     def restore_from_session(
@@ -341,9 +347,12 @@ class State:
         stripped = raw.strip()
         if stripped.startswith("{"):
             return State._from_json_str(stripped)
-        # Legacy pickle/base64
+        # Legacy pickle/base64 — read but warn; next save will use JSON
+        logger.warning(
+            "Loading legacy pickle state — will be migrated to JSON on next save"
+        )
         pickled = base64.b64decode(stripped)
-        return pickle.loads(pickled)  # nosec B301 — trusted internal data
+        return pickle.loads(pickled)  # nosec B301 — legacy transitional only
 
     @staticmethod
     def _from_json_str(raw: str) -> State:

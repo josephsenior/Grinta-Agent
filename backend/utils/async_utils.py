@@ -3,11 +3,48 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from collections.abc import Coroutine, Iterable
 from concurrent import futures
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Awaitable, Callable
+
+_logger = logging.getLogger(__name__)
+
+# Module-level set to hold strong references to fire-and-forget tasks.
+# Without this, tasks created via ``asyncio.create_task()`` may be
+# garbage-collected before completion (CPython GC behaviour).
+_background_tasks: set[asyncio.Task[Any]] = set()
+
+
+def create_tracked_task(
+    coro: Coroutine[Any, Any, Any],
+    *,
+    name: str | None = None,
+    task_set: set[asyncio.Task[Any]] | None = None,
+) -> asyncio.Task[Any]:
+    """Create an asyncio task with a strong reference to prevent GC.
+
+    This is the canonical replacement for bare ``asyncio.create_task()``
+    where the returned ``Task`` would otherwise be discarded. The task is
+    held in *task_set* (defaults to the module-level ``_background_tasks``)
+    and automatically removed when it completes.
+
+    Args:
+        coro: The coroutine to schedule.
+        name: Optional name for the task (useful for debugging).
+        task_set: The ``set`` to store the task in.  Defaults to the
+                  module-level ``_background_tasks``.
+
+    Returns:
+        The created ``asyncio.Task``.
+    """
+    target = task_set if task_set is not None else _background_tasks
+    task = asyncio.create_task(coro, name=name)
+    target.add(task)
+    task.add_done_callback(target.discard)
+    return task
 
 from backend.core.constants import GENERAL_TIMEOUT
 
@@ -184,7 +221,7 @@ def run_or_schedule(coro: Coroutine[Any, Any, Any]) -> None:
         loop = None
 
     if loop is not None and loop.is_running():
-        loop.create_task(coro)
+        create_tracked_task(coro, name="run_or_schedule")
         return
 
     # No running loop — fall back to synchronous execution.

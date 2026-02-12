@@ -114,7 +114,7 @@ def _circuit_breaker_health(controller: Any) -> CircuitBreakerHealth | None:
         }
 
     last_check: dict[str, Any] | None = None
-    with contextlib.suppress(Exception):
+    try:
         result = service.check()
         if result is not None:
             last_check = {
@@ -122,6 +122,8 @@ def _circuit_breaker_health(controller: Any) -> CircuitBreakerHealth | None:
                 "reason": getattr(result, "reason", ""),
                 "action": getattr(result, "action", ""),
             }
+    except Exception:
+        logger.debug("Circuit breaker check failed", exc_info=True)
 
     return CircuitBreakerHealth(
         enabled=True,
@@ -136,8 +138,10 @@ def _circuit_breaker_health(controller: Any) -> CircuitBreakerHealth | None:
 def _sync_budget_metrics(controller: Any) -> None:
     state_tracker = getattr(controller, "state_tracker", None)
     if state_tracker and hasattr(state_tracker, "sync_budget_flag_with_metrics"):
-        with contextlib.suppress(Exception):
+        try:
             state_tracker.sync_budget_flag_with_metrics()
+        except Exception:
+            logger.debug("Failed to sync budget metrics", exc_info=True)
 
 
 def _extract_agent_state(state: Any) -> str:
@@ -152,11 +156,15 @@ def _collect_event_stream_stats(controller: Any) -> dict[str, Any]:
 
     stats: dict[str, Any] = {}
     if hasattr(event_stream, "get_stats"):
-        with contextlib.suppress(Exception):
+        try:
             stats.update(event_stream.get_stats() or {})
+        except Exception:
+            logger.debug("Failed to collect event stream stats", exc_info=True)
     if hasattr(event_stream, "get_backpressure_snapshot"):
-        with contextlib.suppress(Exception):
+        try:
             stats.update(event_stream.get_backpressure_snapshot() or {})
+        except Exception:
+            logger.debug("Failed to collect backpressure snapshot", exc_info=True)
     if stats:
         return stats
     return {}
@@ -165,8 +173,10 @@ def _collect_event_stream_stats(controller: Any) -> dict[str, Any]:
 def _is_stuck(controller: Any) -> bool:
     stuck_service = getattr(controller, "stuck_detection_service", None)
     if stuck_service and hasattr(stuck_service, "is_stuck"):
-        with contextlib.suppress(Exception):
+        try:
             return bool(stuck_service.is_stuck())
+        except Exception:
+            logger.debug("Stuck detection check failed", exc_info=True)
     return False
 
 

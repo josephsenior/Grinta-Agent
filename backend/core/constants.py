@@ -82,8 +82,6 @@ DEFAULT_LLM_CORRECT_NUM = 5
 # Verified models for CLI and configuration
 VERIFIED_PROVIDERS = ["anthropic", "openai", "mistral"]
 VERIFIED_OPENAI_MODELS = [
-    "gpt-5-2025-08-07",
-    "gpt-5-mini-2025-08-07",
     "o4-mini",
     "gpt-4o",
     "gpt-4o-mini",

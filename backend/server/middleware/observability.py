@@ -154,14 +154,17 @@ class RequestObservabilityMiddleware(BaseHTTPMiddleware):
                     f"(threshold {policy.comparison} {policy.threshold})"
                 )
                 logger.warning(message)
-                asyncio.create_task(
+                from backend.utils.async_utils import create_tracked_task
+
+                create_tracked_task(
                     self.alert_client.send_alert(
                         policy_name=policy.name,
                         metric=policy.metric,
                         value=float(value),
                         threshold=policy.threshold,
                         message=message,
-                    )
+                    ),
+                    name="observability-alert",
                 )
 
 

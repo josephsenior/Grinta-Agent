@@ -62,7 +62,12 @@ class IterationGuardService:
         return graceful_env not in ("0", "false", "no")
 
     def _schedule_graceful_shutdown(self, reason: str) -> None:
-        asyncio.create_task(self._graceful_shutdown(reason=reason))
+        from backend.utils.async_utils import create_tracked_task
+
+        create_tracked_task(
+            self._graceful_shutdown(reason=reason),
+            name="graceful-shutdown",
+        )
 
     async def _graceful_shutdown(self, reason: str) -> None:
         """Give agent one final turn to save work and summarize progress."""

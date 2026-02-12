@@ -5,10 +5,10 @@ Provides intelligent caching for global config, user settings, and merged result
 
 from __future__ import annotations
 
-import pickle
 import time
 from typing import TYPE_CHECKING, Union
 
+from backend.core.cache._serializer import deserialize_model, serialize_model
 from backend.core.logger import forge_logger as logger
 
 if TYPE_CHECKING:
@@ -100,7 +100,9 @@ class SmartConfigCache:
         try:
             cached = self.redis.get("smart_cache:global_config")
             if cached:
-                config = pickle.loads(cached)
+                from backend.core.config.forge_config import ForgeConfig
+
+                config = deserialize_model(cached, ForgeConfig)
                 logger.debug("🚀 Global config cache HIT")
                 return config
 
@@ -110,7 +112,7 @@ class SmartConfigCache:
             config = load_FORGE_config()
 
             # Cache for 5 minutes (global config rarely changes)
-            self.redis.setex("smart_cache:global_config", 300, pickle.dumps(config))
+            self.redis.setex("smart_cache:global_config", 300, serialize_model(config))
             logger.debug("🚀 Global config cache MISS - loaded and cached")
             return config
 
@@ -174,8 +176,10 @@ class SmartConfigCache:
             cached = self.redis.get(user_key)
 
             if cached:
-                settings = pickle.loads(cached)
-                logger.debug(f"🚀 User settings cache HIT for {user_id}")
+                from backend.storage.data_models.settings import Settings as SettingsModel
+
+                settings = deserialize_model(cached, SettingsModel)
+                logger.debug("🚀 User settings cache HIT for %s", user_id)
                 return settings
 
             # Cache miss - load from database
@@ -192,7 +196,7 @@ class SmartConfigCache:
                 merged_settings = settings
 
             # Cache for 1 minute (user settings change more frequently)
-            self.redis.setex(user_key, 60, pickle.dumps(merged_settings))
+            self.redis.setex(user_key, 60, serialize_model(merged_settings))
             logger.debug(
                 f"🚀 User settings cache MISS for {user_id} - loaded and cached"
             )

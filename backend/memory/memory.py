@@ -550,8 +550,11 @@ class Memory:
                             "MEMORY.set_runtime_status: status_callback returned"
                         )
                     except Exception:
-                        asyncio.create_task(
-                            self._set_runtime_status("error", status, message)
+                        from backend.utils.async_utils import create_tracked_task
+
+                        create_tracked_task(
+                            self._set_runtime_status("error", status, message),
+                            name="memory-status-fallback",
                         )
             except (RuntimeError, KeyError) as e:
                 logger.error(

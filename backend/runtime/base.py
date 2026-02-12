@@ -296,7 +296,12 @@ class Runtime(
     def _cleanup_processes(self) -> None:
         loop, created = self._resolve_event_loop()
         if loop and loop.is_running():
-            loop.create_task(self.process_manager.cleanup_all(runtime=self))
+            from backend.utils.async_utils import create_tracked_task
+
+            create_tracked_task(
+                self.process_manager.cleanup_all(runtime=self),
+                name="process-cleanup",
+            )
             return
         self._run_cleanup_synchronously(loop, created)
 

@@ -215,8 +215,19 @@ def _create_early_status_callback(
             try:
                 run_or_schedule(controller.set_agent_state_to(AgentState.ERROR))
             except Exception:
-                with contextlib.suppress(Exception):
-                    asyncio.create_task(controller.set_agent_state_to(AgentState.ERROR))
+                try:
+                    from backend.utils.async_utils import create_tracked_task
+
+                    create_tracked_task(
+                        controller.set_agent_state_to(AgentState.ERROR),
+                        name="error-state-last-resort",
+                    )
+                except Exception:
+                    logger.error(
+                        "CRITICAL: Failed to transition agent to ERROR state — "
+                        "agent may be stuck in an inconsistent state",
+                        exc_info=True,
+                    )
         else:
             logger.info(msg)
 
@@ -486,8 +497,10 @@ async def _execute_controller_lifecycle(
 
 def _attach_status_callback(memory: Memory, controller) -> None:
     _early_status_callback = _create_early_status_callback(controller)
-    with contextlib.suppress(Exception):
+    try:
         memory.status_callback = _early_status_callback
+    except Exception:
+        logger.warning("Failed to attach status callback to memory", exc_info=True)
 
 
 def _subscribe_controller_events(

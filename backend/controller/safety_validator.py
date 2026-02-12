@@ -284,7 +284,12 @@ class SafetyValidator:
 
         # Send webhook alert if configured
         if self.config.alert_webhook_url:
-            asyncio.create_task(self._send_webhook_alert(alert_message))
+            from backend.utils.async_utils import create_tracked_task
+
+            create_tracked_task(
+                self._send_webhook_alert(alert_message),
+                name="safety-webhook-alert",
+            )
 
     def _format_alert_message(
         self,

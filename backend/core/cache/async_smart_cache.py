@@ -6,10 +6,10 @@ Provides intelligent async-compatible caching for global config, user settings, 
 from __future__ import annotations
 
 import asyncio
-import pickle
 import time
 from typing import TYPE_CHECKING, Any
 
+from backend.core.cache._serializer import deserialize_model, serialize_model
 from backend.core.logger import forge_logger as logger
 
 if TYPE_CHECKING:
@@ -139,7 +139,9 @@ class AsyncSmartCache:
         try:
             cached = await client.get("smart_cache:global_config")
             if cached:
-                config = pickle.loads(cached)
+                from backend.core.config.forge_config import ForgeConfig
+
+                config = deserialize_model(cached, ForgeConfig)
                 logger.debug("🚀 Global config cache HIT (Redis)")
                 return config
 
@@ -150,7 +152,7 @@ class AsyncSmartCache:
 
             # Cache for 5 minutes (global config rarely changes)
             await client.setex(
-                "smart_cache:global_config", 300, pickle.dumps(config)
+                "smart_cache:global_config", 300, serialize_model(config)
             )
             logger.debug("🚀 Global config cache MISS - loaded and cached (Redis)")
             return config
@@ -218,8 +220,10 @@ class AsyncSmartCache:
             cached = await client.get(user_key)
 
             if cached:
-                settings = pickle.loads(cached)
-                logger.debug(f"🚀 User settings cache HIT for '{user_id}' (Redis)")
+                from backend.storage.data_models.settings import Settings as SettingsModel
+
+                settings = deserialize_model(cached, SettingsModel)
+                logger.debug("🚀 User settings cache HIT for '%s' (Redis)", user_id)
                 return settings
 
             # Cache miss - load from database and merge
@@ -238,8 +242,8 @@ class AsyncSmartCache:
                 merged_settings = settings
 
             # Cache for 1 minute (user settings change more frequently)
-            await client.setex(user_key, 60, pickle.dumps(merged_settings))
-            logger.debug(f"🚀 Cached merged settings for '{user_id}' (Redis, TTL: 60s)")
+            await client.setex(user_key, 60, serialize_model(merged_settings))
+            logger.debug("🚀 Cached merged settings for '%s' (Redis, TTL: 60s)", user_id)
             return merged_settings
 
         except Exception as e:

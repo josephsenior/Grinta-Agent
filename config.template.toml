@@ -139,7 +139,7 @@ api_key = ""
 #max_output_tokens = 0
 
 # Model to use. (For Headless / CLI only -  In Web this is overridden by Session Init)
-model = "gpt-4o"
+model = "claude-sonnet-4-20250514"
 
 # Number of retries to attempt when an operation fails with the LLM.
 # Increase this value to allow more attempts before giving up
@@ -299,21 +299,6 @@ classpath = "my_package.my_module.MyCustomAgent"
 
 # BrowserGym environment to use for evaluation
 #browsergym_eval_env = ""
-
-#################################### Security ###################################
-# Configuration for security features
-##############################################################################
-[security]
-
-# Enable confirmation mode (For Headless / CLI only -  In Web this is overridden by Session Init)
-#confirmation_mode = false
-
-# The security analyzer to use (For Headless / CLI only -  In Web this is overridden by Session Init)
-# Available options: 'llm' (default), 'invariant'
-#security_analyzer = "llm"
-
-# Whether to enable security analyzer
-#enable_security_analyzer = true
 
 #################################### Condenser #################################
 # Condensers control how conversation history is managed and compressed when

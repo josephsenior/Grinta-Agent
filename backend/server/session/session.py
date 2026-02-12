@@ -442,19 +442,25 @@ class Session:
 
     def _log_dispatch_start(self, data: dict) -> None:
         """Log the start of dispatch operation."""
-        with contextlib.suppress(Exception):
+        try:
             self.logger.info(
-                f"Dispatch called with data: {data}",
+                "Dispatch called with data keys: %s",
+                list(data.keys()) if isinstance(data, dict) else type(data).__name__,
                 extra={"signal": "dispatch_called"},
             )
+        except Exception:
+            pass  # logging failure must not block dispatch
 
     def _log_parsed_event(self, event) -> None:
         """Log the parsed event information."""
-        with contextlib.suppress(Exception):
+        try:
             self.logger.info(
-                f"Parsed event: {type(event).__name__} content={getattr(event, 'content', None)!r}",
+                "Parsed event: %s",
+                type(event).__name__,
                 extra={"signal": "dispatch_parsed_event"},
             )
+        except Exception:
+            pass  # logging failure must not block dispatch
 
     async def _handle_image_validation(self, event) -> bool:
         """Handle image validation for message actions. Returns True if validation failed."""
@@ -582,11 +588,13 @@ class Session:
         if isinstance(data, dict) and (
             data.get("observation") == "null" or data.get("action") == "null"
         ):
-            with contextlib.suppress(Exception):
+            try:
                 self.logger.warning(
                     'Dropping event with literal "null" in observation/action',
                     extra={"payload_sample": data},
                 )
+            except Exception:
+                pass  # logging failure must not affect event filtering
             return True
         return False
 

@@ -103,5 +103,9 @@ class ServerConversation:
         if self.event_stream:
             self.event_stream.close()
         from backend.runtime.supervisor import runtime_supervisor
+        from backend.utils.async_utils import create_tracked_task
 
-        asyncio.create_task(runtime_supervisor.close(self))
+        create_tracked_task(
+            runtime_supervisor.close(self),
+            name="runtime-close",
+        )

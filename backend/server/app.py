@@ -69,19 +69,30 @@ def _validate_config() -> None:
 
     This runs once during the lifespan startup phase and logs warnings for
     common misconfigurations that silently degrade the experience.
+
+    Set ``FORGE_STRICT=1`` (or ``FORGE_ENV=production``) to promote warnings
+    to hard errors that prevent startup.
     """
     import shutil
 
+    strict = os.getenv("FORGE_STRICT", "").strip().lower() in ("1", "true", "yes") or \
+             os.getenv("FORGE_ENV", "").strip().lower() == "production"
+
     warnings: list[str] = []
+    errors: list[str] = []  # always fatal regardless of strict mode
 
     # 1. SESSION_API_KEY — should not be the insecure default
     from backend.server.shared import server_config
 
     if getattr(server_config, "session_api_key", "") == "forge_dev_key":
-        warnings.append(
+        msg = (
             "SESSION_API_KEY is set to the insecure default 'forge_dev_key'. "
             "Set SESSION_API_KEY env var or let Forge auto-generate one."
         )
+        if strict:
+            errors.append(msg)
+        else:
+            warnings.append(msg)
 
     # 1b. Budget sanity — warn on unlimited budget (easy foot-gun)
     from backend.server.shared import config as _forge_config
@@ -124,13 +135,29 @@ def _validate_config() -> None:
             "and set your LLM API key."
         )
 
+    if errors:
+        logger.error("=" * 60)
+        logger.error("FATAL CONFIG ERRORS (strict mode)")
+        logger.error("=" * 60)
+        for e in errors:
+            logger.error("  %s", e)
+        logger.error("=" * 60)
+        raise SystemExit(
+            "Forge cannot start due to configuration errors. "
+            "Fix the issues above or unset FORGE_STRICT / FORGE_ENV=production."
+        )
+
     if warnings:
         logger.warning("=" * 60)
         logger.warning("STARTUP CONFIG WARNINGS")
         logger.warning("=" * 60)
         for w in warnings:
-            logger.warning(f"  ⚠ {w}")
+            logger.warning("  %s", w)
         logger.warning("=" * 60)
+        if strict:
+            raise SystemExit(
+                "Forge strict mode: resolve all warnings above or unset FORGE_STRICT."
+            )
     else:
         logger.info("Config validation passed.")
 

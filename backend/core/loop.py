@@ -39,7 +39,12 @@ def _handle_error_status(
         except Exception:
             logger.warning("Failed to schedule ERROR state transition via run_or_schedule", exc_info=True)
             try:
-                asyncio.create_task(controller.set_agent_state_to(AgentState.ERROR))
+                from backend.utils.async_utils import create_tracked_task
+
+                create_tracked_task(
+                    controller.set_agent_state_to(AgentState.ERROR),
+                    name="error-state-fallback",
+                )
             except Exception:
                 logger.error("All attempts to transition agent to ERROR state failed", exc_info=True)
 
