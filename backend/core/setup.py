@@ -49,21 +49,59 @@ if TYPE_CHECKING:
 def filter_plugins_by_config(
     plugins: list[PluginRequirement],
     agent: Agent | None = None,
-    config: ForgeConfig | None = None,
+    config: "ForgeConfig | None" = None,
     agent_cls_name: str | None = None,
 ) -> list[PluginRequirement]:
-    """Filter plugins based on agent configuration.
-    
+    """Filter plugins through two layers:
+
+    1. **Environment allowlist** — delegates to
+       ``backend.runtime.plugins.filter_plugins_by_config`` which honours the
+       ``FORGE_PLUGINS`` env-var (comma-separated allowlist).  When the var is
+       unset every plugin passes through.
+    2. **Agent-config denylist** — if an ``AgentConfig`` is reachable (via
+       *agent* or *config* + *agent_cls_name*), its ``disabled_plugins``
+       attribute (if present) is respected.
+
     Args:
-        plugins: List of plugin requirements to filter
-        agent: Optional agent instance to get config from
-        config: Optional ForgeConfig to get agent config from
-        agent_cls_name: Optional agent class name to look up config
-        
+        plugins: List of plugin requirements to filter.
+        agent: Optional agent instance to derive config from.
+        config: Optional ForgeConfig to look up per-agent config.
+        agent_cls_name: Agent class name used to resolve config.
+
     Returns:
-        Filtered list of plugin requirements
+        Filtered list of plugin requirements.
     """
-    return plugins
+    # --- Layer 1: env-var allowlist ---
+    from backend.runtime.plugins import (
+        filter_plugins_by_config as _env_filter,
+    )
+
+    filtered = _env_filter(plugins)
+
+    # --- Layer 2: per-agent disabled list ---
+    agent_config = None
+    if agent is not None:
+        agent_config = getattr(agent, "config", None)
+    elif config is not None and agent_cls_name:
+        try:
+            agent_config = config.get_agent_config(agent_cls_name)
+        except Exception:
+            pass
+
+    if agent_config is not None:
+        disabled: set[str] = set(
+            getattr(agent_config, "disabled_plugins", None) or []
+        )
+        if disabled:
+            before = len(filtered)
+            filtered = [p for p in filtered if p.name not in disabled]
+            if len(filtered) < before:
+                logger.info(
+                    "Plugins disabled by agent config: %s",
+                    ", ".join(sorted(disabled)),
+                )
+
+    return filtered
 
 
 def create_runtime(

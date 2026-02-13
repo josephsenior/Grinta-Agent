@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sys
 from typing import TYPE_CHECKING, Any
 
@@ -15,13 +16,44 @@ if TYPE_CHECKING:
     from backend.models.llm_registry import LLMRegistry
 
 
-class ActionExecutionClient(Runtime):
-    """Lightweight compatibility shim for action-execution based runtimes.
+logger = logging.getLogger(__name__)
 
-    This minimal implementation exists so that `LocalRuntime` and any other
-    runtime implementations can inherit from a common base without pulling in
-    removed or heavy dependencies.
+
+class UnsupportedActionError(NotImplementedError):
+    """Raised when a runtime method is not supported on the current platform/config."""
+
+
+class ActionExecutionClient(Runtime):
+    """Base runtime client that dispatches actions to an action-execution server.
+
+    **Capability contract:**
+
+    Every public action method falls into one of three categories:
+
+    * *Always available* — works on all platforms (``run``, ``read``, ``write``,
+      ``edit``, ``browse``, ``think``, ``list_files``, ``copy_to``,
+      ``check_if_alive``, ``send_action_for_execution``).
+    * *Platform-restricted* — only available on non-Windows hosts.  On Windows
+      these methods return a typed ``ErrorObservation`` with a clear message
+      instead of silently no-opping (``call_tool_mcp``, ``get_mcp_config``).
+    * *Not yet implemented* — calling raises ``UnsupportedActionError`` with a
+      human-readable message (``copy_from``, ``_upload_file_to_sandbox``).
+
+    Subclasses (e.g. ``LocalRuntimeInProcess``) may override any method to
+    provide a concrete implementation without changing this contract.
     """
+
+    # Actions that are always dispatched to the server
+    _SERVER_ACTIONS: frozenset[str] = frozenset({
+        "run", "read", "write", "edit",
+        "browse", "browse_interactive",
+        "think", "null", "finish_playbook",
+    })
+
+    # Actions restricted on Windows
+    _WINDOWS_UNSUPPORTED: frozenset[str] = frozenset({
+        "call_tool_mcp",
+    })
 
     def __init__(
         self,
@@ -139,7 +171,11 @@ class ActionExecutionClient(Runtime):
                 self._upload_file_to_sandbox(f, sandbox_dest, recursive, host_src)
 
     def copy_from(self, path: str) -> Any:
-        raise NotImplementedError()
+        raise UnsupportedActionError(
+            "copy_from is not implemented in ActionExecutionClient. "
+            "Override in a subclass (e.g. LocalRuntimeInProcess) to provide "
+            "sandbox-to-host file transfer."
+        )
 
     def list_files(self, path: str | None = None, recursive: bool = False) -> list[str]:
         resp = self._send_action_server_request(
@@ -154,13 +190,23 @@ class ActionExecutionClient(Runtime):
         return self._execute_action_on_server(action)
 
     async def call_tool_mcp(self, action: Any) -> Any:
+        """Call an MCP tool.  Not available on Windows."""
         if sys.platform == "win32":
             from backend.events.observation import ErrorObservation
 
-            return ErrorObservation(content="MCP is not supported on Windows")
+            return ErrorObservation(
+                content=(
+                    "MCP tools are not supported on Windows. "
+                    "To use MCP, run Forge on Linux or macOS, or "
+                    "use a Docker-based runtime."
+                )
+            )
 
-        # Implementation depends on MCP server setup
-        raise NotImplementedError()
+        raise UnsupportedActionError(
+            "call_tool_mcp requires the action-execution server to have "
+            "an MCP endpoint configured.  Ensure the runtime supports MCP "
+            "or override this method in your runtime subclass."
+        )
 
     def check_if_alive(self) -> None:
         self._send_action_server_request("GET", "/ping")
@@ -220,10 +266,14 @@ class ActionExecutionClient(Runtime):
         try:
             return send_request(None, method, url, **kwargs)
         except httpx.TimeoutException:
-            raise TimeoutError("Request to action server timed out")
+            raise TimeoutError(f"Request to action server timed out: {method} {path}")
 
     def _upload_file_to_sandbox(
         self, file_handle: Any, sandbox_dest: str, recursive: bool, host_src: str
     ) -> None:
-        # Placeholder for test monkeypatching and future implementation
-        raise NotImplementedError()
+        raise UnsupportedActionError(
+            "_upload_file_to_sandbox is not implemented in the base "
+            "ActionExecutionClient.  Use LocalRuntimeInProcess.copy_to() "
+            "for in-process file transfer, or implement a subclass that "
+            "uploads to the action-execution server."
+        )

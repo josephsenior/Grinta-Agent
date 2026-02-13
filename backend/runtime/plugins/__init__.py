@@ -1,14 +1,24 @@
 """Runtime plugin registration and convenience exports.
 
+.. note:: **Two plugin systems exist in Forge:**
+
+   * :mod:`backend.core.plugin` — *core hooks* (host-side, lifecycle hooks,
+     entry-point group ``forge.plugins``).
+   * **This module** — *sandbox runtime plugins* (run inside the container,
+     entry-point group ``forge.runtime_plugins``).
+
+   They are intentionally separate.  See :mod:`backend.core.plugin` module
+   docstring for a comparison table.
+
 Plugin Discovery
 ----------------
 Plugins are registered via two mechanisms:
 
 1. **Built-in registry** — ``ALL_PLUGINS`` dict below (hardcoded).
 2. **Entry-point discovery** — third-party packages can declare a
-   ``forge.plugins`` entry point group to be auto-discovered::
+   ``forge.runtime_plugins`` entry point group to be auto-discovered::
 
-       [project.entry-points."forge.plugins"]
+       [project.entry-points."forge.runtime_plugins"]
        my_plugin = "my_package.plugin:MyPlugin"
 
    The entry point value must be a callable that returns a ``Plugin``
@@ -53,13 +63,14 @@ ALL_PLUGINS: dict[str, Callable[[], Plugin]] = {
 # ------------------------------------------------------------------
 # Entry-point auto-discovery
 # ------------------------------------------------------------------
-_EP_GROUP = "forge.plugins"
+_EP_GROUP = "forge.runtime_plugins"
 
 
 def discover_plugins() -> dict[str, Callable[[], Plugin]]:
     """Merge built-in and entry-point-discovered plugins.
 
-    Third-party packages register via ``[project.entry-points."forge.plugins"]``.
+    Third-party packages register via
+    ``[project.entry-points."forge.runtime_plugins"]``.
     Conflicts are logged and the built-in version wins.
     """
     merged: dict[str, Callable[[], Plugin]] = dict(ALL_PLUGINS)

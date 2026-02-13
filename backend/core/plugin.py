@@ -1,5 +1,27 @@
 """Forge plugin system — lightweight hook-based extension API.
 
+There are **two** plugin surfaces in Forge — this module provides the
+*core hook API* while :mod:`backend.runtime.plugins` provides the
+*sandbox runtime plugin API*.  They serve different purposes:
+
++------------------------------+--------------------------------------------+
+| This module (core hooks)     | runtime.plugins (sandbox extensions)       |
++==============================+============================================+
+| ``ForgePlugin`` — lifecycle   | ``Plugin`` — initialise / run inside sandbox|
+| hooks (action, event, LLM,   |                                            |
+| session).                    |                                            |
++------------------------------+--------------------------------------------+
+| Registered via entry-point   | Declared via ``PluginRequirement`` +       |
+| ``forge.plugins`` →          | ``ALL_PLUGINS`` or entry-point discovery.  |
+| ``register(registry)``       |                                            |
++------------------------------+--------------------------------------------+
+| Runs **in the Forge process**| Runs **inside the sandbox/container**.     |
++------------------------------+--------------------------------------------+
+
+If a third-party package needs both, it should register *two* objects —
+one ``ForgePlugin`` for host-side hooks, and one ``Plugin`` subclass for
+sandbox behaviour.
+
 Plugins are Python packages that expose a ``forge_plugin`` entry point
 (group: ``forge.plugins``).  Each entry point must resolve to a callable
 that accepts a :class:`PluginRegistry` and calls ``registry.register(...)``
@@ -7,16 +29,16 @@ to install one or more :class:`ForgePlugin` instances.
 
 Example ``pyproject.toml`` entry for a plugin::
 
-    [project.entry-points."forge.plugins"]
-    my_plugin = "my_plugin:register"
+    [project.entry-points.\"forge.plugins\"]
+    my_plugin = \"my_plugin:register\"
 
 Example plugin implementation::
 
     from backend.core.plugin import ForgePlugin, PluginRegistry, HookType
 
     class MyPlugin(ForgePlugin):
-        name = "my-plugin"
-        version = "0.1.0"
+        name = \"my-plugin\"
+        version = \"0.1.0\"
 
         async def on_action_pre(self, action):
             # Modify or inspect actions before execution
@@ -40,6 +62,13 @@ if TYPE_CHECKING:
     from backend.events.event import Event
 
 logger = logging.getLogger(__name__)
+
+# ------------------------------------------------------------------
+# API version — bump MINOR for additive hook changes, MAJOR for
+# breaking contract changes.  Plugins can declare ``min_api_version``
+# to fail-fast when loaded into an incompatible host.
+# ------------------------------------------------------------------
+PLUGIN_API_VERSION: tuple[int, int] = (1, 0)
 
 
 # ------------------------------------------------------------------
@@ -81,11 +110,16 @@ class ForgePlugin(ABC):
     Subclasses should set ``name`` and ``version`` and override any
     ``on_*`` methods they want to hook into.  All hooks are optional —
     the default implementations are no-ops.
+
+    Set ``min_api_version`` to the minimum ``PLUGIN_API_VERSION`` your
+    plugin is compatible with.  The registry will reject plugins whose
+    ``min_api_version`` exceeds the host version.
     """
 
     name: str = "unnamed-plugin"
     version: str = "0.0.0"
     description: str = ""
+    min_api_version: tuple[int, int] = (1, 0)
 
     # ── Action hooks ─────────────────────────────────────
 
@@ -149,11 +183,21 @@ class PluginRegistry:
     _plugins: dict[str, ForgePlugin] = field(default_factory=dict)
 
     def register(self, plugin: ForgePlugin) -> None:
-        """Register a plugin. Duplicate names are rejected."""
+        """Register a plugin. Duplicate names and incompatible versions are rejected."""
         if plugin.name in self._plugins:
             logger.warning(
                 "Plugin %r already registered — skipping duplicate",
                 plugin.name,
+            )
+            return
+        # Version gate
+        required = getattr(plugin, "min_api_version", (1, 0))
+        if required > PLUGIN_API_VERSION:
+            logger.error(
+                "Plugin %r requires API v%s.%s but host provides v%s.%s — skipping",
+                plugin.name,
+                *required,
+                *PLUGIN_API_VERSION,
             )
             return
         self._plugins[plugin.name] = plugin

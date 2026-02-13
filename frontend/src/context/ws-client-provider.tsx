@@ -29,6 +29,7 @@ import {
   shouldInvalidateFileChanges,
   warnIfNullPayload,
 } from "./ws-client-message-utils";
+import { normalizeForgeEvent, compactStreamingChunks } from "#/utils/event-normalization";
 import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
 import { useWSErrorMessage } from "#/hooks/use-ws-error-message";
 import Forge from "#/api/forge";
@@ -424,7 +425,14 @@ export function WsClientProvider({
             return prevEvents;
           }
 
-          const next = [...prevEvents, event as ForgeAction | ForgeObservation];
+          let next = [...prevEvents, event as ForgeAction | ForgeObservation];
+
+          // When approaching the cap, compact streaming chunks first
+          // to reclaim slots before falling back to dropping oldest events.
+          if (next.length > MAX_WS_EVENTS) {
+            next = compactStreamingChunks(next) as typeof next;
+          }
+
           return next.length > MAX_WS_EVENTS
             ? next.slice(next.length - MAX_WS_EVENTS)
             : next;
@@ -505,8 +513,11 @@ export function WsClientProvider({
     ],
   );
 
-  function handleMessage(event: Record<string, unknown>) {
-    warnIfNullPayload(event);
+  function handleMessage(raw: Record<string, unknown>) {
+    // Centralised normalization — guarantees id, timestamp, source, message
+    // invariants and sanitizes literal "NULL" strings.
+    const event = normalizeForgeEvent(raw);
+
     handleAssistantMessage(event);
 
     if (!isForgeEvent(event)) {

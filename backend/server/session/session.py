@@ -103,9 +103,17 @@ class Session:
             self._monitor_publish_queue()
         )
         self._wait_websocket_initial_complete: bool = True
+        self._closed: bool = False
 
     async def close(self) -> None:
-        """Close session and notify clients of stopped state."""
+        """Close session and notify clients of stopped state.
+
+        Idempotent — calling more than once is a no-op.
+        """
+        if self._closed:
+            return
+        self._closed = True
+
         if self.sio:
             await self.sio.emit(
                 "forge_event",
@@ -118,75 +126,67 @@ class Session:
         await self.agent_session.close()
         self._monitor_publish_queue_task.cancel()
 
-    def _configure_security_settings(self, settings: Settings) -> None:
-        """Configure security settings from the provided settings."""
-        self.config.security.confirmation_mode = (
-            self.config.security.confirmation_mode
-            if settings.confirmation_mode is None
-            else settings.confirmation_mode
-        )
-        self.config.security.security_analyzer = (
-            self.config.security.security_analyzer
-            if settings.security_analyzer is None
-            else settings.security_analyzer
-        )
+    # ------------------------------------------------------------------ #
+    # Settings consolidation                                              #
+    # ------------------------------------------------------------------ #
+    def _apply_settings(self, settings: Settings) -> None:
+        """Apply all user settings to the session config in one place.
 
-    def _configure_sandbox_settings(self, settings: Settings) -> None:
-        """Configure sandbox settings from the provided settings."""
-        self.config.sandbox.base_container_image = (
-            settings.sandbox_base_container_image
-            or self.config.sandbox.base_container_image
+        Mutates ``self.config`` so downstream code picks up user overrides.
+        """
+        cfg = self.config
+
+        # Security
+        if settings.confirmation_mode is not None:
+            cfg.security.confirmation_mode = settings.confirmation_mode
+        if settings.security_analyzer is not None:
+            cfg.security.security_analyzer = settings.security_analyzer
+
+        # Sandbox
+        cfg.sandbox.base_container_image = (
+            settings.sandbox_base_container_image or cfg.sandbox.base_container_image
         )
-        self.config.sandbox.runtime_container_image = (
+        cfg.sandbox.runtime_container_image = (
             settings.sandbox_runtime_container_image
             if settings.sandbox_base_container_image
             or settings.sandbox_runtime_container_image
-            else self.config.sandbox.runtime_container_image
+            else cfg.sandbox.runtime_container_image
         )
-
         if settings.sandbox_api_key:
-            self.config.sandbox.api_key = settings.sandbox_api_key.get_secret_value()
+            cfg.sandbox.api_key = settings.sandbox_api_key.get_secret_value()
 
-    def _configure_git_settings(self, settings: Settings) -> None:
-        """Configure git settings from the provided settings."""
+        # Git
         git_user_name = getattr(settings, "git_user_name", None)
         if git_user_name is not None:
-            self.config.git_user_name = git_user_name
-
+            cfg.git_user_name = git_user_name
         git_user_email = getattr(settings, "git_user_email", None)
         if git_user_email is not None:
-            self.config.git_user_email = git_user_email
+            cfg.git_user_email = git_user_email
 
-    def _configure_mcp_settings(self, settings: Settings) -> None:
-        """Configure MCP settings from the provided settings."""
+        # MCP
         self.logger.debug(
-            f"MCP configuration before setup - self.config.mcp_config: {self.config.mcp}"
+            f"MCP configuration before setup - self.config.mcp_config: {cfg.mcp}"
         )
-
         mcp_config = getattr(settings, "mcp_config", None)
         if mcp_config is not None:
-            self.config.mcp = self.config.mcp.merge(mcp_config)
+            cfg.mcp = cfg.mcp.merge(mcp_config)
             self.logger.debug(f"Merged custom MCP Config: {mcp_config}")
 
         FORGE_mcp_server, FORGE_mcp_stdio_servers = (
             ForgeMCPConfigImpl.create_default_mcp_server_config(
-                self.config.mcp_host,
-                self.config,
+                cfg.mcp_host,
+                cfg,
                 self.user_id,
             )
         )
         if FORGE_mcp_server:
-            self.config.mcp.shttp_servers.append(FORGE_mcp_server)
+            cfg.mcp.shttp_servers.append(FORGE_mcp_server)
             self.logger.debug("Added default MCP HTTP server to config")
-            self.config.mcp.stdio_servers.extend(FORGE_mcp_stdio_servers)
+            cfg.mcp.stdio_servers.extend(FORGE_mcp_stdio_servers)
 
-        self.logger.debug(
-            f"MCP configuration after setup - self.config.mcp: {self.config.mcp}"
-        )
+        self.logger.debug(f"MCP configuration after setup - self.config.mcp: {cfg.mcp}")
 
-    def _configure_agent_condenser(
-        self, settings: Settings, agent_config, llm_config
-    ) -> None:
+    def _apply_condenser(self, settings: Settings, agent_config, llm_config) -> None:
         """Configure agent condenser if enabled."""
         if settings.enable_default_condenser:
             max_events_for_condenser = settings.condenser_max_size or 120
@@ -319,27 +319,22 @@ class Session:
         # Get agent class
         agent_cls = settings.agent or self.config.default_agent
 
-        # Configure various settings
-        self._configure_security_settings(settings)
-        self._configure_sandbox_settings(settings)
-        self._configure_git_settings(settings)
-        self._configure_mcp_settings(settings)
+        # Apply all settings in one shot
+        self._apply_settings(settings)
 
-        # Set additional configuration
+        # Derive agent config and budget limits
         max_iterations = settings.max_iterations or self.config.max_iterations
         max_budget_per_task = (
             settings.max_budget_per_task
             if settings.max_budget_per_task is not None
             else self.config.max_budget_per_task
         )
-
-        # Get agent configuration
         agent_config = self.config.get_agent_config(agent_cls)
         agent_name = agent_cls if agent_cls is not None else "agent"
         llm_config = self.config.get_llm_config_from_agent(agent_name)
 
         # Configure condenser if enabled
-        self._configure_agent_condenser(settings, agent_config, llm_config)
+        self._apply_condenser(settings, agent_config, llm_config)
 
         # Create agent
         agent = Agent.get_cls(agent_cls)(agent_config, self.llm_registry)
@@ -640,12 +635,13 @@ class Session:
                 # If no controller yet, manually emit state change so UI updates
                 from backend.events.observation import AgentStateChangedObservation
                 from backend.events.serialization import event_to_dict
+
                 await self.send(
                     event_to_dict(
                         AgentStateChangedObservation(
                             content=message,
                             reason=message,
-                            agent_state=AgentState.ERROR
+                            agent_state=AgentState.ERROR,
                         )
                     )
                 )

@@ -63,6 +63,7 @@ from backend.runtime.git_setup import GitSetupMixin
 from backend.runtime.playbook_loader import PlaybookLoaderMixin
 from backend.runtime.plugins import PluginRequirement
 from backend.runtime.runtime_status import RuntimeStatus
+from backend.runtime.capabilities import RuntimeCapabilities, detect_capabilities
 from backend.runtime.command_timeout import CommandTimeoutMixin
 from backend.runtime.security_enforcement import SecurityEnforcementMixin
 from backend.runtime.task_tracking import TaskTrackingMixin
@@ -185,6 +186,8 @@ class Runtime(
     _runtime_initialized: bool = False
     security_analyzer: SecurityAnalyzer | None = None
     workspace_base: str | None = None
+    capabilities: RuntimeCapabilities | None = None
+    """Frozen capability snapshot, populated during ``connect()``."""
 
     def __init__(
         self,
@@ -455,6 +458,17 @@ class Runtime(
         await self._export_latest_git_provider_tokens(event)
 
         if isinstance(event, MCPAction):
+            # Centralised MCP guard: if capabilities have been probed and
+            # MCP is unsupported, short-circuit with a clear error rather
+            # than letting driver-specific code fail in unpredictable ways.
+            if self.capabilities is not None and not self.capabilities.can_mcp:
+                return ErrorObservation(
+                    content=(
+                        "MCP tools are not available in this environment "
+                        f"(platform={self.capabilities.platform}).  "
+                        "Set FORGE_ENABLE_WINDOWS_MCP=1 to override on Windows."
+                    )
+                )
             return await self.call_tool_mcp(event)
         else:
             return await call_sync_from_async(self.run_action, event)

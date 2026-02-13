@@ -206,6 +206,17 @@ class AgentSession:
                 selected_branch,
             )
 
+            # Short-circuit: if the runtime failed to connect there is no
+            # point continuing to controller/memory setup — they all require
+            # a live runtime.  Let _finalize_session_startup report the
+            # failure via the normal error path.
+            if not runtime_connected:
+                self.logger.warning(
+                    "Runtime failed to connect — skipping controller setup"
+                )
+                error_msg = "Runtime failed to connect"
+                return  # jumps straight to the finally → _finalize_session_startup
+
             # Setup memory and MCP tools
             await self._setup_memory_and_mcp_tools(
                 selected_repository,
@@ -570,11 +581,6 @@ class AgentSession:
                     f"Waited too long for initialization to finish before closing session {self.sid}"
                 )
                 break
-        try:
-            if self.event_stream is not None:
-                self.event_stream.close()  # type: ignore[attr-defined]
-        except Exception as e:
-            self.logger.warning("Error closing event stream: %s", e)
 
         # Best-effort: terminate any subprocesses/servers started by this runtime.
         try:
@@ -583,24 +589,36 @@ class AgentSession:
                 runtime.hard_kill()  # type: ignore[call-arg]
         except Exception as e:
             self.logger.warning("Error hard-killing runtime processes: %s", e)
+
+        # Close the controller *before* the event stream — the controller
+        # needs to write final state (STOPPED) to the stream during
+        # shutdown.  Closing the stream first would cause those writes
+        # to fail silently.
         try:
             if self.controller is not None:
                 self.controller.save_state()
                 await self.controller.close()
         except Exception as e:
             self.logger.warning("Error closing controller: %s", e)
-        finally:
-            # Always release runtime — even if controller.close() throws
-            try:
-                if self._runtime_acquire_result is not None:
-                    runtime_orchestrator.release(self._runtime_acquire_result)
-                    self._runtime_acquire_result = None
-                    self.runtime = None
-                elif self.runtime is not None:
-                    EXECUTOR.submit(self.runtime.close)
-                    self.runtime = None
-            except Exception as e:
-                self.logger.warning("Error releasing runtime: %s", e)
+
+        # Now it's safe to close the event stream — no more writers.
+        try:
+            if self.event_stream is not None:
+                self.event_stream.close()  # type: ignore[attr-defined]
+        except Exception as e:
+            self.logger.warning("Error closing event stream: %s", e)
+
+        # Always release runtime — even if controller/event-stream close threw.
+        try:
+            if self._runtime_acquire_result is not None:
+                runtime_orchestrator.release(self._runtime_acquire_result)
+                self._runtime_acquire_result = None
+                self.runtime = None
+            elif self.runtime is not None:
+                EXECUTOR.submit(self.runtime.close)
+                self.runtime = None
+        except Exception as e:
+            self.logger.warning("Error releasing runtime: %s", e)
 
     def _run_replay(
         self,

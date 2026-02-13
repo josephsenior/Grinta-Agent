@@ -10,13 +10,18 @@ from backend.controller.agent import Agent
 from backend.controller.state.state import State
 from backend.core.config import AgentConfig
 from backend.core.logger import forge_logger as logger
-from backend.core.message import Message, TextContent
-from backend.events.action import PlaybookFinishAction, CmdRunAction, MessageAction
+from backend.core.message import Message
+from backend.events.action import PlaybookFinishAction, MessageAction, AgentThinkAction
 from backend.events.event import EventSource
-from backend.events.observation.commands import CmdOutputObservation
 from backend.models.llm_registry import LLMRegistry
 from backend.runtime.plugins import (
     PluginRequirement,
+)
+from backend.core.errors import (
+    AgentRuntimeError,
+    ContextLimitError,
+    ToolExecutionError,
+    PlanningError,
 )
 from backend.utils.prompt import OrchestratorPromptManager, PromptManager
 
@@ -35,7 +40,7 @@ if TYPE_CHECKING:
 
 class Orchestrator(Agent):
     """Production-focused CodeAct agent with modular architecture."""
-    
+
     VERSION = "2.2"
     sandbox_plugins: list[PluginRequirement] = [
         AgentSkillsRequirement(name="agent_skills"),
@@ -54,15 +59,15 @@ class Orchestrator(Agent):
         self.event_stream: "EventStream | None" = None
 
         # Safety / hallucination systems
-        from backend.engines.orchestrator.anti_hallucination_system import (
-            AntiHallucinationSystem,
+        from backend.engines.orchestrator.file_verification_guard import (
+            FileVerificationGuard,
         )
         from backend.engines.orchestrator.hallucination_detector import (
             HallucinationDetector,
         )
 
         self.hallucination_detector = HallucinationDetector()
-        self.anti_hallucination = AntiHallucinationSystem()
+        self.anti_hallucination = FileVerificationGuard()
         self.safety_manager = CodeActSafetyManager(
             anti_hallucination=self.anti_hallucination,
             hallucination_detector=self.hallucination_detector,
@@ -111,9 +116,6 @@ class Orchestrator(Agent):
             config=self.config,
         )
 
-
-
-
     def _run_production_health_check(self) -> None:
         try:
             from backend.engines.orchestrator.tools.health_check import (
@@ -137,38 +139,60 @@ class Orchestrator(Agent):
         self.pending_actions.clear()
 
     def step(self, state: State) -> "Action":
-        exit_action = self._check_exit_command(state)
-        if exit_action:
-            return exit_action
+        try:
+            exit_action = self._check_exit_command(state)
+            if exit_action:
+                return exit_action
 
-        pending = self._consume_pending_action()
-        if pending:
-            return pending
+            pending = self._consume_pending_action()
+            if pending:
+                return pending
 
-        condensed = self.memory_manager.condense_history(state)
-        if condensed.pending_action:
-            return condensed.pending_action
+            condensed = self.memory_manager.condense_history(state)
+            if condensed.pending_action:
+                return condensed.pending_action
 
-        initial_user_message = self.memory_manager.get_initial_user_message(
-            state.history
-        )
-        messages = self.memory_manager.build_messages(
-            condensed_history=condensed.events,
-            initial_user_message=initial_user_message,
-            llm_config=self.llm.config,
-        )
-        serialized_messages = self._serialize_messages(messages)
-        params = self.planner.build_llm_params(serialized_messages, state, self.tools)
-        self._sync_executor_llm()
+            initial_user_message = self.memory_manager.get_initial_user_message(
+                state.history
+            )
+            messages = self.memory_manager.build_messages(
+                condensed_history=condensed.events,
+                initial_user_message=initial_user_message,
+                llm_config=self.llm.config,
+            )
+            serialized_messages = self._serialize_messages(messages)
+            params = self.planner.build_llm_params(
+                serialized_messages, state, self.tools
+            )
+            self._sync_executor_llm()
 
-        result = self.executor.execute(params, self.event_stream)
+            result = self.executor.execute(params, self.event_stream)
 
-        actions = result.actions or []
-        if not actions:
-            return self._build_fallback_action(result)
+            actions = result.actions or []
+            if not actions:
+                return self._build_fallback_action(result)
 
-        self._queue_additional_actions(actions[1:])
-        return actions[0]
+            self._queue_additional_actions(actions[1:])
+            return actions[0]
+
+        except ContextLimitError:
+            logger.warning(
+                "Auto-Healing: Context limit reached. Triggering condensation."
+            )
+            return AgentThinkAction(
+                thought="I have reached the context limit. I must condense my memory before proceeding.",
+            )
+
+        except ToolExecutionError as e:
+            logger.warning(f"Auto-Healing: Tool Execution Error: {e}")
+            return AgentThinkAction(
+                thought=f"I encountered a tool error: {str(e)}. I will analyze the last tool call and retry.",
+            )
+
+        except Exception as e:
+            logger.error(f"Critical Failure in Orchestrator.step: {e}", exc_info=True)
+            # Wrap generic exceptions in AgentRuntimeError for standardized handling upstream
+            raise AgentRuntimeError(f"Critical agent failure: {str(e)}") from e
 
     # ------------------------------------------------------------------ #
     # Test/mocking helpers
@@ -240,19 +264,45 @@ class Orchestrator(Agent):
         return "\n".join(texts)
 
     def _sync_executor_llm(self) -> None:
-        if hasattr(self, "executor") and getattr(self.executor, "_llm", None) is not self.llm:
+        if (
+            hasattr(self, "executor")
+            and getattr(self.executor, "_llm", None) is not self.llm
+        ):
             try:  # pragma: no cover - defensive assignment
                 self.executor._llm = self.llm  # type: ignore[attr-defined]
             except Exception:
                 pass
 
     def _build_fallback_action(self, result) -> "Action":
+        """Create a fallback action when the LLM produces no tool calls.
+
+        This typically means the LLM returned pure-text (e.g. a final answer
+        or a refusal).  We surface it as a ``MessageAction`` so the
+        controller can decide whether to continue or stop.
+
+        If the LLM returned an entirely empty response we inject a
+        diagnostic ``AgentThinkAction`` so the loop doesn't silently
+        stall.
+        """
         message_text = ""
         if result.response and getattr(result.response, "choices", None):
             first_choice = result.response.choices[0]
             message = getattr(first_choice, "message", None)
             if message is not None:
                 message_text = getattr(message, "content", "") or ""
+
+        if not message_text.strip():
+            logger.warning(
+                "LLM returned an empty response with no tool calls — "
+                "injecting diagnostic think action"
+            )
+            return AgentThinkAction(
+                thought=(
+                    "The LLM returned an empty response with no actions. "
+                    "I will re-evaluate the current state and try again."
+                )
+            )
+
         fallback = MessageAction(content=message_text)
         fallback.source = EventSource.AGENT
         return fallback
@@ -269,40 +319,9 @@ class Orchestrator(Agent):
         if latest_user_message and latest_user_message.content.strip() == "/exit":
             return PlaybookFinishAction()
         return None
+
     def response_to_actions(self, response) -> list["Action"]:
         """Compatibility wrapper for legacy call sites."""
         return codeact_function_calling.response_to_actions(
             response, mcp_tool_names=list(self.mcp_tools.keys())
         )
-
-    # ------------------------------------------------------------------ #
-    # Legacy compatibility (used by older unit tests)                   #
-    # ------------------------------------------------------------------ #
-    def _get_messages(self, history, initial_user_message):  # pragma: no cover
-        """Legacy wrapper preserved for backward-compatible tests."""
-        messages = self.memory_manager.build_messages(
-            condensed_history=history,
-            initial_user_message=initial_user_message,
-            llm_config=self.llm.config,
-        )
-
-        action_ids = {
-            getattr(event.tool_call_metadata, "tool_call_id", None)
-            for event in history
-            if isinstance(event, CmdRunAction)
-            and getattr(event, "tool_call_metadata", None) is not None
-        }
-        observation_ids = {
-            getattr(event.tool_call_metadata, "tool_call_id", None)
-            for event in history
-            if isinstance(event, CmdOutputObservation)
-            and getattr(event, "tool_call_metadata", None) is not None
-        }
-
-        if action_ids and observation_ids and action_ids & observation_ids:
-            placeholder = TextContent(text="")
-            messages.append(Message(role="assistant", content=[placeholder]))
-            messages.append(Message(role="tool", content=[placeholder]))
-
-        return messages
-

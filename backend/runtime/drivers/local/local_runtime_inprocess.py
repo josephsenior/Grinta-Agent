@@ -30,8 +30,10 @@ from backend.runtime.action_execution_server import ActionExecutor
 from backend.runtime.drivers.action_execution.action_execution_client import (
     ActionExecutionClient,
 )
+from backend.runtime.executor_protocol import ActionExecutorProtocol
 from backend.runtime.plugins import ALL_PLUGINS, Plugin
 from backend.runtime.runtime_status import RuntimeStatus
+from backend.runtime.capabilities import detect_capabilities
 from backend.utils.async_utils import call_async_from_sync
 from backend.security.analyzer import SecurityAnalyzer
 from backend.events.action import ActionSecurityRisk
@@ -140,8 +142,10 @@ class LocalRuntimeInProcess(ActionExecutionClient):
         self._temp_workspace: str | None = workspace_base
         self.status_callback = status_callback
         
-        # ActionExecutor instance (created in connect())
-        self._executor: ActionExecutor | None = None
+        # ActionExecutor instance (created in connect()).  Typed against the
+        # protocol so this driver does not depend on the concrete class at
+        # runtime — any executor satisfying the protocol works.
+        self._executor: ActionExecutorProtocol | None = None
         
         # Apply startup env vars
         if self.config.sandbox.runtime_startup_env_vars:
@@ -210,7 +214,17 @@ class LocalRuntimeInProcess(ActionExecutionClient):
         
         self.set_runtime_status(RuntimeStatus.READY)
         self._runtime_initialized = True
-        
+
+        # Populate the capability matrix once at startup
+        self.capabilities = detect_capabilities(
+            enable_browser=self.config.enable_browser,
+        )
+        if self.capabilities.missing_tools:
+            logger.warning(
+                "Missing expected tools: %s",
+                ", ".join(self.capabilities.missing_tools),
+            )
+
         elapsed = time.time() - start_time
         logger.info(f"🚀 In-process runtime ready in {elapsed:.2f}s")
 
@@ -227,8 +241,11 @@ class LocalRuntimeInProcess(ActionExecutionClient):
                     prefix=f"FORGE_workspace_{self.sid}_"
                 )
             self.config.workspace_mount_path_in_sandbox = self._temp_workspace
-            # Ensure we start inside the workspace to prevent accidental global access
-            os.chdir(self._temp_workspace)
+            # NOTE: We intentionally do NOT call os.chdir() here.
+            # Mutating the process-global cwd is unsafe when multiple
+            # sessions or concurrent operations share the same process.
+            # Instead, the workspace path is passed to ActionExecutor's
+            # work_dir parameter and each command runs in that directory.
             logger.info(f"Using workspace: {self._temp_workspace}")
             return
 
@@ -302,13 +319,13 @@ class LocalRuntimeInProcess(ActionExecutionClient):
         
         # Resolve path
         if not path:
-            full_path = self._executor._initial_cwd
+            full_path = self._executor.initial_cwd
         else:
             try:
                 from backend.core.type_safety.path_validation import SafePath
                 safe_path = SafePath.validate(
                     path,
-                    workspace_root=self._executor._initial_cwd,
+                    workspace_root=self._executor.initial_cwd,
                     must_be_relative=True,
                 )
                 full_path = str(safe_path.path)
@@ -317,7 +334,7 @@ class LocalRuntimeInProcess(ActionExecutionClient):
                 if os.path.isabs(path):
                     full_path = path
                 else:
-                    full_path = os.path.join(self._executor._initial_cwd, path)
+                    full_path = os.path.join(self._executor.initial_cwd, path)
         
         # Check if path exists and is a directory (handle Windows edge cases)
         try:
