@@ -21,16 +21,24 @@ from backend.server.shared import (
     event_service_adapter,
     get_event_service_adapter,
 )
-from backend.server.shared import conversation_manager, file_store, get_conversation_manager
+from backend.server.shared import (
+    conversation_manager,
+    file_store,
+    get_conversation_manager,
+)
 from backend.instruction.types import InputMetadata
 from backend.server.user_auth import get_user_id, get_user_settings_store
 from backend.server.utils import get_conversation, get_conversation_metadata
 from backend.server.utils.responses import error
 from backend.server.dependencies import get_dependencies
 from backend.core.config.llm_config import LLMConfig
-from backend.engines.orchestrator.anti_hallucination_system import AntiHallucinationSystem
+from backend.engines.orchestrator.file_verification_guard import FileVerificationGuard
 from backend.controller.error_recovery import ErrorRecoveryStrategy, ErrorType
-from backend.controller.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, CircuitBreakerResult
+from backend.controller.circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    CircuitBreakerResult,
+)
 from backend.events.action import ActionSecurityRisk
 from backend.core.cache.async_smart_cache import AsyncSmartCache
 from backend.models.cost_tracker import record_llm_cost_from_response
@@ -124,9 +132,11 @@ async def get_remote_runtime_config(
     """
     manager = _require_conversation_manager()
     user_id = await get_user_id(request)
-    
+
     try:
-        conversation = await manager.attach_to_conversation(conversation_id, user_id or "dev-user")
+        conversation = await manager.attach_to_conversation(
+            conversation_id, user_id or "dev-user"
+        )
         if conversation:
             runtime = conversation.runtime
             runtime_id = runtime.runtime_id if hasattr(runtime, "runtime_id") else None
@@ -152,8 +162,6 @@ async def get_remote_runtime_config(
         )
 
 
-
-
 @app.get("/web-hosts")
 async def get_hosts(
     request: Request,
@@ -173,9 +181,11 @@ async def get_hosts(
     """
     manager = _require_conversation_manager()
     user_id = await get_user_id(request)
-    
+
     try:
-        conversation = await manager.attach_to_conversation(conversation_id, user_id or "dev-user")
+        conversation = await manager.attach_to_conversation(
+            conversation_id, user_id or "dev-user"
+        )
         if conversation:
             runtime: Runtime = conversation.runtime
             web_hosts = getattr(runtime, "web_hosts", None) or []
@@ -214,37 +224,19 @@ async def get_git_changes(
     Returns:
         JSONResponse: A JSON response with the list of changes.
     """
-    import subprocess
+    from backend.server.services.git_service import get_changes
 
-    try:
-        workspace_dir = os.path.join(
-            os.path.expanduser(file_store.root), conversation_id
-        )
-        if not os.path.isdir(workspace_dir):
-            return JSONResponse(status_code=200, content={"changes": []})
-
-        result = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=workspace_dir,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        changes = []
-        for line in result.stdout.strip().splitlines():
-            if len(line) < 4:
-                continue
-            status_code = line[:2].strip()
-            file_path = line[3:]
-            changes.append({"status": status_code, "path": file_path})
-
-        return JSONResponse(status_code=200, content={"changes": changes})
-    except FileNotFoundError:
-        # git not installed
-        return JSONResponse(status_code=200, content={"changes": []})
-    except Exception as e:
-        logger.warning("Failed to get git changes for %s: %s", conversation_id, e)
-        return JSONResponse(status_code=200, content={"changes": []})
+    workspace_dir = os.path.join(
+        os.path.expanduser(file_store.root), conversation_id
+    )
+    result = get_changes(workspace_dir)
+    if result.error:
+        code = 422 if "not installed" in result.error else (504 if "timed out" in result.error else 500)
+        return JSONResponse(status_code=code, content={"error": result.error})
+    return JSONResponse(
+        status_code=200,
+        content={"changes": [{"status": c.status, "path": c.path} for c in result.changes]},
+    )
 
 
 @app.get("/git/diff")
@@ -263,31 +255,22 @@ async def get_git_diff(
     Returns:
         JSONResponse: A JSON response with the diff content.
     """
-    import subprocess
+    from backend.server.services.git_service import get_diff
 
-    try:
-        workspace_dir = os.path.join(
-            os.path.expanduser(file_store.root), conversation_id
-        )
-        if not os.path.isdir(workspace_dir):
-            return JSONResponse(status_code=200, content={"diff": "", "path": path})
-
-        result = subprocess.run(
-            ["git", "diff", "--", path],
-            cwd=workspace_dir,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+    workspace_dir = os.path.join(
+        os.path.expanduser(file_store.root), conversation_id
+    )
+    result = get_diff(workspace_dir, path)
+    if result.error:
+        code = 404 if "not found" in result.error else (422 if "not installed" in result.error else (504 if "timed out" in result.error else 500))
         return JSONResponse(
-            status_code=200,
-            content={"diff": result.stdout, "path": path},
+            status_code=code,
+            content={"error": result.error, "path": path},
         )
-    except FileNotFoundError:
-        return JSONResponse(status_code=200, content={"diff": "", "path": path})
-    except Exception as e:
-        logger.warning("Failed to get git diff for %s/%s: %s", conversation_id, path, e)
-        return JSONResponse(status_code=200, content={"diff": "", "path": path})
+    return JSONResponse(
+        status_code=200,
+        content={"diff": result.diff, "path": result.path},
+    )
 
 
 @app.get("/events")
@@ -415,7 +398,9 @@ async def add_event_raw(
                 title=f"Conversation {conversation_id}",
             )
             await conversation_store.save_metadata(metadata)
-            conversation = await manager.attach_to_conversation(conversation_id, user_id)
+            conversation = await manager.attach_to_conversation(
+                conversation_id, user_id
+            )
         if not conversation:
             return JSONResponse(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -622,6 +607,7 @@ def _extract_mcp_tools(agent) -> list[str]:
 
 class CodeCompletionRequest(BaseModel):
     """Request model for code completion."""
+
     filePath: str
     fileContent: str
     language: str
@@ -632,38 +618,45 @@ class CodeCompletionRequest(BaseModel):
 
 class CodeCompletionResponse(BaseModel):
     """Response model for code completion."""
+
     completion: str
     stopReason: str | None = None
 
 
 # Global circuit breaker instances per conversation (lightweight, no State required)
 _completion_circuit_breakers: dict[str, CircuitBreaker] = {}
-_completion_error_tracking: dict[str, dict[str, Any]] = defaultdict(lambda: {
-    "consecutive_errors": 0,
-    "recent_errors": [],
-    "recent_success": [],
-    "last_error_time": None,
-})
+_completion_error_tracking: dict[str, dict[str, Any]] = defaultdict(
+    lambda: {
+        "consecutive_errors": 0,
+        "recent_errors": [],
+        "recent_success": [],
+        "last_error_time": None,
+    }
+)
 
 # Global cache instance for LLM config (Priority 2: SmartConfigCache)
 _completion_config_cache: Optional[AsyncSmartCache] = None
 
 # Per-conversation budget tracking (Priority 2: BudgetGuardService)
-_completion_budgets: dict[str, dict[str, Any]] = defaultdict(lambda: {
-    "total_cost": 0.0,
-    "request_count": 0,
-    "max_cost_per_request": 0.01,  # $0.01 per completion
-    "max_total_cost": 1.0,  # $1.00 per conversation
-    "budget_exceeded": False,
-})
+_completion_budgets: dict[str, dict[str, Any]] = defaultdict(
+    lambda: {
+        "total_cost": 0.0,
+        "request_count": 0,
+        "max_cost_per_request": 0.01,  # $0.01 per completion
+        "max_total_cost": 1.0,  # $1.00 per conversation
+        "budget_exceeded": False,
+    }
+)
 
 # Retry tracking per conversation (Priority 2: RetryService)
-_completion_retry_tracking: dict[str, dict[str, Any]] = defaultdict(lambda: {
-    "retry_count": 0,
-    "max_retries": 3,
-    "last_retry_time": None,
-    "retry_backoff": 1.0,  # Start with 1 second
-})
+_completion_retry_tracking: dict[str, dict[str, Any]] = defaultdict(
+    lambda: {
+        "retry_count": 0,
+        "max_retries": 3,
+        "last_retry_time": None,
+        "retry_backoff": 1.0,  # Start with 1 second
+    }
+)
 
 
 def _get_completion_config_cache() -> AsyncSmartCache:
@@ -674,35 +667,40 @@ def _get_completion_config_cache() -> AsyncSmartCache:
     return _completion_config_cache
 
 
-def _estimate_completion_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+def _estimate_completion_cost(
+    model: str, prompt_tokens: int, completion_tokens: int
+) -> float:
     """Estimate cost for code completion.
-    
+
     Args:
         model: Model name
         prompt_tokens: Number of prompt tokens
         completion_tokens: Number of completion tokens
-        
+
     Returns:
         Estimated cost in USD
     """
     from backend.models.cost_tracker import get_completion_cost
+
     return get_completion_cost(model, prompt_tokens, completion_tokens)
 
 
-def _track_completion_cost(model: str, prompt_tokens: int, completion_tokens: int, user_key: str) -> float:
+def _track_completion_cost(
+    model: str, prompt_tokens: int, completion_tokens: int, user_key: str
+) -> float:
     """Track and record completion cost.
-    
+
     Args:
         model: Model name
         prompt_tokens: Number of prompt tokens
         completion_tokens: Number of completion tokens
         user_key: User identifier for cost tracking
-        
+
     Returns:
         Actual cost in USD
     """
     cost = _estimate_completion_cost(model, prompt_tokens, completion_tokens)
-    
+
     # Record cost using cost tracker
     try:
         # Create a mock response dict for cost tracking
@@ -712,12 +710,12 @@ def _track_completion_cost(model: str, prompt_tokens: int, completion_tokens: in
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
                 "total_tokens": prompt_tokens + completion_tokens,
-            }
+            },
         }
         record_llm_cost_from_response(user_key, mock_response, model)
     except Exception as e:
         logger.debug(f"Failed to record cost via cost tracker: {e}")
-    
+
     return cost
 
 
@@ -734,26 +732,34 @@ def _get_completion_circuit_breaker(conversation_id: str) -> CircuitBreaker:
     return _completion_circuit_breakers[conversation_id]
 
 
-def _check_completion_circuit_breaker(conversation_id: str) -> tuple[bool, Optional[str]]:
+def _check_completion_circuit_breaker(
+    conversation_id: str,
+) -> tuple[bool, Optional[str]]:
     """Check if circuit breaker should trip for code completion.
-    
+
     Returns:
         Tuple of (should_block, reason_if_blocked)
     """
     tracking = _completion_error_tracking[conversation_id]
-    
+
     # Check consecutive errors
     if tracking["consecutive_errors"] >= 5:
-        return True, f"Too many consecutive errors ({tracking['consecutive_errors']}). Circuit breaker tripped."
-    
+        return (
+            True,
+            f"Too many consecutive errors ({tracking['consecutive_errors']}). Circuit breaker tripped.",
+        )
+
     # Check error rate in last 10 requests
     recent = tracking["recent_success"][-10:]
     if len(recent) >= 10:
         error_count = sum(1 for success in recent if not success)
         error_rate = error_count / len(recent)
         if error_rate > 0.5:  # 50% error rate
-            return True, f"Error rate too high ({error_rate:.1%}). Circuit breaker tripped."
-    
+            return (
+                True,
+                f"Error rate too high ({error_rate:.1%}). Circuit breaker tripped.",
+            )
+
     return False, None
 
 
@@ -764,7 +770,7 @@ def _record_completion_error(conversation_id: str, error: Exception) -> None:
     tracking["recent_errors"].append(str(error))
     tracking["recent_success"].append(False)
     tracking["last_error_time"] = time.time()
-    
+
     # Keep only last 20 entries
     if len(tracking["recent_success"]) > 20:
         tracking["recent_success"] = tracking["recent_success"][-20:]
@@ -777,20 +783,22 @@ def _record_completion_success(conversation_id: str) -> None:
     tracking = _completion_error_tracking[conversation_id]
     tracking["consecutive_errors"] = 0  # Reset on success
     tracking["recent_success"].append(True)
-    
+
     # Keep only last 20 entries
     if len(tracking["recent_success"]) > 20:
         tracking["recent_success"] = tracking["recent_success"][-20:]
 
 
-def _analyze_completion_security(completion: str, file_path: str, language: str) -> tuple[ActionSecurityRisk, Optional[str]]:
+def _analyze_completion_security(
+    completion: str, file_path: str, language: str
+) -> tuple[ActionSecurityRisk, Optional[str]]:
     """Analyze code completion for security risks.
-    
+
     Returns:
         Tuple of (risk_level, warning_message_if_high_risk)
     """
     completion_lower = completion.lower()
-    
+
     # High-risk patterns
     high_risk_patterns = [
         r"eval\s*\(",
@@ -805,7 +813,7 @@ def _analyze_completion_security(completion: str, file_path: str, language: str)
         r"format\s*\(.*%",
         r"\.format\s*\(.*\{.*\}",
     ]
-    
+
     # Medium-risk patterns
     medium_risk_patterns = [
         r"open\s*\(",
@@ -816,34 +824,34 @@ def _analyze_completion_security(completion: str, file_path: str, language: str)
         r"requests\s*\.(get|post)",
         r"urllib\s*\.(urlopen|request)",
     ]
-    
+
     import re
-    
+
     # Check for high-risk patterns
     for pattern in high_risk_patterns:
         if re.search(pattern, completion_lower):
             return ActionSecurityRisk.HIGH, f"High-risk pattern detected: {pattern}"
-    
+
     # Check for medium-risk patterns
     for pattern in medium_risk_patterns:
         if re.search(pattern, completion_lower):
             return ActionSecurityRisk.MEDIUM, f"Medium-risk pattern detected: {pattern}"
-    
+
     return ActionSecurityRisk.LOW, None
 
 
 def _format_completion_error_message(exc: Exception, error_type: ErrorType) -> str:
     """Format user-friendly error message using ErrorRecoveryStrategy patterns.
-    
+
     Args:
         exc: The exception that occurred
         error_type: Classified error type
-        
+
     Returns:
         User-friendly error message
     """
     error_str = str(exc)
-    
+
     # Use ErrorRecoveryStrategy patterns for user-friendly messages
     if error_type == ErrorType.NETWORK_ERROR:
         return (
@@ -939,41 +947,48 @@ async def get_code_completion(
     """
     # Initialize anti-hallucination system
     anti_hallucination = AntiHallucinationSystem()
-    
+
     # Check circuit breaker before processing
     should_block, block_reason = _check_completion_circuit_breaker(conversation.sid)
     if should_block:
-        logger.warning(f"Code completion blocked by circuit breaker for conversation {conversation.sid}: {block_reason}")
+        logger.warning(
+            f"Code completion blocked by circuit breaker for conversation {conversation.sid}: {block_reason}"
+        )
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={
-                "error": block_reason or "Service temporarily unavailable due to high error rate.",
+                "error": block_reason
+                or "Service temporarily unavailable due to high error rate.",
                 "completion": "",
-                "stopReason": "circuit_breaker_tripped"
+                "stopReason": "circuit_breaker_tripped",
             },
         )
-    
+
     try:
         # Priority 2: SmartConfigCache - Cache user settings
         cache = _get_completion_config_cache()
         user_settings_store = await get_user_settings_store(request)
-        
+
         if not user_settings_store:
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={"error": "User settings store not available."},
             )
-        
+
         # Try to get cached settings
-        settings = await cache.get_user_settings(user_id or "anonymous", user_settings_store)
-        
+        settings = await cache.get_user_settings(
+            user_id or "anonymous", user_settings_store
+        )
+
         if not settings or not settings.llm_model:
             # Cache miss or no settings - load directly
             settings = await user_settings_store.load()
             if not settings or not settings.llm_model:
                 return JSONResponse(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    content={"error": "LLM settings not configured. Please configure your LLM settings first."},
+                    content={
+                        "error": "LLM settings not configured. Please configure your LLM settings first."
+                    },
                 )
 
         # Build LLM config from settings
@@ -1012,18 +1027,21 @@ IMPORTANT:
 
         # Prepare messages for LLM
         messages = [
-            {"role": "system", "content": "You are a helpful code completion assistant. Provide concise, accurate code completions. Never claim to have performed file operations."},
-            {"role": "user", "content": prompt}
+            {
+                "role": "system",
+                "content": "You are a helpful code completion assistant. Provide concise, accurate code completions. Never claim to have performed file operations.",
+            },
+            {"role": "user", "content": prompt},
         ]
 
         # Priority 2: BudgetGuardService - Get budget tracking
         budget = _completion_budgets[conversation.sid]
-        
+
         # Priority 2: RetryService - Advanced retry with exponential backoff
         retry_tracking = _completion_retry_tracking[conversation.sid]
         completion_text = None
         last_error: Exception | None = None
-        
+
         for attempt in range(retry_tracking["max_retries"] + 1):
             try:
                 # Priority 2: BudgetGuardService - Check cost before request
@@ -1034,19 +1052,21 @@ IMPORTANT:
                     prompt_tokens=prompt_tokens_est,
                     completion_tokens=completion_tokens_est,
                 )
-                
+
                 if budget["total_cost"] + estimated_cost > budget["max_total_cost"]:
-                    logger.warning(f"Code completion blocked: would exceed budget (current: ${budget['total_cost']:.4f}, estimated: ${estimated_cost:.4f})")
+                    logger.warning(
+                        f"Code completion blocked: would exceed budget (current: ${budget['total_cost']:.4f}, estimated: ${estimated_cost:.4f})"
+                    )
                     budget["budget_exceeded"] = True
                     return JSONResponse(
                         status_code=status.HTTP_402_PAYMENT_REQUIRED,
                         content={
                             "error": f"Request would exceed budget. Current: ${budget['total_cost']:.4f}, Estimated: ${estimated_cost:.4f}, Max: ${budget['max_total_cost']:.2f}",
                             "completion": "",
-                            "stopReason": "budget_exceeded"
+                            "stopReason": "budget_exceeded",
                         },
                     )
-                
+
                 # Request completion from LLM with timeout and stuck detection
                 # Use asyncio.wait_for for timeout handling
                 completion_text = await asyncio.wait_for(
@@ -1056,9 +1076,9 @@ IMPORTANT:
                         llm_config=llm_config,
                         messages=messages,
                     ),
-                    timeout=COMPLETION_TIMEOUT
+                    timeout=COMPLETION_TIMEOUT,
                 )
-                
+
                 # Success - record cost and break retry loop
                 actual_prompt_tokens = len(str(messages)) // 4
                 actual_completion_tokens = len(completion_text or "") // 4
@@ -1073,12 +1093,14 @@ IMPORTANT:
                 retry_tracking["retry_count"] = 0  # Reset on success
                 retry_tracking["retry_backoff"] = 1.0  # Reset backoff
                 break
-                
+
             except asyncio.TimeoutError as e:
                 last_error = e
                 if attempt < retry_tracking["max_retries"]:
                     retry_tracking["retry_count"] += 1
-                    wait_time = retry_tracking["retry_backoff"] * (2 ** attempt)  # Exponential backoff
+                    wait_time = retry_tracking["retry_backoff"] * (
+                        2**attempt
+                    )  # Exponential backoff
                     logger.warning(
                         f"Code completion timeout (attempt {attempt + 1}/{retry_tracking['max_retries'] + 1}), "
                         f"retrying in {wait_time:.1f}s for conversation {conversation.sid}"
@@ -1086,14 +1108,16 @@ IMPORTANT:
                     await asyncio.sleep(wait_time)
                     retry_tracking["retry_backoff"] = wait_time
                 else:
-                    logger.warning(f"Code completion timeout after {retry_tracking['max_retries'] + 1} attempts for conversation {conversation.sid}")
+                    logger.warning(
+                        f"Code completion timeout after {retry_tracking['max_retries'] + 1} attempts for conversation {conversation.sid}"
+                    )
                     _record_completion_error(conversation.sid, e)
                     return JSONResponse(
                         status_code=status.HTTP_504_GATEWAY_TIMEOUT,
                         content={
                             "error": f"Code completion request timed out after {retry_tracking['max_retries'] + 1} attempts. The request may be too complex or the LLM service is slow.",
                             "completion": "",
-                            "stopReason": "timeout"
+                            "stopReason": "timeout",
                         },
                     )
             except Exception as e:
@@ -1105,10 +1129,12 @@ IMPORTANT:
                     ErrorType.TIMEOUT_ERROR,
                     ErrorType.RUNTIME_CRASH,
                 ]
-                
+
                 if is_retryable and attempt < retry_tracking["max_retries"]:
                     retry_tracking["retry_count"] += 1
-                    wait_time = retry_tracking["retry_backoff"] * (2 ** attempt)  # Exponential backoff
+                    wait_time = retry_tracking["retry_backoff"] * (
+                        2**attempt
+                    )  # Exponential backoff
                     logger.warning(
                         f"Code completion error (type: {error_type.value}, attempt {attempt + 1}/{retry_tracking['max_retries'] + 1}), "
                         f"retrying in {wait_time:.1f}s for conversation {conversation.sid}: {e}"
@@ -1118,7 +1144,7 @@ IMPORTANT:
                 else:
                     # Not retryable or max retries reached
                     raise
-        
+
         if completion_text is None:
             # All retries exhausted
             if last_error:
@@ -1128,7 +1154,7 @@ IMPORTANT:
 
         # Clean up the completion (remove any extra formatting)
         completion = completion_text.strip()
-        
+
         # Remove markdown code blocks if present
         if completion.startswith("```"):
             lines = completion.split("\n")
@@ -1141,45 +1167,55 @@ IMPORTANT:
         security_risk, security_warning = _analyze_completion_security(
             completion, request_body.filePath, request_body.language
         )
-        
+
         if security_risk == ActionSecurityRisk.HIGH:
-            logger.warning(f"High security risk detected in code completion: {security_warning}")
-            _record_completion_error(conversation.sid, Exception(f"High security risk: {security_warning}"))
+            logger.warning(
+                f"High security risk detected in code completion: {security_warning}"
+            )
+            _record_completion_error(
+                conversation.sid, Exception(f"High security risk: {security_warning}")
+            )
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
                     "completion": "",
                     "stopReason": "security_risk_high",
-                    "warning": f"Completion blocked due to security risk: {security_warning}"
+                    "warning": f"Completion blocked due to security risk: {security_warning}",
                 },
             )
-        
+
         # Anti-hallucination validation
         # Check for file operation claims (hallucination pattern)
         is_valid, error_message = anti_hallucination.validate_response(
             response_text=completion,
-            actions=[]  # No actions for code completion
+            actions=[],  # No actions for code completion
         )
-        
+
         if not is_valid:
-            logger.warning(f"Anti-hallucination check failed for code completion: {error_message}")
-            _record_completion_error(conversation.sid, Exception(f"Hallucination detected: {error_message}"))
+            logger.warning(
+                f"Anti-hallucination check failed for code completion: {error_message}"
+            )
+            _record_completion_error(
+                conversation.sid, Exception(f"Hallucination detected: {error_message}")
+            )
             # Return empty completion if hallucination detected
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={
                     "completion": "",
                     "stopReason": "hallucination_detected",
-                    "warning": "Completion validation failed. Please try again."
+                    "warning": "Completion validation failed. Please try again.",
                 },
             )
 
         # Additional validation: Check for repetitive or stuck patterns
         # Simple check: if completion is too long or contains suspicious patterns
         if len(completion) > 1000:  # Reasonable limit for code completion
-            logger.warning(f"Code completion too long ({len(completion)} chars), truncating")
+            logger.warning(
+                f"Code completion too long ({len(completion)} chars), truncating"
+            )
             completion = completion[:1000]
-        
+
         # Check for suspicious patterns that might indicate stuck/hallucination
         suspicious_patterns = [
             "I have created",
@@ -1191,7 +1227,7 @@ IMPORTANT:
             "The file has been",
             "File created successfully",
         ]
-        
+
         completion_lower = completion.lower()
         for pattern in suspicious_patterns:
             if pattern.lower() in completion_lower:
@@ -1205,7 +1241,7 @@ IMPORTANT:
 
         # Record success for circuit breaker
         _record_completion_success(conversation.sid)
-        
+
         # Log metrics
         logger.info(
             f"Code completion successful for {request_body.filePath} "
@@ -1218,7 +1254,9 @@ IMPORTANT:
             content={
                 "completion": completion,
                 "stopReason": "stop" if completion else "empty",
-                "securityRisk": security_risk.value if security_risk != ActionSecurityRisk.LOW else None,
+                "securityRisk": security_risk.value
+                if security_risk != ActionSecurityRisk.LOW
+                else None,
             },
         )
 
@@ -1232,15 +1270,15 @@ IMPORTANT:
         error_type = ErrorRecoveryStrategy.classify_error(e)
         logger.error(
             f"Error getting code completion (type: {error_type.value}): {e}",
-            exc_info=True
+            exc_info=True,
         )
-        
+
         # Record error for circuit breaker
         _record_completion_error(conversation.sid, e)
-        
+
         # Priority 1: RecoveryService pattern - Format user-friendly error message
         error_message = _format_completion_error_message(e, error_type)
-        
+
         # Determine appropriate status code based on error type
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         if error_type == ErrorType.NETWORK_ERROR:
@@ -1249,13 +1287,13 @@ IMPORTANT:
             status_code = status.HTTP_504_GATEWAY_TIMEOUT
         elif error_type == ErrorType.PERMISSION_ERROR:
             status_code = status.HTTP_403_FORBIDDEN
-        
+
         return JSONResponse(
             status_code=status_code,
             content={
                 "error": error_message,
                 "errorType": error_type.value,
                 "completion": "",
-                "stopReason": "error"
+                "stopReason": "error",
             },
         )

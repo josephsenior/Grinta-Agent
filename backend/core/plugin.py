@@ -70,6 +70,18 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------
 PLUGIN_API_VERSION: tuple[int, int] = (1, 0)
 
+# How many minor versions back we support.  Plugins whose
+# ``min_api_version`` is more than PLUGIN_COMPAT_WINDOW minor versions
+# behind the current PLUGIN_API_VERSION will emit a deprecation
+# warning at registration time, signalling that support may be dropped
+# in a future release.
+PLUGIN_COMPAT_WINDOW: int = 2
+
+# Contract stability marker — when True the hook signatures in
+# ``ForgePlugin`` are considered stable and will follow semver.
+# Third-party plugins may rely on this guarantee.
+__plugin_contract_frozen__: bool = True
+
 
 # ------------------------------------------------------------------
 # Hook types
@@ -183,14 +195,23 @@ class PluginRegistry:
     _plugins: dict[str, ForgePlugin] = field(default_factory=dict)
 
     def register(self, plugin: ForgePlugin) -> None:
-        """Register a plugin. Duplicate names and incompatible versions are rejected."""
+        """Register a plugin. Duplicate names and incompatible versions are rejected.
+
+        Version compatibility rules:
+
+        * ``min_api_version > PLUGIN_API_VERSION`` → **rejected** (hard error).
+        * ``min_api_version`` within ``PLUGIN_COMPAT_WINDOW`` of the current
+          minor version → **accepted** normally.
+        * ``min_api_version`` older than the compat window → **accepted** with
+          a deprecation warning.
+        """
         if plugin.name in self._plugins:
             logger.warning(
                 "Plugin %r already registered — skipping duplicate",
                 plugin.name,
             )
             return
-        # Version gate
+        # Version gate — hard reject when the plugin requires a newer API
         required = getattr(plugin, "min_api_version", (1, 0))
         if required > PLUGIN_API_VERSION:
             logger.error(
@@ -200,6 +221,21 @@ class PluginRegistry:
                 *PLUGIN_API_VERSION,
             )
             return
+        # Deprecation warning — plugin targets an API version near the
+        # edge of the compatibility window.
+        host_major, host_minor = PLUGIN_API_VERSION
+        req_major, req_minor = required
+        if req_major == host_major and (host_minor - req_minor) >= PLUGIN_COMPAT_WINDOW:
+            import warnings
+
+            msg = (
+                f"Plugin {plugin.name!r} targets API v{req_major}.{req_minor} "
+                f"which is at the edge of the compatibility window "
+                f"(current v{host_major}.{host_minor}, window={PLUGIN_COMPAT_WINDOW}). "
+                f"Update the plugin to a newer min_api_version before support is dropped."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            logger.warning(msg)
         self._plugins[plugin.name] = plugin
         logger.info("Plugin registered: %s v%s", plugin.name, plugin.version)
 
@@ -344,7 +380,10 @@ def get_plugin_registry() -> PluginRegistry:
 __all__ = [
     "ForgePlugin",
     "HookType",
+    "PLUGIN_API_VERSION",
+    "PLUGIN_COMPAT_WINDOW",
     "PluginRegistry",
+    "__plugin_contract_frozen__",
     "discover_plugins",
     "get_plugin_registry",
 ]

@@ -87,7 +87,7 @@ def invalid_session_api_key(
         if provided_key is not None:
             return not secrets.compare_digest(str(provided_key), expected_key)
 
-    # Query-param auth — opt-in via env-var
+    # Query-param auth — opt-in via env-var (deprecated; leak-prone)
     allow_query = os.getenv("FORGE_ALLOW_QUERY_TOKEN_AUTH", "false").lower() in (
         "1", "true", "yes",
     )
@@ -98,6 +98,10 @@ def invalid_session_api_key(
             or query_params.get("apiKey", [])
         )
         if query_api_keys:
+            logger.warning(
+                "Query-token auth used on Socket.IO (deprecated) — "
+                "migrate to auth payload or X-Session-API-Key header"
+            )
             return not secrets.compare_digest(str(query_api_keys[0]), expected_key)
 
     return True  # Missing key ⇒ invalid

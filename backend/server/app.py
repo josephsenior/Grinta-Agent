@@ -135,6 +135,18 @@ def _validate_config() -> None:
             "and set your LLM API key."
         )
 
+    # 5. Query-token auth — leak-prone, should only be used in dev
+    if os.getenv("FORGE_ALLOW_QUERY_TOKEN_AUTH", "false").lower() in ("1", "true", "yes"):
+        msg = (
+            "FORGE_ALLOW_QUERY_TOKEN_AUTH is enabled. Query-parameter tokens "
+            "leak into server logs, browser history, and referrer headers. "
+            "Use header-based auth (X-Session-API-Key) in production."
+        )
+        if strict:
+            errors.append(msg)
+        else:
+            warnings.append(msg)
+
     if errors:
         logger.error("=" * 60)
         logger.error("FATAL CONFIG ERRORS (strict mode)")

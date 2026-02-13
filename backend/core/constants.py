@@ -1,7 +1,31 @@
+"""Central location for Forge core constants.
+
+Organisation
+~~~~~~~~~~~~
+Constants are grouped into logical sections with ``# ── Section ──``
+headers.  Each group documents its purpose and any associated env-vars.
+
+Boolean env-vars are parsed via the ``_parse_bool_env`` helper so that
+``"1"``, ``"true"`` and ``"yes"`` (case-insensitive) are all truthy;
+everything else is falsy.
+
+An ``ENV_VAR_REGISTRY`` dict at the bottom of this module catalogues
+*every* environment variable read in this file, its default value, and a
+short description.  Operators can inspect it programmatically or grep
+for a single source of truth.
+"""
+
 import os
 from typing import Any
 
-# Re-export enums and provider configs from dedicated modules.
+
+# ── Helpers ──────────────────────────────────────────────────────────
+def _parse_bool_env(var: str, default: str = "false") -> bool:
+    """Return *True* when the env-var *var* is set to a truthy string."""
+    return os.getenv(var, default).strip().lower() in ("true", "1", "yes")
+
+
+# ── Re-exports ──────────────────────────────────────────────────────
 # Consumers can continue to ``from backend.core.constants import ActionType``
 # or migrate to ``from backend.core.enums import ActionType`` at their leisure.
 from backend.core.enums import (  # noqa: F401
@@ -39,36 +63,35 @@ from backend.core.providers import (  # noqa: F401
     _LazyModelList,
 )
 
-"""Central location for Forge core constants."""
-
+# ── Core Identity & Limits ──────────────────────────────────────────
 FORGE_DEFAULT_AGENT = "Orchestrator"
 FORGE_MAX_ITERATIONS = 500  # Increased from 100 for complex tasks with dynamic iteration management
 
-# Workspace constants
+# ── Workspace & Paths ───────────────────────────────────────────────
 JWT_SECRET_FILE = ".jwt_secret"
 DEFAULT_WORKSPACE_BASE = "~/.Forge"
 DEFAULT_CONFIG_FILE = "config.toml"
 
-# URL constants
+# ── URLs ────────────────────────────────────────────────────────────
 GUIDE_URL = "https://docs.forge.dev/guide"
 TROUBLESHOOTING_URL = "https://docs.forge.dev/usage/troubleshooting"
 
-# Security constants
+# ── Security ────────────────────────────────────────────────────────
 SECRET_PLACEHOLDER = "**********"
 
-# Cache constants
+# ── Cache ───────────────────────────────────────────────────────────
 SETTINGS_CACHE_TTL = 60  # seconds
 
-# Timeout constants
+# ── Timeouts & Thresholds ───────────────────────────────────────────
 GENERAL_TIMEOUT = 15
 COMPLETION_TIMEOUT = 30.0
 
-# Threshold constants
+# ── Threshold Constants ─────────────────────────────────────────────
 MAX_LINES_TO_EDIT = 300
 IDLE_RECLAIM_SPIKE_THRESHOLD = 3
 EVICTION_SPIKE_THRESHOLD = 1
 
-# Runtime constants
+# ── Runtime Bootstrap ───────────────────────────────────────────────
 MICROMAMBA_ENV_NAME = "Forge"
 DEFAULT_PYTHON_PREFIX = [
     "/Forge/micromamba/bin/micromamba",
@@ -80,10 +103,10 @@ DEFAULT_PYTHON_PREFIX = [
 ]
 DEFAULT_MAIN_MODULE = "forge.runtime.action_execution_server"
 
-# Storage constants
+# ── Storage ─────────────────────────────────────────────────────────
 CONVERSATION_BASE_DIR = "sessions"
 
-# Default configuration constants
+# ── Default Configuration ───────────────────────────────────────────
 DEFAULT_RUNTIME = "local"
 DEFAULT_FILE_STORE = "local"
 DEFAULT_CACHE_DIR = "/tmp/cache"
@@ -96,7 +119,7 @@ DEFAULT_LOG_LEVEL = "INFO"
 DEFAULT_ENABLE_BROWSER = True
 DEFAULT_ENABLE_DEFAULT_CONDENSER = True
 
-# Sandbox defaults
+# ── Sandbox Defaults ────────────────────────────────────────────────
 DEFAULT_SANDBOX_TIMEOUT = 120
 DEFAULT_SANDBOX_CLOSE_DELAY = 60
 DEFAULT_SANDBOX_AUTO_LINT_ENABLED = True
@@ -105,7 +128,7 @@ DEFAULT_SANDBOX_KEEP_RUNTIME_ALIVE = False
 DEFAULT_SANDBOX_USE_HOST_NETWORK = False
 DEFAULT_SANDBOX_FORCE_REBUILD_RUNTIME = False
 
-# LLM defaults
+# ── LLM Defaults ────────────────────────────────────────────────────
 DEFAULT_LLM_MODEL = "claude-sonnet-4-20250514"
 DEFAULT_LLM_NUM_RETRIES = 5
 DEFAULT_LLM_RETRY_MULTIPLIER = 8
@@ -116,7 +139,7 @@ DEFAULT_LLM_TEMPERATURE = 0.0
 DEFAULT_LLM_TOP_P = 1.0
 DEFAULT_LLM_CORRECT_NUM = 5
 
-# File upload configuration
+# ── File Upload ─────────────────────────────────────────────────────
 DEFAULT_MAX_FILE_UPLOAD_SIZE_MB = 100
 FILES_TO_IGNORE = [
     ".git/",
@@ -128,7 +151,7 @@ FILES_TO_IGNORE = [
     ".downloads/",
 ]
 
-# Agent defaults
+# ── Agent Behavior Defaults ─────────────────────────────────────────
 DEFAULT_AGENT_MEMORY_MAX_THREADS = 10
 CURRENT_AGENT_CONFIG_SCHEMA_VERSION = "2025-11-14"
 DEFAULT_AGENT_MEMORY_ENABLED = True
@@ -169,15 +192,24 @@ DEFAULT_AGENT_SYSTEM_PROMPT_FILENAME = "system_prompt.j2"
 DEFAULT_AGENT_CLI_MODE = False
 DEFAULT_FORGE_MCP_CONFIG_CLS = "backend.core.config.mcp_config.ForgeMCPConfig"
 
-# Server constants
+# ── API & Server ────────────────────────────────────────────────────
 API_VERSION_V1 = "v1"
 CURRENT_API_VERSION = API_VERSION_V1
-ENFORCE_API_VERSIONING = False
+
+# API versioning is strict by default: unversioned /api/ requests are
+# rejected with a 400 suggesting the correct path.  Existing deployments
+# that rely on unversioned routes can set FORGE_PERMISSIVE_API=1 to
+# restore the old permissive behavior during migration.
+ENFORCE_API_VERSIONING = os.getenv(
+    "FORGE_PERMISSIVE_API", ""
+).strip().lower() not in ("1", "true", "yes")
+
 ROOM_KEY_TEMPLATE = "room_{sid}"
 DEFAULT_SESSION_WAIT_TIME_BEFORE_CLOSE = 90
 DEFAULT_SESSION_WAIT_TIME_BEFORE_CLOSE_INTERVAL = 5
 
-# Quota and Plan constants (QuotaPlan enum in backend.core.enums)
+# ── Quota & Plan Limits ─────────────────────────────────────────────
+# QuotaPlan enum lives in backend.core.enums
 DEFAULT_QUOTA_HOUR_WINDOW = 3600
 DEFAULT_QUOTA_DAY_WINDOW = 86400
 DEFAULT_QUOTA_MONTH_WINDOW = 2592000
@@ -198,45 +230,31 @@ ENTERPRISE_PLAN_DAILY_LIMIT = 100.0
 ENTERPRISE_PLAN_MONTHLY_LIMIT = 2000.0
 ENTERPRISE_PLAN_BURST_LIMIT = 50.0
 
-# Circuit Breaker defaults (CircuitState enum in backend.core.enums)
+# ── Circuit Breaker ─────────────────────────────────────────────────
+# CircuitState enum lives in backend.core.enums
 DEFAULT_CIRCUIT_FAILURE_THRESHOLD = 5
 DEFAULT_CIRCUIT_SUCCESS_THRESHOLD = 2
 DEFAULT_CIRCUIT_TIMEOUT_SECONDS = 60
 
-# Action execution constants
+# ── Action Execution ────────────────────────────────────────────────
 ROOT_GID = 0
 SESSION_API_KEY_HEADER = "X-Session-API-Key"
 
-# Logging constants
+# ── Logging & Debug (env-var driven) ────────────────────────────────
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "yes"]
-DEBUG_LLM = os.getenv("DEBUG_LLM", "False").lower() in ["true", "1", "yes"]
-DEBUG_LLM_PROMPT = os.getenv("DEBUG_LLM_PROMPT", "False").lower() in [
-    "true",
-    "1",
-    "yes",
-]
-LOG_JSON = os.getenv("LOG_JSON", "True").lower() in [
-    "true",
-    "1",
-    "yes",
-]  # Default to JSON for production
+DEBUG = _parse_bool_env("DEBUG")
+DEBUG_LLM = _parse_bool_env("DEBUG_LLM")
+DEBUG_LLM_PROMPT = _parse_bool_env("DEBUG_LLM_PROMPT")
+LOG_JSON = _parse_bool_env("LOG_JSON", default="true")  # Default to JSON for production
 LOG_JSON_LEVEL_KEY = os.getenv("LOG_JSON_LEVEL_KEY", "level")
 # Enable OTEL log correlation when explicitly requested, defaulting to OTEL_ENABLED
-OTEL_LOG_CORRELATION = os.getenv(
-    "OTEL_LOG_CORRELATION", os.getenv("OTEL_ENABLED", "false")
-).lower() in [
-    "true",
-    "1",
-    "yes",
-]
-LOG_TO_FILE = os.getenv("LOG_TO_FILE", str(LOG_LEVEL == "DEBUG")).lower() in [
-    "true",
-    "1",
-    "yes",
-]
-LOG_ALL_EVENTS = os.getenv("LOG_ALL_EVENTS", "False").lower() in ["true", "1", "yes"]
-DEBUG_RUNTIME = os.getenv("DEBUG_RUNTIME", "False").lower() in ["true", "1", "yes"]
+OTEL_LOG_CORRELATION = _parse_bool_env(
+    "OTEL_LOG_CORRELATION",
+    default=os.getenv("OTEL_ENABLED", "false"),
+)
+LOG_TO_FILE = _parse_bool_env("LOG_TO_FILE", default=str(LOG_LEVEL == "DEBUG"))
+LOG_ALL_EVENTS = _parse_bool_env("LOG_ALL_EVENTS")
+DEBUG_RUNTIME = _parse_bool_env("DEBUG_RUNTIME")
 
 LOG_COLORS = {
     "ACTION": "green",
@@ -248,7 +266,7 @@ LOG_COLORS = {
     "PLAN": "light_magenta",
 }
 
-# Tool name constants
+# ── Tool Names ──────────────────────────────────────────────────────
 EXECUTE_BASH_TOOL_NAME = "execute_bash"
 STR_REPLACE_EDITOR_TOOL_NAME = "str_replace_editor"
 BROWSER_TOOL_NAME = "browser"
@@ -256,27 +274,29 @@ FINISH_TOOL_NAME = "finish"
 LLM_BASED_EDIT_TOOL_NAME = "edit_file"
 TASK_TRACKER_TOOL_NAME = "task_tracker"
 
-# Security Risk constants
+# ── Security Risk ───────────────────────────────────────────────────
 SECURITY_RISK_DESC = "The LLM's assessment of the safety risk of this action. See the SECURITY_RISK_ASSESSMENT section in the system prompt for risk level definitions."
 RISK_LEVELS = ["LOW", "MEDIUM", "HIGH"]
 
-# UX Presentation constants (ErrorSeverity, ErrorCategory enums in backend.core.enums)
+# ── UX / Error Presentation ─────────────────────────────────────────
+# ErrorSeverity, ErrorCategory enums live in backend.core.enums
 
-# Browser Gym constants
+# ── Browser Gym ─────────────────────────────────────────────────────
 BROWSER_EVAL_GET_GOAL_ACTION = "GET_EVAL_GOAL"
 BROWSER_EVAL_GET_REWARDS_ACTION = "GET_EVAL_REWARDS"
 
-# Command Output constants
+# ── Command Output ──────────────────────────────────────────────────
 CMD_OUTPUT_PS1_BEGIN = "\n###PS1JSON###\n"
 CMD_OUTPUT_PS1_END = "\n###PS1END###"
 MAX_CMD_OUTPUT_SIZE = 30000
 DEFAULT_CMD_EXIT_CODE = -1
 DEFAULT_CMD_PID = -1
 
+# ── Runtime Messages ────────────────────────────────────────────────
 # Runtime constants
 BASH_TIMEOUT_MESSAGE_TEMPLATE = 'You may wait longer to see additional output by sending empty command \'\', send other commands to interact with the current process, send keys ("C-c", "C-z", "C-d") to interrupt/kill the previous command before sending your new command, or use the timeout parameter in execute_bash for future commands.'
 
-# Condenser defaults
+# ── Condenser Defaults ──────────────────────────────────────────────
 DEFAULT_CONDENSER_ATTENTION_WINDOW = 100
 DEFAULT_BROWSER_CONDENSER_ATTENTION_WINDOW = 1
 DEFAULT_CONDENSER_KEEP_FIRST = 1
@@ -288,7 +308,7 @@ DEFAULT_SMART_CONDENSER_KEEP_FIRST = 5
 DEFAULT_SMART_CONDENSER_IMPORTANCE_THRESHOLD = 0.6
 DEFAULT_SMART_CONDENSER_RECENCY_BONUS_WINDOW = 20
 
-# Permissions defaults
+# ── Permissions & Safety Defaults ───────────────────────────────────
 DEFAULT_FILE_OPERATIONS_MAX_SIZE_MB = 50
 DEFAULT_FILE_OPERATIONS_BLOCKED_PATHS = [
     "/etc/**",  # System config
@@ -317,7 +337,7 @@ DEFAULT_SHELL_CONFIRMATION_PATTERNS = [
 ]
 DEFAULT_BROWSER_MAX_PAGES = 10
 
-# Runtime resource limits defaults
+# ── Runtime Resource Limits ─────────────────────────────────────────
 DEFAULT_RUNTIME_MAX_MEMORY_MB = 2048
 DEFAULT_RUNTIME_MAX_CPU_PERCENT = 80.0
 DEFAULT_RUNTIME_MAX_DISK_GB = 10
@@ -327,7 +347,7 @@ MAX_FILENAME_LENGTH = 255
 MAX_PATH_LENGTH = 4096  # Maximum path length (POSIX limit)
 MAX_FILE_SIZE_FOR_GIT_DIFF = 1024 * 1024
 
-# Server and middleware constants
+# ── Server & Middleware ─────────────────────────────────────────────
 MIN_COMPRESS_SIZE = 1024  # 1KB
 KNOWLEDGE_BASE_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 KNOWLEDGE_BASE_NAME_MAX_LENGTH = 200
@@ -340,7 +360,7 @@ CACHE_MEDIUM = 3600  # 1 hour
 CACHE_SHORT = 300  # 5 minutes
 CACHE_NONE = 0  # No cache
 
-# MCP Client constants
+# ── MCP Client ──────────────────────────────────────────────────────
 DEFAULT_MCP_CACHE_TTL_SECONDS = 600
 MAX_MCP_CACHE_ENTRY_BYTES = 5 * 1024 * 1024
 MCP_CACHEABLE_TOOLS = {
@@ -351,11 +371,11 @@ MCP_CACHEABLE_TOOLS = {
     "get_component_metadata",
 }
 
-# Integration constants
+# ── Integrations ────────────────────────────────────────────────────
 MAX_GITHUB_BRANCHES = 5000
 MAX_GITHUB_REPOS = 1000
 
-# Whitespace handling defaults
+# ── Whitespace Handling ─────────────────────────────────────────────
 DEFAULT_INDENT_SIZES = {
     "python": 4,
     "javascript": 2,
@@ -378,8 +398,31 @@ DEFAULT_INDENT_SIZES = {
     "css": 2,
 }
 
-# Storage defaults
+# ── Storage Defaults ────────────────────────────────────────────────
 DEFAULT_SECRETS_FILENAME = "user_secrets.json"
+
+
+# ── Env-Var Registry ───────────────────────────────────────────────
+# Single source of truth for every environment variable read in this
+# module.  Format:  "VAR_NAME": ("default", "description")
+# Operators can inspect this dict or ``grep ENV_VAR_REGISTRY`` to
+# discover every knob.
+ENV_VAR_REGISTRY: dict[str, tuple[str, str]] = {
+    # Logging & debug
+    "LOG_LEVEL": ("INFO", "Root log level (DEBUG / INFO / WARNING / ERROR)"),
+    "DEBUG": ("false", "Enable general debug mode"),
+    "DEBUG_LLM": ("false", "Log raw LLM request/response payloads"),
+    "DEBUG_LLM_PROMPT": ("false", "Log full prompt text sent to LLMs"),
+    "LOG_JSON": ("true", "Emit structured JSON logs (recommended for prod)"),
+    "LOG_JSON_LEVEL_KEY": ("level", "JSON key name for the log-level field"),
+    "OTEL_LOG_CORRELATION": ("<OTEL_ENABLED>", "Attach OTEL trace/span IDs to logs"),
+    "OTEL_ENABLED": ("false", "Master switch for OpenTelemetry integration"),
+    "LOG_TO_FILE": ("<true when DEBUG>", "Write logs to a file in addition to stdout"),
+    "LOG_ALL_EVENTS": ("false", "Log every event processed by the event stream"),
+    "DEBUG_RUNTIME": ("false", "Extra runtime container debug output"),
+    # API versioning
+    "FORGE_PERMISSIVE_API": ("", "Set to '1' to allow unversioned /api/ routes (deprecated)"),
+}
 
 # All enum classes (ContentType, ActionType, AgentState, ObservationType,
 # ExitReason, ActionConfirmationStatus, ActionSecurityRisk, AppMode,

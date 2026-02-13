@@ -48,9 +48,15 @@ __all__ = [
     "Plugin",
     "PluginRequirement",
     "ALL_PLUGINS",
+    "__runtime_plugin_contract_frozen__",
     "discover_plugins",
     "filter_plugins_by_config",
 ]
+
+# Contract stability — the ``Plugin`` / ``PluginRequirement`` ABCs
+# are frozen and follow semver.  Third-party runtime plugins may
+# rely on this guarantee.
+__runtime_plugin_contract_frozen__: bool = True
 
 # ------------------------------------------------------------------
 # Built-in plugin registry

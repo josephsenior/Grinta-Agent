@@ -11,8 +11,8 @@ from backend.core.constants import (
 )
 
 
-# During beta, allow non-versioned endpoints for backward compatibility
-# After public launch, set this to True to enforce versioning
+# API versioning enforcement — strict by default.  Override with
+# FORGE_PERMISSIVE_API=1 env var for legacy unversioned routes.
 ENFORCE_API_VERSIONING = ENFORCE_API_VERSIONING
 
 

@@ -1,3 +1,11 @@
+/**
+ * @deprecated This provider is mounted in the route tree but its context
+ * hook (useConversationSubscriptions) is never consumed by any component.
+ * All real-time WebSocket handling is owned by {@link WsClientProvider}
+ * in ws-client-provider.tsx.  This file is kept temporarily to avoid
+ * unmount side-effects during the transition.  Remove once confirmed
+ * safe in integration tests.
+ */
 import React, {
   createContext,
   useContext,

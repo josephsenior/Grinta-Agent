@@ -36,7 +36,7 @@ def check_session_api_key(
     if session_api_key and secrets.compare_digest(session_api_key, expected_key):
         return
 
-    # 2) Optional query token (opt-in; leak-prone)
+    # 2) Optional query token (opt-in; leak-prone — deprecated)
     allow_query_token_auth = os.getenv("FORGE_ALLOW_QUERY_TOKEN_AUTH", "false").lower() in (
         "1",
         "true",
@@ -45,6 +45,10 @@ def check_session_api_key(
     if allow_query_token_auth and request is not None:
         query_token = request.query_params.get("token") or request.query_params.get("apiKey")
         if query_token and secrets.compare_digest(query_token, expected_key):
+            import logging
+            logging.getLogger("forge.auth").warning(
+                "Query-token auth used (deprecated) — migrate to X-Session-API-Key header"
+            )
             return
 
     # 3) Authorization: Bearer <token>

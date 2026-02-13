@@ -11,6 +11,11 @@ from typing import TYPE_CHECKING, Callable, Mapping, cast
 from backend.controller import AgentController
 from backend.controller.replay import ReplayManager
 from backend.controller.state.state import State
+from backend.core.errors import (
+    RuntimeConnectError,
+    SessionAlreadyActiveError,
+    SessionStartupError,
+)
 from backend.core.exceptions import AgentRuntimeUnavailableError
 from backend.core.logger import forgeLoggerAdapter
 from backend.core.schemas import AgentState
@@ -211,11 +216,11 @@ class AgentSession:
             # a live runtime.  Let _finalize_session_startup report the
             # failure via the normal error path.
             if not runtime_connected:
+                error_msg = "Runtime failed to connect"
                 self.logger.warning(
                     "Runtime failed to connect — skipping controller setup"
                 )
-                error_msg = "Runtime failed to connect"
-                return  # jumps straight to the finally → _finalize_session_startup
+                raise RuntimeConnectError(error_msg)
 
             # Setup memory and MCP tools
             await self._setup_memory_and_mcp_tools(
@@ -254,8 +259,8 @@ class AgentSession:
                 await get_plugin_registry().dispatch_session_start(
                     self.sid, {"user_id": self.user_id}
                 )
-            except Exception:  # noqa: BLE001 — plugins must not break startup
-                pass
+            except Exception as plugin_err:  # noqa: BLE001 — plugins must not break startup
+                self.logger.warning("Plugin session_start hook failed: %s", plugin_err)
 
             startup_state["finished"] = True
 
@@ -273,7 +278,7 @@ class AgentSession:
         """Validate that the session can be started."""
         if self.controller or self.runtime:
             msg = "Session already started. You need to close this session and start a new one."
-            raise RuntimeError(msg)
+            raise SessionAlreadyActiveError(msg)
         if self._closed:
             self.logger.warning("Session closed before starting")
             return False
@@ -568,8 +573,8 @@ class AgentSession:
             await get_plugin_registry().dispatch_session_end(
                 self.sid, {"user_id": self.user_id}
             )
-        except Exception:  # noqa: BLE001 — plugins must not break shutdown
-            pass
+        except Exception as plugin_err:  # noqa: BLE001 — plugins must not break shutdown
+            self.logger.warning("Plugin session_end hook failed: %s", plugin_err)
         while self._starting and should_continue():
             self.logger.debug(
                 f"Waiting for initialization to finish before closing session {self.sid}"
@@ -710,7 +715,7 @@ class AgentSession:
             raise RuntimeError(msg)
         if self.runtime is None:
             msg = "Runtime must be initialized before the agent controller"
-            raise RuntimeError(msg)
+            raise SessionStartupError(msg)
         msg = f"\n--------------------------------- Forge Configuration ---------------------------------\nLLM: {
             agent.llm.config.model
         }\nBase URL: {agent.llm.config.base_url}\nAgent: {agent.name}\nRuntime: {

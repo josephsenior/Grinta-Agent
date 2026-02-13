@@ -1,3 +1,13 @@
+/**
+ * Canonical WebSocket provider — the single owner of the Socket.IO
+ * connection, event stream, and parsed events for a conversation.
+ *
+ * All components that need real-time data should consume either
+ * `useWsStatus()` (connection state) or `useWsEvents()` (event list).
+ *
+ * NOTE: conversation-subscriptions-provider.tsx is deprecated and
+ * should be removed once integration tests confirm no side-effects.
+ */
 import React, { startTransition } from "react";
 import { io, Socket } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -290,6 +300,10 @@ export function WsClientProvider({
     (ForgeAction | ForgeObservation)[]
   >([]);
   const hydratedEventIdsRef = React.useRef<Set<string>>(new Set());
+  /** O(1) dedupe index — avoids rebuilding a Set on every incoming event. */
+  const seenEventIdsRef = React.useRef<Set<string>>(new Set());
+  /** Counter for events evicted due to MAX_WS_EVENTS cap (dev telemetry). */
+  const evictedCountRef = React.useRef<number>(0);
   const lastEventRef = React.useRef<Record<string, unknown> | null>(null);
   const connectingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const { providers } = useUserProviders();
@@ -411,20 +425,15 @@ export function WsClientProvider({
 
       const eventId =
         getEventId(event as unknown as Record<string, unknown>) ?? "";
+
+      // O(1) dedupe via persistent Set ref — no per-event array scan.
+      if (seenEventIdsRef.current.has(eventId)) {
+        return;
+      }
+      seenEventIdsRef.current.add(eventId);
+
       startTransition(() => {
         setParsedEvents((prevEvents) => {
-          const existingIds = new Set(
-            prevEvents.map(
-              (existing) =>
-                getEventId(existing as unknown as Record<string, unknown>) ??
-                "",
-            ),
-          );
-
-          if (existingIds.has(eventId)) {
-            return prevEvents;
-          }
-
           let next = [...prevEvents, event as ForgeAction | ForgeObservation];
 
           // When approaching the cap, compact streaming chunks first
@@ -433,9 +442,32 @@ export function WsClientProvider({
             next = compactStreamingChunks(next) as typeof next;
           }
 
-          return next.length > MAX_WS_EVENTS
-            ? next.slice(next.length - MAX_WS_EVENTS)
-            : next;
+          if (next.length > MAX_WS_EVENTS) {
+            const evictCount = next.length - MAX_WS_EVENTS;
+            evictedCountRef.current += evictCount;
+
+            // Log eviction telemetry at warn-level so it's visible during
+            // long sessions without being spammy (only fires on actual evict).
+            if (evictedCountRef.current % 500 === 0 || evictCount > 100) {
+              EventLogger.warning(
+                `Event eviction: dropped ${evictCount} oldest events ` +
+                  `(total evicted: ${evictedCountRef.current})`,
+              );
+            }
+
+            // Remove evicted IDs from the dedupe index to prevent unbounded
+            // growth.  Only the retained tail is still "seen".
+            const evicted = next.slice(0, evictCount);
+            for (const ev of evicted) {
+              const id =
+                getEventId(ev as unknown as Record<string, unknown>) ?? "";
+              seenEventIdsRef.current.delete(id);
+            }
+
+            next = next.slice(evictCount);
+          }
+
+          return next;
         });
       });
     },
@@ -581,6 +613,8 @@ export function WsClientProvider({
     setEvents([]);
     setParsedEvents([]);
     hydratedEventIdsRef.current.clear();
+    seenEventIdsRef.current.clear();
+    evictedCountRef.current = 0;
     setWebSocketStatus("CONNECTING");
 
     // 🔄 CRITICAL FIX: Reset agent state when switching conversations
