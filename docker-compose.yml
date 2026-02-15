@@ -1,0 +1,65 @@
+# ============================================================================
+# Forge — Docker Compose
+# ============================================================================
+# Quick start:   docker compose up
+# With rebuild:  docker compose up --build
+# Background:    docker compose up -d
+# With extras:   docker compose --profile database up
+# ============================================================================
+
+services:
+  forge:
+    build: .
+    ports:
+      - "${FORGE_PORT:-3000}:3000"
+    volumes:
+      - ./workspace:/app/workspace          # Persist agent workspace
+      - ./config.toml:/app/config.toml:ro   # Mount your config (optional)
+    environment:
+      - SESSION_API_KEY=${SESSION_API_KEY:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+    security_opt:
+      - no-new-privileges:true
+
+  # Optional: PostgreSQL for conversation/KB storage
+  # Activate with: docker compose --profile database up
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["database"]
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: forge
+      POSTGRES_USER: forge
+      # WARNING: Change this password in production!
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forge_dev}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+volumes:
+  pgdata:

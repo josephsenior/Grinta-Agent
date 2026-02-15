@@ -1,0 +1,46 @@
+[MASTER]
+# Ignore patterns
+ignore=.venv,.venv-wsl-backup,node_modules,.git
+
+[MESSAGES CONTROL]
+# Disable docstring requirements for cleaner linting
+# Critical APIs have been manually documented for IDE/developer experience
+disable=C0114,  # missing-module-docstring
+        C0115,  # missing-class-docstring
+        C0116,  # missing-function-docstring
+        E0401,  # import-error (false positives with dynamic imports)
+        E0611,  # no-name-in-module (false positives with lazy imports)
+        E0603,  # undefined-all-variable (false positives with __getattr__)
+        C0415,  # import-outside-toplevel (intentional for lazy loading)
+        W0718,  # broad-exception-caught (intentional for robustness)
+        R0903,  # too-few-public-methods (data classes are fine)
+        W0201,  # attribute-defined-outside-init (intentional in some cases)
+        C0413,  # wrong-import-position (sometimes necessary)
+        W0613   # unused-argument (required by interface/protocol)
+
+[DESIGN]
+# Relaxed thresholds for large orchestration/service modules
+max-args=8
+max-locals=25
+max-branches=16
+max-statements=70
+max-attributes=12
+
+[FORMAT]
+# Maximum line length (already using black with 120)
+max-line-length=120
+
+[BASIC]
+# Good variable names (allow single-letter variables in specific contexts)
+good-names=i,j,k,ex,Run,_,f,e,x,y,id,pk,db,ok
+
+# Allow uppercase constants and class attributes
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__)|([a-z_][a-z0-9_]*))$
+attr-rgx=[a-z_][a-z0-9_]{0,30}$|[A-Z][a-zA-Z0-9]*$
+
+[TYPECHECK]
+# Ignore missing members in dynamic libraries
+ignored-modules=pydantic,litellm
+
+# Ignore no-member errors for common dynamic attributes
+ignored-classes=pydantic.BaseModel,sqlalchemy.orm.DeclarativeMeta

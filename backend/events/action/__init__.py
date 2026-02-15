@@ -1,0 +1,54 @@
+"""Action event definitions emitted by Forge agents."""
+
+from __future__ import annotations
+
+from backend.events.action.action import (
+    Action,
+    ActionConfirmationStatus,
+    ActionSecurityRisk,
+)
+from backend.events.action.agent import (
+    AgentRejectAction,
+    AgentThinkAction,
+    ChangeAgentStateAction,
+    PlaybookFinishAction,
+    RecallAction,
+    TaskTrackingAction,
+)
+from backend.events.action.browse import BrowseInteractiveAction, BrowseURLAction
+from backend.events.action.commands import CmdRunAction
+from backend.events.action.empty import NullAction
+from backend.events.action.files import (
+    FileEditAction,
+    FileReadAction,
+    FileWriteAction,
+)
+from backend.events.action.mcp import MCPAction
+from backend.events.action.message import (
+    MessageAction,
+    StreamingChunkAction,
+    SystemMessageAction,
+)
+
+__all__ = [
+    "Action",
+    "ActionConfirmationStatus",
+    "ActionSecurityRisk",
+    "PlaybookFinishAction",
+    "AgentRejectAction",
+    "AgentThinkAction",
+    "BrowseInteractiveAction",
+    "BrowseURLAction",
+    "ChangeAgentStateAction",
+    "CmdRunAction",
+    "FileEditAction",
+    "FileReadAction",
+    "FileWriteAction",
+    "MCPAction",
+    "MessageAction",
+    "NullAction",
+    "RecallAction",
+    "StreamingChunkAction",  # ⚡ CRITICAL FIX: Enable real-time LLM streaming!
+    "SystemMessageAction",
+    "TaskTrackingAction",
+]

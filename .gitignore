@@ -1,0 +1,83 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node (residual)
+node_modules/
+dist/
+build/
+
+# OS
+.DS_Store
+*.log
+
+# Backup files
+*.bak
+
+# Secrets
+.env
+.env.local
+.jwt_secret
+~/
+backend/~/  # Never commit JWT secrets or sensitive backend configs
+
+# Runtime config (user-specific — only template is tracked)
+config.toml
+
+# local venv created during snapshot work
+.venv2/
+
+# Debug backups
+debug_backups/
+
+dummy_eval_output_dir/
+
+tmp_snippet_workspace_script*/
+
+tmp_secrets_store/
+
+tmp_snippet_debug/
+
+# Temporary test/diagnostic files
+tmp_*.txt
+tmp_*.ini
+tmp_*.py
+temp_*.py
+test_*.txt
+debug_*.txt
+debug_*.py
+
+diag_*.txt
+
+# Runtime user data
+backend/prompts/
+backend/snippets/
+backend/workspace/
+workspace/users/
+workspace/sessions/
+
+# Test coverage reports
+coverage/
+.coverage
+*.cover
+htmlcov/
+
+# Test framework caches
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Analysis / lint tool output
+mypy_*.txt
+pylint_*.txt
+*_results.txt
+*_check.txt
+
+# Debug/error logs
+*.out
+tsc_errors*.txt

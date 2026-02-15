@@ -1,0 +1,74 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(docs/|modules/|python/|third_party/)
+      - id: end-of-file-fixer
+        exclude: ^(docs/|modules/|python/|third_party/)
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: check-ast
+      - id: check-case-conflict
+      - id: check-docstring-first
+
+  - repo: https://github.com/tox-dev/pyproject-fmt
+    rev: v2.5.1
+    hooks:
+      - id: pyproject-fmt
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.24.1
+    hooks:
+      - id: validate-pyproject
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.8
+    hooks:
+      - id: ruff
+        args: [--fix, --unsafe-fixes]
+        exclude: third_party/
+      - id: ruff-format
+        exclude: third_party/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          [
+            types-requests,
+            types-setuptools,
+            types-pyyaml,
+            types-toml,
+            types-docker,
+            types-Markdown,
+            pydantic,
+            lxml,
+          ]
+        args: [--ignore-missing-imports, --no-strict-optional]
+        exclude: ^tests/
+
+  - repo: local
+    hooks:
+      - id: check-layer-imports
+        name: Check layer boundary imports
+        entry: python backend/scripts/verify/check_layer_imports.py
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.py$
+
+  # - repo: https://github.com/PyCQA/bandit
+  #   rev: 1.7.5
+  #   hooks:
+  #     - id: bandit
+  #     args: ["-c", "pyproject.toml", "-r", "Forge/"]
+  #     exclude: ^tests/
+
+  # - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+  #   rev: v1.3.2
+  #   hooks:
+  #     - id: python-safety-dependencies-check
+  #       exclude: ^evaluation/|^.*requirements.*\.txt$

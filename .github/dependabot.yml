@@ -1,0 +1,37 @@
+version: 2
+updates:
+  - package-ecosystem: 'pip'
+    directory: '/'
+    schedule:
+      interval: 'daily'
+    open-pull-requests-limit: 1
+    groups:
+      # put packages in their own group if they have a history of breaking the build or needing to be reverted
+      pre-commit:
+        patterns:
+          - 'pre-commit'
+      browsergym:
+        patterns:
+          - 'browsergym*'
+      mcp-packages:
+        patterns:
+          - 'mcp'
+      security-all:
+        applies-to: 'security-updates'
+        patterns:
+          - '*'
+      version-all:
+        applies-to: 'version-updates'
+        patterns:
+          - '*'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+
+  - package-ecosystem: 'docker'
+    directories:
+      - 'containers/*'
+    schedule:
+      interval: 'weekly'

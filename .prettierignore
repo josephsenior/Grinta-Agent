@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.venv/
+.venv-wsl-backup/
+
+# Python files (handled by Black)
+*.py
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Version control
+.git/
+.github/workflows/
+
+# IDE
+.vscode/
+.idea/
+
+# Generated files
+*.min.js
+*.min.css
+coverage/
+
+# Large data files
+*.jsonl
+*.json.gz
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
