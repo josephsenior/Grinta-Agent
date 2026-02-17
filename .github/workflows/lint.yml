@@ -21,7 +21,7 @@ jobs:
     name: Lint python
     runs-on: blacksmith-4vcpu-ubuntu-2204
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Set up python
@@ -39,7 +39,7 @@ jobs:
     name: Check version consistency
     runs-on: blacksmith-4vcpu-ubuntu-2204
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up python
         uses: useblacksmith/setup-python@v6
         with:
@@ -52,7 +52,7 @@ jobs:
     name: Type check (mypy)
     runs-on: blacksmith-4vcpu-ubuntu-2204
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up python
         uses: useblacksmith/setup-python@v6
         with:
