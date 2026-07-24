@@ -205,7 +205,7 @@ def test_package_manager_path(
         monkeypatch.setattr(
             'backend.cli.doctor.checks.Path.exists',
             lambda self: (
-                str(self) == exists_path
+                Path(self) == Path(exists_path) if exists_path else False
             ),  # None -> never matched -> not installed
         )
     monkeypatch.setenv('PATH', os.pathsep.join(path_dirs))
