@@ -186,7 +186,7 @@ class BashSession(BaseShellSession):
         )
         history_limit = str(self.HISTORY_LIMIT)
         try:
-            session.set_option('history-limit', history_limit, _global=True)
+            session.set_option('history-limit', history_limit, _global=True)  # type: ignore[call-arg]
         except TypeError:
             try:
                 session.set_option('history-limit', history_limit, global_=True)  # type: ignore[call-arg]
