@@ -10,7 +10,6 @@ from textual.containers import Container
 from textual.widgets import Static
 
 from backend.cli.theme import (
-    CLR_REASONING_SNAP,
     NAVY_BG_TRANSCRIPT_BLOCK,
     NAVY_BG_USER,
     NAVY_TEXT_BODY,
@@ -271,6 +270,8 @@ class ThinkingIndicator(Container):
     ThinkingIndicator > #thinking-content {{
         width: 100%;
         height: auto;
+        /* Keep private reasoning visually behind user-facing agent replies. */
+        opacity: 0.68;
     }}
     """
 
@@ -314,10 +315,10 @@ class ThinkingIndicator(Container):
         """No-op for API compatibility."""
 
     def _update_display_lightweight(self, content: Static, full_text: str) -> None:
-        from backend.cli.tui.renderer.prep import prep_streaming_renderable
+        from backend.cli.tui.renderer.prep import prep_reasoning_renderable
 
         content.remove_class('-hidden')
-        body = prep_streaming_renderable(full_text, base_text_style=CLR_REASONING_SNAP)
+        body = prep_reasoning_renderable(full_text)
         content.update(
             assemble_thinking_renderable(
                 self._current_action,

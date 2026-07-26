@@ -13,7 +13,6 @@ from textual.widgets import (
     Static,
 )
 
-from backend.cli.theme import CLR_REASONING_SNAP
 from backend.cli.tui.constants import (
     _TUI_SCROLL_PAINT_INTERVAL_SECONDS,
 )
@@ -289,11 +288,13 @@ class RendererLiveMixin:
             if thoughts and self._live_thinking_dirty:
                 snapshot_text = '\n'.join(thoughts)
                 self._live_thinking_widget.finalize()
+                from backend.cli.tui.renderer.prep import prep_reasoning_renderable
+
                 self._step_draft.note_thinking_committed()
                 snapshot = assemble_thinking_renderable(
                     'Thinking',
                     THINKING_LABEL,
-                    Text(snapshot_text, style=CLR_REASONING_SNAP),
+                    prep_reasoning_renderable(snapshot_text),
                 )
                 self._append_history_items(snapshot, Text(''))
             else:

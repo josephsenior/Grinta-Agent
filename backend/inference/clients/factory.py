@@ -50,9 +50,9 @@ def get_direct_client(
     )
 
     if provider == 'codex':
-        from backend.inference.clients.codex_app_server import CodexAppServerClient
+        from backend.inference.clients.codex_app_server import CodexResponsesClient
 
-        return CodexAppServerClient(model_name=stripped_model, timeout=timeout)
+        return CodexResponsesClient(model_name=stripped_model, timeout=timeout)
 
     client = _try_opencode_messages_client(
         provider, stripped_model, api_key, timeout, resolved_base_url

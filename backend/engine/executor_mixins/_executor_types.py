@@ -46,6 +46,7 @@ class ExecutionResult:
 class _AsyncStreamingState:
     content_accumulate: str = ''
     thinking_accumulate: str = ''
+    last_reasoning_item_id: str = ''
     tool_calls_dict: dict[int, dict[str, Any]] = field(default_factory=dict)
     streamed_usage: dict[str, int] | None = None
     stream_response_id: str = ''

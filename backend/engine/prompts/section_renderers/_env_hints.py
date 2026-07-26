@@ -50,7 +50,7 @@ def _discovery_decision_table(
     lines = [
         '<DISCOVERY_ROUTING>',
         'Pick the first matching row:',
-        '- Ranked `<REPO_MAP>` is preloaded for coding tasks (refreshed after edits) — use it for orientation first',
+        '- Ranked `<REPO_MAP>` is always preloaded for the active workspace (refreshed after edits) — use it for orientation first',
         '- Text/regex in file contents → `grep` (default output_mode=files_with_matches; use content when you need lines)',
         '- File paths by name/pattern → `glob`',
         '- Symbol name, file unknown → `find_symbols`',

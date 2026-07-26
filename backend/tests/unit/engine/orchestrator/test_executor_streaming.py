@@ -74,6 +74,40 @@ def test_finalize_stream_tool_calls_filters_invalid_streamed_name() -> None:
     assert state.malformed_tool_call_dropped is True
 
 
+def test_reasoning_item_boundaries_are_rendered_as_separate_lines() -> None:
+    """Codex reasoning summaries may omit whitespace between item deltas."""
+    from backend.engine.executor import OrchestratorExecutor
+    from backend.engine.executor_mixins._executor_types import _AsyncStreamingState
+
+    executor = object.__new__(OrchestratorExecutor)
+    state = _AsyncStreamingState()
+    event_stream = _event_stream('reasoning-item-boundaries')
+
+    asyncio.run(
+        executor._emit_stream_thinking_piece(
+            state,
+            'Clarifying configured model identity',
+            event_stream,
+            force=True,
+            reasoning_item_id='reasoning-1',
+        )
+    )
+    asyncio.run(
+        executor._emit_stream_thinking_piece(
+            state,
+            'Confirming session model as gpt-5.6-sol',
+            event_stream,
+            force=True,
+            reasoning_item_id='reasoning-2',
+        )
+    )
+
+    assert state.thinking_accumulate == (
+        'Clarifying configured model identity\n'
+        'Confirming session model as gpt-5.6-sol'
+    )
+
+
 def test_finalize_stream_tool_calls_recovers_text_marker_after_bad_streamed_name() -> (
     None
 ):

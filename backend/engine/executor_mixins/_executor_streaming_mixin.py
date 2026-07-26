@@ -460,12 +460,26 @@ class _ExecutorStreamingMixin:
         event_stream: EventStream | None,
         *,
         force: bool = False,
+        reasoning_item_id: str = '',
     ) -> None:
         if text_piece:
+            # Codex streams detailed summaries by reasoning item. A new item
+            # begins a distinct transcript sentence, even when the app-server
+            # omits a trailing newline from the preceding item.
+            if (
+                reasoning_item_id
+                and state.last_reasoning_item_id
+                and reasoning_item_id != state.last_reasoning_item_id
+                and state.thinking_accumulate
+                and not state.thinking_accumulate.endswith('\n')
+            ):
+                state.thinking_accumulate += '\n'
             state.thinking_accumulate = self._merge_stream_fragment(
                 state.thinking_accumulate,
                 text_piece,
             )
+            if reasoning_item_id:
+                state.last_reasoning_item_id = reasoning_item_id
         if not event_stream or not state.thinking_accumulate:
             return
         if not self._should_emit_stream_snapshot(
@@ -1003,6 +1017,7 @@ class _ExecutorStreamingMixin:
                 state,
                 reasoning_chunk,
                 event_stream,
+                reasoning_item_id=str(delta.get('_reasoning_item_id') or ''),
             )
 
         remaining = self._extract_delta_text(delta)

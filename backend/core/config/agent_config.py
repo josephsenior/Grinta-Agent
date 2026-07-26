@@ -216,7 +216,7 @@ class AgentConfig(BaseModel, metaclass=CanonicalModelMetaclass):
     enable_repo_map: bool = Field(
         default=True,
         description=(
-            'Inject a graph-ranked REPO_MAP block for coding tasks using the '
+            'Inject a graph-ranked REPO_MAP block for the active workspace using the '
             'persistent symbol index.'
         ),
     )

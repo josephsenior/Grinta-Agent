@@ -935,7 +935,7 @@ class OrchestratorPlanner:
         return self._apply_control_message(messages, block)
 
     def _inject_repo_map(self, messages: list, mode: str) -> list:
-        """Inject graph-ranked REPO_MAP control block for coding tasks."""
+        """Inject the graph-ranked REPO_MAP control block for the workspace."""
         if getattr(self._config, 'enable_repo_map', True) is False:
             return messages
         task = self._get_last_user_message(messages) or ''

@@ -91,13 +91,6 @@ def build_repo_map_block(
 ) -> str:
     if not repo_map_enabled(config):
         return ''
-    if mode.strip().lower() == 'chat':
-        return ''
-
-    from backend.context.coding_preflight import _looks_like_coding_task
-
-    if not _looks_like_coding_task(task):
-        return ''
 
     store = get_symbol_index_store()
     if store is None:

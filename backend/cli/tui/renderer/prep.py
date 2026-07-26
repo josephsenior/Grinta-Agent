@@ -26,6 +26,17 @@ _COMPLETE_FENCE_RE = re.compile(r'```([^\n`]*)\n(.*?)```', re.DOTALL)
 _OPEN_FENCE_RE = re.compile(r'```([^\n`]*)\n(.*)$', re.DOTALL)
 _OPEN_FENCE_START_RE = re.compile(r'```([^\n`]*)$')
 _INLINE_CODE_RE = re.compile(r'`([^`\n]+)`')
+_REASONING_TOKEN_RE = re.compile(
+    r'(?P<inline>`(?P<inline_value>[^`\n]+)`)'
+    r'|(?P<strong>\*\*(?P<strong_value>[^*\n]+)\*\*)'
+    r'|(?P<path>(?<![\w`])(?:[A-Za-z]:[\\/]|\.{1,2}[\\/]|[A-Za-z_][\w.-]*(?:[\\/][\w.@+-]+)+(?:\.[A-Za-z0-9]+)?)(?![\w`]))'
+)
+_REASONING_HEADING_RE = re.compile(r'^(?P<prefix>\s*#{1,3}\s+)(?P<body>.*)$')
+_REASONING_BULLET_RE = re.compile(r'^(?P<prefix>\s*(?:[-*+] |\d+[.)] ))(?P<body>.*)$')
+_REASONING_LABEL_RE = re.compile(
+    r'^(?P<prefix>\s*(?:plan|inspect|check|read|run|update|verify|result|next|risk|decision|observation|conclusion)\s*:\s*)(?P<body>.*)$',
+    re.IGNORECASE,
+)
 
 
 class GrintaMarkdown(Markdown):
@@ -55,6 +66,52 @@ def _prep_inline_code_text(
     if not parts:
         return Text(text, style=base_text_style)
     return Text.assemble(*parts)
+
+
+def _prep_reasoning_text(text: str, *, base_text_style: str) -> Text:
+    """Add lightweight structure to provider reasoning without requiring Markdown.
+
+    Reasoning streams commonly contain bare file paths, short action labels, and
+    list items rather than fully fenced Markdown.  Make those landmarks scannable
+    while retaining the muted reasoning body and keeping updates cheap enough for
+    token-by-token rendering.
+    """
+    parts: list[Any] = []
+
+    def add_tokens(value: str, style: str) -> None:
+        position = 0
+        for match in _REASONING_TOKEN_RE.finditer(value):
+            before = value[position : match.start()]
+            if before:
+                parts.append((before, style))
+            if match.group('inline_value') is not None:
+                parts.append((match.group('inline_value'), inline_code_style()))
+            elif match.group('strong_value') is not None:
+                parts.append((match.group('strong_value'), '#bbc8e8'))
+            else:
+                parts.append((match.group('path'), inline_code_style()))
+            position = match.end()
+        tail = value[position:]
+        if tail:
+            parts.append((tail, style))
+
+    for index, line in enumerate(text.splitlines(keepends=True)):
+        line_body = line.rstrip('\r\n')
+        newline = line[len(line_body) :]
+        match = (
+            _REASONING_HEADING_RE.match(line_body)
+            or _REASONING_BULLET_RE.match(line_body)
+            or _REASONING_LABEL_RE.match(line_body)
+        )
+        if match is not None:
+            parts.append((match.group('prefix'), '#42a394'))
+            add_tokens(match.group('body'), base_text_style)
+        else:
+            add_tokens(line_body, base_text_style)
+        if newline:
+            parts.append((newline, base_text_style))
+
+    return Text.assemble(*parts) if parts else Text('', style=base_text_style)
 
 
 def _split_streaming_fences(content: str) -> tuple[list[Any], str, bool]:
@@ -223,6 +280,28 @@ def prep_streaming_renderable(
     if len(parts) == 1:
         return parts[0]
     return Group(*parts)
+
+
+def prep_reasoning_renderable(text: str) -> Any:
+    """Prepare a reasoning block with code and planning landmarks highlighted."""
+    from backend.cli.theme import CLR_REASONING_SNAP
+
+    content = text or ''
+    if not content.strip():
+        return Text('')
+    if '```' not in content:
+        return _prep_reasoning_text(content, base_text_style=CLR_REASONING_SNAP)
+
+    raw_parts, _tail, _has_open = _split_streaming_fences(content)
+    parts: list[Any] = []
+    for segment in raw_parts:
+        if isinstance(segment, Syntax):
+            parts.append(segment)
+        elif isinstance(segment, str) and segment.strip():
+            parts.append(_prep_reasoning_text(segment, base_text_style=CLR_REASONING_SNAP))
+    if not parts:
+        return _prep_reasoning_text(content, base_text_style=CLR_REASONING_SNAP)
+    return parts[0] if len(parts) == 1 else Group(*parts)
 
 
 @dataclass

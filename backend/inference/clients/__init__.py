@@ -22,6 +22,7 @@ from backend.inference.clients.base import (  # noqa: F401
 )
 from backend.inference.clients.codex_app_server import (
     CodexAppServerClient,  # noqa: F401
+    CodexResponsesClient,  # noqa: F401
 )
 from backend.inference.clients.factory import get_direct_client  # noqa: F401
 from backend.inference.clients.openai_client import (  # noqa: F401
@@ -59,6 +60,7 @@ def __getattr__(name: str):
 __all__ = [
     'AnthropicClient',
     'CodexAppServerClient',
+    'CodexResponsesClient',
     'Anthropic',
     'AsyncAnthropic',
     'DirectLLMClient',

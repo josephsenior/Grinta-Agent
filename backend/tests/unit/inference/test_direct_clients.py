@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+import json
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -11,7 +13,7 @@ from backend.inference.clients import (
     _pool_key,
     get_direct_client,
 )
-from backend.inference.clients.codex_app_server import CodexAppServerClient
+from backend.inference.clients.codex_app_server import CodexResponsesClient
 
 # ---------------------------------------------------------------------------
 # Helper: mock the SDK constructors to avoid real HTTP clients
@@ -35,16 +37,21 @@ def _mock_openai_sdk():
 
 
 def test_codex_model_list_uses_account_catalog() -> None:
-    client = CodexAppServerClient()
+    client = CodexResponsesClient()
     with (
         patch.object(client, '_ensure_started'),
+        patch.object(client, '_ensure_authenticated_locked'),
         patch.object(
             client,
             '_request',
             side_effect=[
                 {
                     'data': [
-                        {'id': 'first-id', 'model': 'gpt-5.6-luna'},
+                        {
+                            'id': 'first-id',
+                            'model': 'gpt-5.6-luna',
+                            'isDefault': True,
+                        },
                         {'id': 'fallback-id'},
                     ],
                     'nextCursor': 'next',
@@ -58,90 +65,271 @@ def test_codex_model_list_uses_account_catalog() -> None:
             'fallback-id',
             'gpt-5.4-mini',
         ]
+        assert client._resolved_model_name() == 'gpt-5.6-luna'
 
 
-def test_codex_thread_params_pass_reasoning_effort_to_app_server() -> None:
-    client = CodexAppServerClient(model_name='gpt-5.6-sol')
-    params = client._thread_params('xhigh')
-    assert params['model'] == 'gpt-5.6-sol'
-    assert params['sandbox'] == 'workspace-write'
-    assert params['config'] == {
-        'model_reasoning_effort': 'xhigh',
-        'model_reasoning_summary': 'detailed',
-    }
-
-
-def test_codex_stream_turn_forwards_reasoning_to_the_transcript() -> None:
-    client = CodexAppServerClient()
-    emitted = []
-    with (
-        patch.object(client, '_ensure_started'),
-        patch.object(
-            client,
-            '_request',
-            side_effect=[{'thread': {'id': 'thread-1'}}, {'turn': {'id': 'turn-1'}}],
-        ),
-        patch.object(
-            client,
-            '_read',
-            side_effect=[
+def test_codex_payload_uses_grinta_instructions_and_native_tools() -> None:
+    client = CodexResponsesClient(model_name='gpt-5.6-sol')
+    client._reasoning_by_call_id['call-1'] = [
+        {
+            'type': 'reasoning',
+            'encrypted_content': 'opaque-state',
+            'summary': [],
+        }
+    ]
+    payload = client._build_payload(
+        [
+            {'role': 'system', 'content': 'You are the Grinta harness.'},
+            {
+                'role': 'assistant',
+                'content': '',
+                'tool_calls': [
+                    {
+                        'id': 'call-1',
+                        'type': 'function',
+                        'function': {'name': 'read', 'arguments': '{"path":"a.py"}'},
+                    }
+                ],
+            },
+            {
+                'role': 'tool',
+                'tool_call_id': 'call-1',
+                'name': 'read',
+                'content': 'print("ok")',
+            },
+        ],
+        {
+            'reasoning_effort': 'xhigh',
+            'tools': [
                 {
-                    'method': 'item/reasoning/summaryTextDelta',
-                    'params': {'turnId': 'turn-1', 'delta': 'Checking the request. '},
-                },
-                {
-                    'method': 'item/agentMessage/delta',
-                    'params': {'turnId': 'turn-1', 'delta': 'Done.'},
-                },
-                {
-                    'method': 'turn/completed',
-                    'params': {'turn': {'id': 'turn-1'}},
-                },
+                    'type': 'function',
+                    'function': {
+                        'name': 'read',
+                        'description': 'Read a file.',
+                        'parameters': {
+                            'type': 'object',
+                            'properties': {'path': {'type': 'string'}},
+                            'required': ['path'],
+                        },
+                    },
+                }
             ],
-        ),
-    ):
-        client._stream_turn([{'role': 'user', 'content': 'Hi'}], 'high', emitted.append)
+            'tool_choice': 'auto',
+            'parallel_tool_calls': True,
+        },
+    )
 
-    assert emitted == [
-        {'reasoning_content': 'Checking the request. '},
-        {'content': 'Done.'},
+    assert payload['instructions'] == 'You are the Grinta harness.'
+    assert payload['reasoning'] == {'effort': 'xhigh', 'summary': 'detailed'}
+    assert payload['tools'][0]['name'] == 'read'
+    assert 'function' not in payload['tools'][0]
+    assert payload['parallel_tool_calls'] is True
+    assert payload['input'] == [
+        {
+            'type': 'reasoning',
+            'encrypted_content': 'opaque-state',
+            'summary': [],
+        },
+        {
+            'type': 'function_call',
+            'call_id': 'call-1',
+            'name': 'read',
+            'arguments': '{"path":"a.py"}',
+        },
+        {
+            'type': 'function_call_output',
+            'call_id': 'call-1',
+            'output': 'print("ok")',
+        },
     ]
 
 
-def test_codex_turn_usage_includes_reasoning_tokens() -> None:
-    client = CodexAppServerClient()
-    with patch.object(
-        client,
-        '_read',
-        side_effect=[
-            {
-                'method': 'thread/tokenUsage/updated',
-                'params': {
-                    'turnId': 'turn-1',
-                    'tokenUsage': {
-                        'total': {
-                            'inputTokens': 100,
-                            'outputTokens': 50,
-                            'reasoningOutputTokens': 40,
-                            'totalTokens': 150,
-                        }
-                    },
+def test_codex_one_shot_completion_consumes_required_response_stream() -> None:
+    events = [
+        {'type': 'response.created', 'response': {'id': 'resp-1'}},
+        {'type': 'response.output_text.delta', 'delta': 'GRINTA_PROVIDER_OK'},
+        {
+            'type': 'response.completed',
+            'response': {
+                'id': 'resp-1',
+                'model': 'gpt-5.6-sol',
+                'status': 'completed',
+                'output': [],
+                'usage': {
+                    'input_tokens': 5,
+                    'output_tokens': 3,
+                    'total_tokens': 8,
                 },
             },
-            {
-                'method': 'item/agentMessage/delta',
-                'params': {'delta': 'Hello'},
-            },
-            {
-                'method': 'turn/completed',
-                'params': {'turn': {'id': 'turn-1'}},
-            },
-        ],
+        },
+    ]
+    responses = SimpleNamespace(create=MagicMock(return_value=events))
+    client = CodexResponsesClient(model_name='gpt-5.6-sol')
+    with (
+        patch.object(client, '_credentials', return_value=('token', 'account')),
+        patch.object(
+            client,
+            '_sync_responses_client',
+            return_value=SimpleNamespace(responses=responses),
+        ),
     ):
-        content, usage = client._wait_for_turn('turn-1')
+        result = client.completion(
+            [{'role': 'user', 'content': 'Reply with the marker.'}],
+            max_tokens=32,
+        )
 
-    assert content == 'Hello'
-    assert usage['reasoning_tokens'] == 40
+    assert result.content == 'GRINTA_PROVIDER_OK'
+    assert result.usage == {
+        'prompt_tokens': 5,
+        'completion_tokens': 3,
+        'total_tokens': 8,
+        'reasoning_tokens': 0,
+    }
+    responses.create.assert_called_once()
+    assert responses.create.call_args.kwargs['stream'] is True
+    assert 'max_output_tokens' not in responses.create.call_args.kwargs
+
+
+def test_codex_credentials_are_refreshed_then_read_from_managed_store(
+    tmp_path,
+) -> None:
+    auth_path = tmp_path / 'auth.json'
+    auth_path.write_text(
+        json.dumps(
+            {
+                'auth_mode': 'chatgpt',
+                'tokens': {
+                    'access_token': 'secret-access',
+                    'account_id': 'account-1',
+                },
+            }
+        ),
+        encoding='utf-8',
+    )
+    client = CodexResponsesClient()
+    with (
+        patch.object(client, '_ensure_started'),
+        patch.object(client, '_ensure_authenticated_locked') as authenticate,
+        patch.object(client, '_codex_home', return_value=tmp_path),
+    ):
+        assert client._credentials() == ('secret-access', 'account-1')
+    authenticate.assert_called_once_with()
+
+
+class _CodexAsyncStream:
+    def __init__(self, events):
+        self._events = iter(events)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self._events)
+        except StopIteration:
+            raise StopAsyncIteration from None
+
+
+@pytest.mark.asyncio
+async def test_codex_stream_maps_reasoning_tools_and_usage_to_grinta() -> None:
+    events = [
+        {'type': 'response.created', 'response': {'id': 'resp-1'}},
+        {
+            'type': 'response.reasoning_summary_text.delta',
+            'item_id': 'reasoning-1',
+            'delta': 'Inspecting the request. ',
+        },
+        {
+            'type': 'response.output_item.done',
+            'output_index': 0,
+            'item': {
+                'type': 'reasoning',
+                'encrypted_content': 'opaque-reasoning',
+                'summary': [],
+            },
+        },
+        {
+            'type': 'response.output_item.added',
+            'output_index': 1,
+            'item': {
+                'type': 'function_call',
+                'id': 'item-1',
+                'call_id': 'call-1',
+                'name': 'read',
+            },
+        },
+        {
+            'type': 'response.function_call_arguments.delta',
+            'output_index': 1,
+            'item_id': 'item-1',
+            'delta': '{"path":"a.py"}',
+        },
+        {
+            'type': 'response.output_item.done',
+            'output_index': 1,
+            'item': {
+                'type': 'function_call',
+                'id': 'item-1',
+                'call_id': 'call-1',
+                'name': 'read',
+                'arguments': '{"path":"a.py"}',
+            },
+        },
+        {
+            'type': 'response.completed',
+            'response': {
+                'id': 'resp-1',
+                'output': [],
+                'usage': {
+                    'input_tokens': 100,
+                    'output_tokens': 50,
+                    'total_tokens': 150,
+                    'output_tokens_details': {'reasoning_tokens': 40},
+                },
+            },
+        },
+    ]
+    responses = SimpleNamespace(
+        create=AsyncMock(return_value=_CodexAsyncStream(events))
+    )
+    client = CodexResponsesClient(model_name='gpt-5.6-sol')
+    with (
+        patch.object(client, '_credentials', return_value=('token', 'account')),
+        patch.object(
+            client,
+            '_async_responses_client',
+            return_value=SimpleNamespace(responses=responses),
+        ),
+    ):
+        chunks = [
+            chunk
+            async for chunk in client.astream(
+                [
+                    {'role': 'system', 'content': 'Grinta'},
+                    {'role': 'user', 'content': 'Read'},
+                ],
+                tools=[],
+                reasoning_effort='high',
+            )
+        ]
+
+    assert chunks[0]['choices'][0]['delta'] == {
+        'reasoning_content': 'Inspecting the request. ',
+        '_reasoning_item_id': 'reasoning-1',
+    }
+    tool_chunks = [
+        chunk['choices'][0]['delta']['tool_calls'][0]
+        for chunk in chunks
+        if chunk.get('choices')
+        and chunk['choices'][0]['delta'].get('tool_calls')
+    ]
+    assert tool_chunks[0]['id'] == 'call-1'
+    assert tool_chunks[0]['function']['name'] == 'read'
+    assert tool_chunks[1]['function']['arguments'] == '{"path":"a.py"}'
+    assert chunks[-1]['usage']['reasoning_tokens'] == 40
+    assert client._reasoning_by_call_id['call-1'][0]['encrypted_content'] == (
+        'opaque-reasoning'
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -238,9 +426,9 @@ class TestGetDirectClientRouting:
         assert type(client).__name__ == 'OpenAIClient'
         assert client._model_name == 'gpt-5'
 
-    def test_codex_routes_to_app_server(self):
+    def test_codex_routes_to_responses_provider(self):
         client = get_direct_client('codex/default', api_key='')
-        assert type(client).__name__ == 'CodexAppServerClient'
+        assert type(client).__name__ == 'CodexResponsesClient'
         assert client._model_name == 'default'
 
     @patch('backend.inference.clients.Anthropic')

@@ -185,7 +185,18 @@ def test_build_repo_map_block_includes_empty_workspace_hint(
     assert 'workspace is currently empty' in block
 
 
-def test_build_repo_map_block_skips_read_only(workspace_with_py: Path) -> None:
+@pytest.mark.parametrize(
+    ('mode', 'task'),
+    [
+        ('agent', 'what is this repo about?'),
+        ('chat', 'hello'),
+    ],
+)
+def test_build_repo_map_block_is_unconditional_across_mode_and_task(
+    workspace_with_py: Path,
+    mode: str,
+    task: str,
+) -> None:
     class _Config:
         enable_repo_map = True
         map_tokens = 800
@@ -193,11 +204,12 @@ def test_build_repo_map_block_skips_read_only(workspace_with_py: Path) -> None:
         llm_config = None
 
     block = build_repo_map_block(
-        task='what is this repo about?',
+        task=task,
         config=_Config(),
-        mode='agent',
+        mode=mode,
     )
-    assert block == ''
+    assert '<REPO_MAP>' in block
+    assert 'app/main.py' in block.replace('\\', '/')
 
 
 def test_reset_on_corrupt_query(

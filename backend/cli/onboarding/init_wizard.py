@@ -412,10 +412,12 @@ def _collect_user_choices(
         return None
     if provider == 'codex':
         try:
-            from backend.inference.clients.codex_app_server import CodexAppServerClient
+            from backend.inference.clients.codex_app_server import (
+                CodexResponsesClient,
+            )
 
             console.print('[dim]Opening ChatGPT sign-in and loading Codex models…[/]')
-            codex_client = CodexAppServerClient()
+            codex_client = CodexResponsesClient()
             try:
                 models = codex_client.list_available_models()
             finally:
