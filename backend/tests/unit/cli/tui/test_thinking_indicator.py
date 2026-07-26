@@ -101,8 +101,8 @@ async def test_thinking_indicator_highlights_reasoning_structure_and_paths() -> 
             for value, style, _ in rendered
             if value.strip() == 'backend/cli/tui/app.py'
         ]
-        bullet_styles = [
-            style for value, style, _ in rendered if value.strip() == '-'
-        ]
+        bullet_styles = [style for value, style, _ in rendered if value.strip() == '-']
         assert path_styles and any('101829' in str(style) for style in path_styles)
-        assert bullet_styles and any('42a394' in str(style.color) for style in bullet_styles)
+        assert bullet_styles and any(
+            '42a394' in str(style.color) for style in bullet_styles
+        )

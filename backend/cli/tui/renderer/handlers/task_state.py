@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import json
+from typing import TYPE_CHECKING
 
 from backend.ledger.action import TaskStateAction
 from backend.ledger.observation import TaskStateObservation

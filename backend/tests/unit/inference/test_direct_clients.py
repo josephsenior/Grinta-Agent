@@ -320,8 +320,7 @@ async def test_codex_stream_maps_reasoning_tools_and_usage_to_grinta() -> None:
     tool_chunks = [
         chunk['choices'][0]['delta']['tool_calls'][0]
         for chunk in chunks
-        if chunk.get('choices')
-        and chunk['choices'][0]['delta'].get('tool_calls')
+        if chunk.get('choices') and chunk['choices'][0]['delta'].get('tool_calls')
     ]
     assert tool_chunks[0]['id'] == 'call-1'
     assert tool_chunks[0]['function']['name'] == 'read'

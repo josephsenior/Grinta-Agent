@@ -572,9 +572,7 @@ def _collect_system_prompt_sections(
             'system_partial_04_critical',
             _render_critical(
                 resolved_terminal_tool,
-                terminal_available=bool(
-                    getattr(config, 'enable_terminal', True)
-                ),
+                terminal_available=bool(getattr(config, 'enable_terminal', True)),
                 editor_available=bool(getattr(config, 'enable_editor', True)),
                 tracker_on=bool(getattr(config, 'enable_task_tracker_tool', True)),
                 criteria_on=bool(

@@ -298,7 +298,9 @@ def prep_reasoning_renderable(text: str) -> Any:
         if isinstance(segment, Syntax):
             parts.append(segment)
         elif isinstance(segment, str) and segment.strip():
-            parts.append(_prep_reasoning_text(segment, base_text_style=CLR_REASONING_SNAP))
+            parts.append(
+                _prep_reasoning_text(segment, base_text_style=CLR_REASONING_SNAP)
+            )
     if not parts:
         return _prep_reasoning_text(content, base_text_style=CLR_REASONING_SNAP)
     return parts[0] if len(parts) == 1 else Group(*parts)

@@ -27,7 +27,9 @@ def _build_agent_execution_block(
     if terminal_routing_rule:
         planning_parts.append(f'`{terminal_command_tool}`')
     planning_parts.append(
-        'the public file API tools' if editor_available else 'the native discovery tools'
+        'the public file API tools'
+        if editor_available
+        else 'the native discovery tools'
     )
     if len(planning_parts) == 1:
         planning_tool_list = planning_parts[0]

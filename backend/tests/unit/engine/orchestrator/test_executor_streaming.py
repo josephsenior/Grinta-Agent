@@ -103,8 +103,7 @@ def test_reasoning_item_boundaries_are_rendered_as_separate_lines() -> None:
     )
 
     assert state.thinking_accumulate == (
-        'Clarifying configured model identity\n'
-        'Confirming session model as gpt-5.6-sol'
+        'Clarifying configured model identity\nConfirming session model as gpt-5.6-sol'
     )
 
 
@@ -727,7 +726,7 @@ def test_async_execute_clamps_completion_budget_before_stream_call(monkeypatch):
         mcp_tools_provider=lambda: {},
     )
 
-    params = {'messages': [{'role': 'user', 'content': 'x' * 500}]}
+    params = {'messages': [{'role': 'user', 'content': 'x' * 2800}]}
     expected = executor._apply_context_window_preflight(dict(params))
 
     asyncio.run(

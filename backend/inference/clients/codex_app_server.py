@@ -132,14 +132,13 @@ def _responses_tools(tools: Any) -> list[dict[str, Any]]:
                 'type': 'function',
                 'name': str(function['name']),
                 'description': str(function.get('description') or ''),
-                'parameters': function.get('parameters') or {
+                'parameters': function.get('parameters')
+                or {
                     'type': 'object',
                     'properties': {},
                 },
                 **(
-                    {'strict': bool(function['strict'])}
-                    if 'strict' in function
-                    else {}
+                    {'strict': bool(function['strict'])} if 'strict' in function else {}
                 ),
             }
         )
@@ -256,13 +255,11 @@ class CodexResponsesClient(DirectLLMClient):
         self._next_id = 1
         self._auth_lock = threading.Lock()
         self._default_model: str | None = None
-        self._reasoning_by_call_id: OrderedDict[
-            str, list[dict[str, Any]]
-        ] = OrderedDict()
+        self._reasoning_by_call_id: OrderedDict[str, list[dict[str, Any]]] = (
+            OrderedDict()
+        )
 
-    def completion(
-        self, messages: list[dict[str, Any]], **kwargs: Any
-    ) -> LLMResponse:
+    def completion(self, messages: list[dict[str, Any]], **kwargs: Any) -> LLMResponse:
         token, account_id = self._credentials()
         client = self._sync_responses_client(token, account_id)
         payload = self._build_payload(messages, kwargs)
@@ -357,19 +354,19 @@ class CodexResponsesClient(DirectLLMClient):
 
             if event_type == 'response.function_call_arguments.delta':
                 output_index = int(_get(event, 'output_index', 0) or 0)
-                tool_index = tool_indexes.get(output_index)
-                if tool_index is None:
+                delta_tool_index: int | None = tool_indexes.get(output_index)
+                if delta_tool_index is None:
                     item_id = str(_get(event, 'item_id') or '')
-                    tool_index = tool_item_indexes.get(item_id)
-                if tool_index is None:
-                    tool_index = len(tool_indexes)
-                    tool_indexes[output_index] = tool_index
+                    delta_tool_index = tool_item_indexes.get(item_id)
+                if delta_tool_index is None:
+                    delta_tool_index = len(tool_indexes)
+                    tool_indexes[output_index] = delta_tool_index
                 delta = _get(event, 'delta')
                 if isinstance(delta, str) and delta:
-                    streamed_arguments.add(tool_index)
+                    streamed_arguments.add(delta_tool_index)
                     yield self._tool_call_chunk(
                         response_id=response_id,
-                        index=tool_index,
+                        index=delta_tool_index,
                         arguments=delta,
                     )
                 continue
@@ -385,23 +382,23 @@ class CodexResponsesClient(DirectLLMClient):
                 if item_type != 'function_call':
                     continue
                 output_index = int(_get(event, 'output_index', 0) or 0)
-                tool_index = tool_indexes.get(output_index)
-                if tool_index is None:
-                    tool_index = len(tool_indexes)
-                    tool_indexes[output_index] = tool_index
+                done_tool_index: int | None = tool_indexes.get(output_index)
+                if done_tool_index is None:
+                    done_tool_index = len(tool_indexes)
+                    tool_indexes[output_index] = done_tool_index
                 call_id = str(_get(item, 'call_id') or _get(item, 'id') or '')
                 if call_id and call_id not in call_ids:
                     call_ids.append(call_id)
                 name = str(_get(item, 'name') or '')
                 arguments = (
                     ''
-                    if tool_index in streamed_arguments
+                    if done_tool_index in streamed_arguments
                     else str(_get(item, 'arguments') or '')
                 )
                 if name or arguments:
                     yield self._tool_call_chunk(
                         response_id=response_id,
-                        index=tool_index,
+                        index=done_tool_index,
                         call_id=call_id,
                         name=name,
                         arguments=arguments,
@@ -545,8 +542,8 @@ class CodexResponsesClient(DirectLLMClient):
                 continue
             if not params.get('success'):
                 raise CodexAppServerError(
-                    f"ChatGPT sign-in did not complete: "
-                    f"{params.get('error') or 'cancelled'}"
+                    f'ChatGPT sign-in did not complete: '
+                    f'{params.get("error") or "cancelled"}'
                 )
             account = self._request('account/read', {'refreshToken': True})
             if (account.get('account') or {}).get('type') == 'chatgpt':
@@ -560,9 +557,9 @@ class CodexResponsesClient(DirectLLMClient):
             return self._model_name
         if self._default_model:
             return self._default_model
-        self.list_available_models()
-        if self._default_model:
-            return self._default_model
+        models = self.list_available_models()
+        if models:
+            return self._default_model or models[0]
         raise CodexAppServerError(
             'The signed-in Codex account did not advertise a default model.'
         )
@@ -580,12 +577,12 @@ class CodexResponsesClient(DirectLLMClient):
             api_key=token,
             base_url=_CODEX_RESPONSES_BASE_URL,
             default_headers=self._default_headers(account_id),
-            http_client=get_shared_http_client('codex-oauth', _CODEX_RESPONSES_BASE_URL),
+            http_client=get_shared_http_client(
+                'codex-oauth', _CODEX_RESPONSES_BASE_URL
+            ),
         )
 
-    def _async_responses_client(
-        self, token: str, account_id: str
-    ) -> AsyncOpenAI:
+    def _async_responses_client(self, token: str, account_id: str) -> AsyncOpenAI:
         return AsyncOpenAI(
             api_key=token,
             base_url=_CODEX_RESPONSES_BASE_URL,
@@ -637,8 +634,6 @@ class CodexResponsesClient(DirectLLMClient):
         instructions: list[str] = []
         input_items: list[dict[str, Any]] = []
         for message in messages:
-            if not isinstance(message, dict):
-                continue
             role = str(message.get('role') or 'user').strip().lower()
             if role in {'system', 'developer'}:
                 text = _content_text(message.get('content'))
@@ -678,9 +673,7 @@ class CodexResponsesClient(DirectLLMClient):
                                 'arguments': str(function.get('arguments') or '{}'),
                             }
                         )
-                content = _message_content_parts(
-                    message.get('content'), assistant=True
-                )
+                content = _message_content_parts(message.get('content'), assistant=True)
                 if content:
                     input_items.append(
                         {'type': 'message', 'role': 'assistant', 'content': content}
@@ -718,9 +711,9 @@ class CodexResponsesClient(DirectLLMClient):
             model=str(_get(response, 'model') or self._resolved_model_name()),
             usage=_usage_dict(_get(response, 'usage')),
             response_id=str(_get(response, 'id') or ''),
-            finish_reason='tool_calls' if tool_calls else str(
-                _get(response, 'status') or 'stop'
-            ),
+            finish_reason='tool_calls'
+            if tool_calls
+            else str(_get(response, 'status') or 'stop'),
             tool_calls=tool_calls,
             reasoning_content=_response_reasoning(output),
         )
@@ -746,9 +739,7 @@ class CodexResponsesClient(DirectLLMClient):
             event_type = str(_get(event, 'type') or '')
             event_response = _get(event, 'response')
             if event_response is not None:
-                response['id'] = str(
-                    _get(event_response, 'id') or response['id']
-                )
+                response['id'] = str(_get(event_response, 'id') or response['id'])
                 response['model'] = str(
                     _get(event_response, 'model') or response['model']
                 )
@@ -786,9 +777,7 @@ class CodexResponsesClient(DirectLLMClient):
                 {
                     'type': 'message',
                     'role': 'assistant',
-                    'content': [
-                        {'type': 'output_text', 'text': ''.join(text_deltas)}
-                    ],
+                    'content': [{'type': 'output_text', 'text': ''.join(text_deltas)}],
                 }
             )
         if reasoning_deltas and 'reasoning' not in output_types:

@@ -15,7 +15,9 @@ def _render_security(
 ) -> str:
     from backend.core.autonomy import security_risk_required_for_autonomy
 
-    read_only_tools = '`read_file`, `grep`, `glob`, `find_symbols`, `analyze_project_structure`'
+    read_only_tools = (
+        '`read_file`, `grep`, `glob`, `find_symbols`, `analyze_project_structure`'
+    )
     if enable_lsp:
         read_only_tools += ', `lsp`'
     if enable_web:

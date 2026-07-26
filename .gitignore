@@ -46,6 +46,9 @@ audit-requirements.txt
 # Test framework caches
 .hypothesis/
 .pytest_cache/
+.pytest-*/
+grinta-pytest-home-*/
+.pre-commit-ci-cache/
 .mypy_cache/
 .ruff_cache/
 .tox/

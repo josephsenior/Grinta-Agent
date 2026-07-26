@@ -122,6 +122,4 @@ def _handle_delegate_task_observation(
     )
     from backend.cli.tui.widgets.activity_card import ToolResult
 
-    orch._append_transcript_widget(
-        ToolResult('Delegate', detail, success=success)
-    )
+    orch._append_transcript_widget(ToolResult('Delegate', detail, success=success))

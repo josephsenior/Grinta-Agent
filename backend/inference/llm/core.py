@@ -351,11 +351,11 @@ class LLM(RetryMixin, DebugMixin):
         completion_tokens = usage.get('completion_tokens', 0)
         reasoning_tokens = usage.get('reasoning_tokens', 0)
         if not reasoning_tokens and 'completion_tokens_details' in usage:
-            details: Any = usage['completion_tokens_details']
-            if hasattr(details, 'reasoning_tokens'):
-                reasoning_tokens = details.reasoning_tokens
-            elif isinstance(details, dict):
-                reasoning_tokens = details.get('reasoning_tokens', 0)
+            completion_details: Any = usage['completion_tokens_details']
+            if hasattr(completion_details, 'reasoning_tokens'):
+                reasoning_tokens = completion_details.reasoning_tokens
+            elif isinstance(completion_details, dict):
+                reasoning_tokens = completion_details.get('reasoning_tokens', 0)
         usage_estimated = bool(usage.get('is_estimated', False))
 
         # Extract cache tokens from provider-specific nested structures
@@ -363,11 +363,11 @@ class LLM(RetryMixin, DebugMixin):
         cache_write = usage.get('cache_write_tokens', 0)
 
         if not cache_read and 'prompt_tokens_details' in usage:
-            details: Any = usage['prompt_tokens_details']
-            if hasattr(details, 'cached_tokens'):
-                cache_read = details.cached_tokens
-            elif isinstance(details, dict):
-                cache_read = details.get('cached_tokens', 0)
+            prompt_details: Any = usage['prompt_tokens_details']
+            if hasattr(prompt_details, 'cached_tokens'):
+                cache_read = prompt_details.cached_tokens
+            elif isinstance(prompt_details, dict):
+                cache_read = prompt_details.get('cached_tokens', 0)
 
         if not cache_write and 'model_extra' in usage:
             extra: Any = usage['model_extra']

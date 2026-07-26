@@ -115,7 +115,6 @@ class AgentMessage(Static):
         self.update(renderable)
 
 
-
 class ToolResult(Static):
     """Deterministic inline tool result shown directly in the transcript."""
 
@@ -142,6 +141,7 @@ class ToolResult(Static):
         super().__init__(renderable)
         if not success:
             self.add_class('-failed')
+
 
 class LiveResponse(Container):
     """In-flight assistant response — streams with the same markdown richness as finals."""

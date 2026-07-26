@@ -31,9 +31,8 @@ def _render_tool_reference(
     )
 
     mode = normalize_interaction_mode(getattr(config, 'mode', 'agent'))
-    can_edit = (
-        not (is_chat_mode(mode) or is_plan_mode(mode))
-        and bool(getattr(config, 'enable_editor', True))
+    can_edit = not (is_chat_mode(mode) or is_plan_mode(mode)) and bool(
+        getattr(config, 'enable_editor', True)
     )
     terminal_available = bool(getattr(config, 'enable_terminal', True))
 

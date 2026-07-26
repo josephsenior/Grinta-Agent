@@ -116,8 +116,7 @@ class TestRenderCriticalModeSpecific:
         lines = [
             line
             for line in body.split('\n')
-            if line.strip()
-            and line.strip().split('.', 1)[0].isdigit()
+            if line.strip() and line.strip().split('.', 1)[0].isdigit()
         ]
         assert len(lines) == 9, (
             f'Expected 9 numbered rules without terminal, got {len(lines)}:\n{body}'
@@ -137,8 +136,7 @@ class TestRenderCriticalModeSpecific:
         lines = [
             line
             for line in body.split('\n')
-            if line.strip()
-            and line.strip().split('.', 1)[0].isdigit()
+            if line.strip() and line.strip().split('.', 1)[0].isdigit()
         ]
         assert len(lines) == 11, (
             f'Expected 11 numbered rules with terminal, got {len(lines)}'
