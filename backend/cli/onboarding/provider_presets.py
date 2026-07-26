@@ -39,6 +39,8 @@ def _help_text(key: str, label: str, category: str) -> str:
         return 'Vercel AI Gateway (OpenAI-compatible, 200+ models)'
     if key == 'moonshot':
         return 'Moonshot Kimi API (kimi-k2.5, kimi-k2.6, kimi-k2.7-code, ...)'
+    if key == 'kimi':
+        return 'Kimi Code API (K3 coding models)'
     return label
 
 

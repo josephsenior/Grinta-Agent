@@ -593,7 +593,11 @@ class DebuggerCard(ScanLineCard):
 
 
 class DelegateCard(ScanLineCard):
-    """1-line delegated worker summary — full result in detail screen."""
+    """1-line delegated worker summary with an inline transcript result."""
+
+    @property
+    def has_detail(self) -> bool:
+        return False
 
     def __init__(
         self,
@@ -637,27 +641,16 @@ class DelegateCard(ScanLineCard):
             return _status_indicator_markup('done')
         return _status_indicator_markup('failed')
 
-    def build_detail_screen(self) -> DetailScreen:
-        from backend.cli.tui.screens.detail.payload import PayloadDetailScreen
-
-        meta: list[str] = []
-        if self._worker:
-            meta.append(f'[#6f83aa]worker: {self._worker}[/]')
-        return PayloadDetailScreen(
-            kind='Delegate',
-            heading=_truncate(self._delegate_task, 80),
-            body=self._result,
-            meta_parts=meta,
-            accent=self.state_border_color,
-            title=f'Delegate  {_truncate(self._delegate_task, 60)}',
-        )
-
 
 # ── MCPCard ────────────────────────────────────────────────────────────
 
 
 class MCPCard(ScanLineCard):
-    """1-line MCP tool call — arguments + result in detail screen."""
+    """1-line MCP tool call with an inline transcript result."""
+
+    @property
+    def has_detail(self) -> bool:
+        return False
 
     def __init__(
         self,
@@ -722,25 +715,16 @@ class MCPCard(ScanLineCard):
             return _status_indicator_markup('done')
         return _status_indicator_markup('failed')
 
-    def build_detail_screen(self) -> DetailScreen:
-        from backend.cli.tui.screens.detail.payload import PayloadDetailScreen
-
-        meta = [f'[#6f83aa]{line}[/]' for line in self._meta_lines if line]
-        return PayloadDetailScreen(
-            kind='MCP',
-            heading=self._name,
-            body=self._result,
-            meta_parts=meta,
-            accent=self.state_border_color,
-            title=f'MCP  {self._name}',
-        )
-
 
 # ── PayloadCard ────────────────────────────────────────────────────────
 
 
 class PayloadCard(ScanLineCard):
-    """Generic artifact row (thinking code/tool/shared payloads)."""
+    """Generic artifact row with an inline transcript payload."""
+
+    @property
+    def has_detail(self) -> bool:
+        return False
 
     def __init__(
         self,
@@ -764,17 +748,6 @@ class PayloadCard(ScanLineCard):
 
     def _delta_text(self) -> str:
         return _status_indicator_markup(self._state)
-
-    def build_detail_screen(self) -> DetailScreen:
-        from backend.cli.tui.screens.detail.payload import PayloadDetailScreen
-
-        return PayloadDetailScreen(
-            kind=self._label,
-            heading=_truncate(self._detail, 80),
-            body=self._body,
-            accent=self.state_border_color,
-            title=f'{self._label}  {_truncate(self._detail, 60)}',
-        )
 
 
 # ── CompactionCard ─────────────────────────────────────────────────────

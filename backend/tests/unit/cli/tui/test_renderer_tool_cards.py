@@ -749,7 +749,7 @@ async def test_tui_acceptance_criteria_renders_scan_line_card(mock_config):
 
 
 @pytest.mark.asyncio
-async def test_tui_task_state_refreshes_tasks_sidebar_without_transcript_card(
+async def test_tui_task_state_refreshes_sidebar_and_transcript(
     mock_config,
 ):
     from backend.ledger.action import TaskStateAction
@@ -799,6 +799,10 @@ async def test_tui_task_state_refreshes_tasks_sidebar_without_transcript_card(
         assert tasks._section_title == 'Tasks · 1/2 done'
         rows = list(tasks.query(SidebarRow).results())
         assert len(rows) == 2
+
+        from backend.cli.tui.widgets.activity_card import ToolResult
+
+        assert len(list(s.query(ToolResult).results())) == 1
 
 
 @pytest.mark.asyncio

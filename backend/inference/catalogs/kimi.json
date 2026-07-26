@@ -1,0 +1,46 @@
+{
+  "provider": "kimi",
+  "client": "openai_compatible",
+  "models": {
+    "k3": {
+      "runtime": {
+        "aliases": ["kimi/k3", "k3"],
+        "context_window_tokens": 1048576,
+        "max_input_tokens": 917504,
+        "max_output_tokens": 131072,
+        "verified": true,
+        "featured": true,
+        "supports_function_calling": true,
+        "supports_parallel_tool_calls": true,
+        "supports_vision": true,
+        "supports_reasoning_effort": true,
+        "supports_prompt_cache": true,
+        "supports_stop_words": true,
+        "reasoning_efforts": ["low", "high", "max"],
+        "reasoning_wire": "openai_reasoning_effort",
+        "supports_response_schema": true
+      },
+      "metadata": {"display_name": "Kimi K3 (Kimi Code)"}
+    },
+    "k3-256k": {
+      "runtime": {
+        "aliases": ["kimi/k3-256k", "k3-256k"],
+        "context_window_tokens": 262144,
+        "max_input_tokens": 229376,
+        "max_output_tokens": 32768,
+        "verified": true,
+        "featured": true,
+        "supports_function_calling": true,
+        "supports_parallel_tool_calls": true,
+        "supports_vision": true,
+        "supports_reasoning_effort": true,
+        "supports_prompt_cache": true,
+        "supports_stop_words": true,
+        "reasoning_efforts": ["low", "high", "max"],
+        "reasoning_wire": "openai_reasoning_effort",
+        "supports_response_schema": true
+      },
+      "metadata": {"display_name": "Kimi K3 256K (Kimi Code)"}
+    }
+  }
+}

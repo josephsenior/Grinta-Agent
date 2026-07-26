@@ -493,6 +493,7 @@ def test_delegate_card_running_then_done():
     card.complete(result='done', success=True)
     assert card.state == 'done'
     assert '✓' in card._delta_text()
+    assert not card.has_detail
 
 
 def test_mcp_card_merges_result():
@@ -500,16 +501,13 @@ def test_mcp_card_merges_result():
     card.complete(result='snippet', success=True)
     assert card.state == 'done'
     assert '⊛ Called' in _line_text(card) or 'search_docs' in _line_text(card)
+    assert not card.has_detail
 
 
-def test_payload_card_detail_screen():
+def test_payload_card_has_no_detail_screen():
     card = PayloadCard('Found', 'MyClass', 'class MyClass: ...')
     assert 'ƒ Found' in _line_text(card)
-    screen = card.build_detail_screen()
-    from backend.cli.tui.screens.detail.payload import PayloadDetailScreen
-
-    assert isinstance(screen, PayloadDetailScreen)
-    assert 'MyClass' in screen._body
+    assert not card.has_detail
 
 
 # ── detail screen base ─────────────────────────────────────────────────

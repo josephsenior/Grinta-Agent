@@ -67,6 +67,8 @@ def _handle_mcp_observation(
         pending = orch._pending_mcp_card
     from backend.cli.tui.widgets.scan_line import MCPCard
 
+    from backend.cli.tui.widgets.activity_card import ToolResult
+
     if isinstance(pending, MCPCard):
         pending.complete(
             result=content,
@@ -76,6 +78,9 @@ def _handle_mcp_observation(
         if orch._pending_mcp_card is pending:
             orch._pending_mcp_card = None
         orch._pending_exploration_meta = None
+        orch._append_transcript_widget(
+            ToolResult(event.name, content, success=not is_error)
+        )
         return
 
     orch._append_scan_line_card(
@@ -90,3 +95,6 @@ def _handle_mcp_observation(
     if action_id is None or action_id < 0:
         orch._pending_mcp_card = None
     orch._pending_exploration_meta = None
+    orch._append_transcript_widget(
+        ToolResult(event.name, content, success=not is_error)
+    )

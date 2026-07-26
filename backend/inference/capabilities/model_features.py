@@ -152,6 +152,7 @@ RESPONSE_SCHEMA_PATTERNS: list[str] = [
     'alibaba/qwen3*',
     # Kimi / Moonshot
     'kimi*',
+    'kimi/k3*',
     'moonshot/*',
     'moonshotai/*',
     # Zhipu GLM

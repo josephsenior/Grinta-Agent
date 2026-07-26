@@ -2,6 +2,29 @@
   "provider": "openrouter",
   "client": "openai_compatible",
   "models": {
+    "moonshotai/kimi-k3": {
+      "runtime": {
+        "aliases": ["openrouter/moonshotai/kimi-k3", "moonshotai/kimi-k3"],
+        "context_window_tokens": 1050000,
+        "max_input_tokens": 917904,
+        "max_output_tokens": 131072,
+        "input_price_per_m": 3.0,
+        "cached_input_price_per_m": 0.3,
+        "output_price_per_m": 15.0,
+        "verified": true,
+        "featured": true,
+        "supports_function_calling": true,
+        "supports_parallel_tool_calls": true,
+        "supports_vision": true,
+        "supports_reasoning_effort": true,
+        "supports_prompt_cache": true,
+        "supports_stop_words": true,
+        "reasoning_efforts": ["low", "high", "max"],
+        "reasoning_wire": "openai_reasoning_effort",
+        "supports_response_schema": true
+      },
+      "metadata": {"display_name": "Kimi K3 (via OpenRouter)"}
+    },
     "anthropic/claude-sonnet-4": {
       "runtime": {
         "aliases": [

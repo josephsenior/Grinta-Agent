@@ -138,10 +138,15 @@ class ScanLineCard(Container):
 
     def __init__(self, *, id: str | None = None) -> None:
         super().__init__(id=id)
-        self.can_focus = True
+        self.can_focus = self.has_detail
         self.set_state('queued')
 
     # ── state management ────────────────────────────────────────────
+
+    @property
+    def has_detail(self) -> bool:
+        """Whether this card opens a separate detail screen."""
+        return True
 
     @property
     def state_border_color(self) -> str:
@@ -209,7 +214,7 @@ class ScanLineCard(Container):
         raise NotImplementedError
 
     def _open_detail(self) -> None:
-        if self.app is None:
+        if not self.has_detail or self.app is None:
             return
         self.app.push_screen(self.build_detail_screen())
 
@@ -223,10 +228,13 @@ class ScanLineCard(Container):
         with Horizontal():
             yield Static(self._line_text(), id='scan-summary')
             yield Static(self._delta_text(), id='scan-delta')
-            yield Static(_expand_label(self._state), id='scan-expand')
+            if self.has_detail:
+                yield Static(_expand_label(self._state), id='scan-expand')
 
     def _refresh_expand_label(self) -> None:
         """Refresh the expand-slot text to reflect the current state."""
+        if not self.has_detail:
+            return
         try:
             widget = self.query_one('#scan-expand', Static)
         except Exception:

@@ -142,6 +142,7 @@ _OPENAI_COMPATIBLE_PROVIDERS: frozenset[str] = frozenset(
         'groq',
         'lightning',
         'mistral',
+        'kimi',
         'nvidia',
         'opencode',
         'opencode-go',

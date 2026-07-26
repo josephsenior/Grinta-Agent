@@ -10,6 +10,7 @@ from backend.cli.tui.widgets.activity_card.message_widgets import (
     AgentMessage,
     LiveResponse,
     ThinkingIndicator,
+    ToolResult,
     UserMessage,
 )
 from backend.cli.tui.widgets.activity_card.orient import OrientLine
@@ -19,5 +20,6 @@ __all__ = [
     'LiveResponse',
     'OrientLine',
     'ThinkingIndicator',
+    'ToolResult',
     'UserMessage',
 ]

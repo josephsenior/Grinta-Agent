@@ -116,6 +116,34 @@ class AgentMessage(Static):
         self.update(renderable)
 
 
+
+class ToolResult(Static):
+    """Deterministic inline tool result shown directly in the transcript."""
+
+    DEFAULT_CSS = f"""
+    ToolResult {{
+        width: 100%;
+        height: auto;
+        margin: 0 0 1 0;
+        padding: 0 1 0 2;
+        background: {NAVY_BG_TRANSCRIPT_BLOCK};
+        border-left: solid #54597b;
+        color: {NAVY_TEXT_BODY};
+    }}
+    ToolResult.-failed {{
+        border-left: solid #E24B4A;
+    }}
+    """
+
+    def __init__(self, tool_name: str, content: str, *, success: bool = True) -> None:
+        from backend.cli.tui.renderer.prep import prep_markdown
+
+        text = content or '(no output)'
+        renderable = prep_markdown(f'**{tool_name} result**\n\n{text}')
+        super().__init__(renderable)
+        if not success:
+            self.add_class('-failed')
+
 class LiveResponse(Container):
     """In-flight assistant response — streams with the same markdown richness as finals."""
 
