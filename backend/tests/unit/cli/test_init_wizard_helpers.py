@@ -24,6 +24,7 @@ def test_provider_requires_api_key() -> None:
     assert _provider_requires_api_key('openai') is True
     assert _provider_requires_api_key('ollama') is False
     assert _provider_requires_api_key('lm_studio') is False
+    assert _provider_requires_api_key('codex') is False
 
 
 def test_settings_api_key_value_uses_placeholder_for_env_providers() -> None:

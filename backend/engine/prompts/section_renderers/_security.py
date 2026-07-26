@@ -8,11 +8,16 @@ def _render_security(
     *,
     enable_web: bool = True,
     enable_docs: bool = True,
+    enable_lsp: bool = False,
+    enable_terminal: bool = True,
+    enable_editor: bool = True,
     autonomy_level: object = 'balanced',
 ) -> str:
     from backend.core.autonomy import security_risk_required_for_autonomy
 
-    read_only_tools = '`read_file`, `grep`, `glob`, `find_symbols`, `analyze_project_structure`, `lsp`'
+    read_only_tools = '`read_file`, `grep`, `glob`, `find_symbols`, `analyze_project_structure`'
+    if enable_lsp:
+        read_only_tools += ', `lsp`'
     if enable_web:
         read_only_tools += ', `web_search`, `web_fetch`'
     if enable_docs:
@@ -26,10 +31,16 @@ def _render_security(
         '  - Changing system settings, global installs, elevated (`sudo`) commands, deleting critical files, '
         'downloading & executing untrusted code, or sending local secrets/data out.'
     )
+    mutation_tools: list[str] = []
+    if enable_terminal:
+        mutation_tools.append('`terminal`')
+    if enable_editor:
+        mutation_tools.extend(['`create_file`', '`replace_string`', '`multiedit`'])
+    mutation_label = ', '.join(mutation_tools) or 'enabled mutation tools'
+
     if security_risk_required_for_autonomy(autonomy_level):
         requirement = (
-            '`security_risk` is **required** on every call to `terminal` '
-            'and the file write tools `create_file`, `replace_string`, and `multiedit`. '
+            f'`security_risk` is **required** on every call to {mutation_label}. '
             f'Read-only observation tools ({read_only_tools}) do **not** require it. '
             'Pick one of `LOW` / `MEDIUM` / `HIGH` based on the action you are about to take. '
             'The server may escalate your risk label; it never lowers it. Missing or invalid values '
@@ -37,18 +48,23 @@ def _render_security(
         )
     else:
         requirement = (
-            '`security_risk` is **optional** in full autonomy on `terminal` '
-            'and file write tools (`create_file`, `replace_string`, `multiedit`). '
+            f'`security_risk` is **optional** in full autonomy on {mutation_label}. '
             f'Read-only observation tools ({read_only_tools}) never need it. '
             'When omitted, the runtime classifies risk server-side. If you provide '
             '`LOW` / `MEDIUM` / `HIGH`, invalid values still fail the call.'
         )
+    process_rule = (
+        '\n- For servers and log tails, start with `terminal(action=start)` or '
+        '`terminal(action=run, is_background=true)`, then use `wait`, `read`, and `kill`; '
+        'do not start duplicate sessions.'
+        if enable_terminal
+        else ''
+    )
     return (
         '# 🔐 Security Risk Policy\n'
         f'{requirement}\n\n'
         f'{risk_block}\n\n'
         '**Global Rules**\n'
-        '- Always escalate to **HIGH** if sensitive data leaves the environment.\n'
-        '- For servers and log tails, start with `action=start` or `is_background=true` on terminal, then '
-        'use the terminal interaction actions (`wait`, `read`, `kill`) — do not start duplicate terminal sessions.'
+        '- Always escalate to **HIGH** if sensitive data leaves the environment.'
+        f'{process_rule}'
     )

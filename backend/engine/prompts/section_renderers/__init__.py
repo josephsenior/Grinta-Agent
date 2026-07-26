@@ -28,7 +28,6 @@ from backend.engine.prompts.section_renderers._autonomy import (
     _build_autonomy_block,
     _build_context_discipline_section,
     _build_risk_preview,
-    _build_when_to_use_context,
     _render_autonomy,
 )
 from backend.engine.prompts.section_renderers._capabilities import (
@@ -74,7 +73,6 @@ __all__ = [
     '_build_context_discipline_section',
     '_build_response_style_block',
     '_build_risk_preview',
-    '_build_when_to_use_context',
     '_choose',
     '_count_section_tokens',
     '_debugger_available',

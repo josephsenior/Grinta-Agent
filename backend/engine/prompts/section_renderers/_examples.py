@@ -33,7 +33,7 @@ def _build_search_tools(*, lsp_available: bool) -> str:
 
 def _build_structured_work_prefix(*, criteria_on: bool, tracker_on: bool) -> str:
     _ = criteria_on
-    return 'See <TASK_STATE> → ' if tracker_on else ''
+    return 'See <TASK_STATE_POLICY> → ' if tracker_on else ''
 
 
 def _build_bug_fix_pattern(
@@ -98,7 +98,7 @@ def _render_examples(
     )
     failure_escalation_step = (
         'After repeated failed attempts on the same sub-task, see `<ASK_USER_TOOL>` '
-        'with a 1-line post-mortem and a specific question'
+        'with the evidence required by `<ERROR_RECOVERY_POLICY>` and a specific question'
     )
 
     bug_fix_pattern = _build_bug_fix_pattern(

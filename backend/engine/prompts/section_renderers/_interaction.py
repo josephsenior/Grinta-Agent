@@ -10,7 +10,8 @@ def _build_response_style_block(_mode: str) -> str:
     return (
         'Use the output form required for this turn:\n'
         '- use tools for investigation or implementation when the protocol calls for action\n'
-        '- use plain prose only for conversation, explanation, or the final summary'
+        '- intermediate prose may accompany tool calls for approach, risk, and progress\n'
+        '- plain prose without tool calls is only for conversation, explanation, or the final summary and ends the run'
     )
 
 
@@ -30,7 +31,8 @@ def _render_interaction_tail(
     communicate_tool_section = (
         '<ASK_USER_TOOL>\n'
         'Use `ask_user(questions=[...])` only when user input is required to continue. '
-        'Do not use plain text for a mid-task question; plain text ends the run.\n'
+        'Do not use plain prose for a mid-task question; prose without a tool call ends the run. '
+        'For every clarification and confirmation decision, follow `<AUTONOMY_VS_ASKING_MATRIX>`.\n'
         '</ASK_USER_TOOL>'
     )
     return render_partial(
@@ -38,7 +40,7 @@ def _render_interaction_tail(
         response_style_body=response_style_body,
         communicate_tool_section=communicate_tool_section,
         interaction_guidance=(
-            'If a request is vague, inspect nearby docs/config first; see `<ASK_USER_TOOL>` only if you are still blocked or the scope is still ambiguous. '
+            'For all clarification and confirmation decisions, follow `<AUTONOMY_VS_ASKING_MATRIX>` and `<ASK_USER_TOOL>`. '
             'Flag problems you notice even outside the task scope.'
         ),
     )

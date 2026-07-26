@@ -856,12 +856,8 @@ class OrchestratorPlanner:
             'matching the registered schemas.\n'
             f'{formatted}\n'
             'RULES:\n'
-            '- find_symbols discovers symbol candidates without reading full bodies.\n'
-            '- read inspects a file (optional line range) or one/more symbol bodies via symbols[].\n'
-            '- create creates a new file.\n'
-            '- replace_string performs one exact text replacement, insertion, or deletion in one file.\n'
-            '- multiedit performs atomic batch refactoring (multiple replace_string ops across one or more files).\n'
-            '- File API rule: one change on one file -> replace_string; anything batched -> multiedit.\n'
+            '- Match arguments to the injected schemas and use exact callable tool names.\n'
+            '- Follow `<DISCOVERY_ROUTING>` and `<EDITOR_AND_FILE_OPERATIONS>` for behavioral policy.\n'
             '</TOOL_CALL_FORMAT>'
         )
 

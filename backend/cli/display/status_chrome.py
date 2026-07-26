@@ -150,6 +150,9 @@ def _format_token_display_compact(hud: Any) -> str:
 
     if getattr(hud, 'token_usage_estimated', False):
         result += '~'
+    reasoning_tokens = int(getattr(hud, 'reasoning_tokens', 0) or 0)
+    if reasoning_tokens > 0:
+        result += f' · R:{HUDBar._format_tokens(reasoning_tokens)}'
     return result
 
 

@@ -15,6 +15,7 @@ _console = Console(no_color=no_color_enabled())
 
 DEFAULT_ONBOARDING_MODEL = 'openai/gpt-5.1'
 DEFAULT_MODEL_BY_PROVIDER: dict[str, str] = {
+    'codex': 'codex/default',
     'anthropic': 'anthropic/claude-sonnet-4.6',
     'google': 'google/gemini-3-flash',
     'groq': 'groq/meta-llama/llama-4-scout',
@@ -34,6 +35,7 @@ DEFAULT_MODEL_BY_PROVIDER: dict[str, str] = {
 # Provider registry — grouped for clean onboarding display.
 # (key, display_label, category)
 _PROVIDERS: list[tuple[str, str, str]] = [
+    ('codex', 'OpenAI Codex (ChatGPT)', 'local'),
     ('openai', 'OpenAI', 'cloud'),
     ('anthropic', 'Anthropic', 'cloud'),
     ('google', 'Google Gemini', 'cloud'),

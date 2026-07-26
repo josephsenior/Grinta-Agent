@@ -65,7 +65,6 @@ class TestRenderCriticalModeSpecific:
 
     COMMON_AGENT_RULES = [
         'File changes require tool calls',
-        'To run commands, use',
         'Reasoning alone does not execute',
         'Never fabricate outcomes',
     ]
@@ -78,7 +77,7 @@ class TestRenderCriticalModeSpecific:
         return _render_critical(
             _fake_render_partial,
             'execute_command',
-            terminal_manager_available=kwargs.get('terminal_available', False),
+            terminal_available=kwargs.get('terminal_available', False),
             tracker_on=kwargs.get('tracker_on', False),
             checkpoints_on=kwargs.get('checkpoints_on', False),
             mode=mode,
@@ -112,37 +111,37 @@ class TestRenderCriticalModeSpecific:
         self._assert_contains_body(body, 'task_state(audit)')
         self._assert_contains_body(body, 'evidence')
 
-    def test_agent_mode_contains_exactly_10_rules(self):
+    def test_agent_mode_without_terminal_contains_exactly_9_rules(self):
         body = self._render_critical(mode='agent', terminal_available=False)
         lines = [
             line
             for line in body.split('\n')
-            if line.strip().startswith(
-                ('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '10.')
-            )
+            if line.strip()
+            and line.strip().split('.', 1)[0].isdigit()
         ]
-        assert len(lines) == 10, (
-            f'Expected 10 numbered rules with acceptance_criteria enabled, got {len(lines)}:\n{body}'
+        assert len(lines) == 9, (
+            f'Expected 9 numbered rules without terminal, got {len(lines)}:\n{body}'
         )
+        self._assert_not_contains_body(body, 'To run commands, use', '`terminal`')
 
     def test_agent_mode_with_terminal_adds_rule(self):
         body = self._render_critical(mode='agent', terminal_available=True)
-        self._assert_contains_body(body, 'Shell vs interactive terminal')
+        self._assert_contains_body(body, 'One terminal, two lifecycles')
         self._assert_contains_body(body, 'execute_command')
         self._assert_not_contains_body(body, '{terminal_command_tool}')
 
-        self._assert_contains_body(body, 'terminal_manager action=wait')
-        self._assert_contains_body(body, 'action=stop')
-        self._assert_contains_body(body, 'action=open')
+        self._assert_contains_body(body, 'action=wait')
+        self._assert_contains_body(body, 'action=kill')
+        self._assert_contains_body(body, 'action=start')
+        self._assert_not_contains_body(body, 'terminal_manager')
         lines = [
             line
             for line in body.split('\n')
-            if line.strip().startswith(
-                ('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '10.')
-            )
+            if line.strip()
+            and line.strip().split('.', 1)[0].isdigit()
         ]
-        assert len(lines) == 10, (
-            f'Expected 10 numbered rules with terminal, got {len(lines)}'
+        assert len(lines) == 11, (
+            f'Expected 11 numbered rules with terminal, got {len(lines)}'
         )
 
     def test_agent_mode_has_mandatory_header(self):
@@ -421,7 +420,7 @@ class TestRenderCriticalFullRender:
         return _render_critical(
             self._mock_render_partial,
             'execute_command',
-            terminal_manager_available=kwargs.get('terminal_available', False),
+            terminal_available=kwargs.get('terminal_available', False),
             tracker_on=kwargs.get('tracker_on', False),
             checkpoints_on=kwargs.get('checkpoints_on', False),
             mode=mode,

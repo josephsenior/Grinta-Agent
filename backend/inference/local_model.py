@@ -19,7 +19,10 @@ def is_local_llm_config(llm_cfg: object) -> bool:
         or getattr(llm_cfg, 'provider', None)
         or ''
     )
-    if str(provider).strip().lower() in {'ollama', 'lm_studio', 'vllm'}:
+    if str(provider).strip().lower() in {'codex', 'ollama', 'lm_studio', 'vllm'}:
+        return True
+
+    if model.startswith('codex/'):
         return True
 
     base = (getattr(llm_cfg, 'base_url', None) or '').strip().lower()

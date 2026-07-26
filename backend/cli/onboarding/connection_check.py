@@ -11,7 +11,7 @@ from rich.text import Text
 
 from backend.cli.theme import CLR_META, CLR_SPINNER, CLR_STATUS_OK, CLR_STATUS_WARN
 
-_LOCAL_PROVIDERS = frozenset({'ollama', 'lm_studio', 'vllm'})
+_LOCAL_PROVIDERS = frozenset({'codex', 'ollama', 'lm_studio', 'vllm'})
 
 
 def validate_connection(

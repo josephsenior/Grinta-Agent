@@ -14,7 +14,7 @@ from backend.utils.terminal.terminal_contract import (
 _DETAILED_TERMINAL_DESCRIPTION = (
     'Omnipotent terminal tool for both one-shot commands and interactive PTY sessions using {shell}.\n\n'
     '**Actions**\n'
-    '* `run` — execute a one-shot command synchronously (builds, tests, git, discovery). '
+    '* `run` — execute a one-shot command synchronously (environment/runtime inspection, builds, tests, git). '
     'Will auto-background if it hangs.\n'
     '* `start` — open an interactive PTY session and run a command.\n'
     '* `read` — fetch output from an interactive or background session (`mode=delta` preferred).\n'

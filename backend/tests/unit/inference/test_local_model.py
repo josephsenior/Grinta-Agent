@@ -12,6 +12,11 @@ def test_is_local_llm_config_true_for_ollama_model() -> None:
     assert is_local_llm_config(cfg) is True
 
 
+def test_is_local_llm_config_true_for_codex_model() -> None:
+    cfg = SimpleNamespace(model='codex/default', custom_llm_provider=None, base_url=None)
+    assert is_local_llm_config(cfg) is True
+
+
 def test_is_local_llm_config_true_for_localhost_base_url() -> None:
     cfg = SimpleNamespace(
         model='custom/foo', provider='', base_url='http://127.0.0.1:11434'

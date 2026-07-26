@@ -232,6 +232,11 @@ def persist_env_detected_settings(
         model = _default_model_for_provider(provider)
     base_url = (getattr(llm_cfg, 'base_url', None) or '').strip()
     secret = _resolve_persisted_api_key(config, api_key)
+    from backend.core.providers.configurations import PROVIDER_CONFIGURATIONS
+
+    requires_api_key = 'api_key' in (
+        PROVIDER_CONFIGURATIONS.get(provider, {}).get('required_params') or set()
+    )
 
     existing = _read_existing_settings(settings_path)
     if existing is None:
@@ -241,7 +246,7 @@ def persist_env_detected_settings(
             model=model,
             api_key=secret,
             base_url=base_url,
-            requires_api_key=True,
+            requires_api_key=requires_api_key,
         )
     else:
         # Subsequent run — merge only the LLM-related keys.
@@ -249,7 +254,7 @@ def persist_env_detected_settings(
         merged_settings['llm_provider'] = provider
         merged_settings['llm_model'] = model
         merged_settings['llm_api_key'] = settings_api_key_value(
-            provider, secret, requires_key=True
+            provider, secret, requires_key=requires_api_key
         )
         if base_url:
             merged_settings['llm_base_url'] = base_url

@@ -24,7 +24,7 @@ def _append_mcp_connected_catalog_sections(
             '- Quality Gates: use for tests, lint, typecheck, formatting checks, and completion-readiness validation.\n\n'
             f'{mode_rule}\n'
             '</CURATED_MCP_CAPABILITIES>',
-            f'🔌 **External MCP tools** ({total}): use **`call_mcp_tool(tool_name="...", arguments={{...}})`** '
+            f'🔌 **User-configured MCP tools** ({total}): use **`call_mcp_tool(tool_name="...", arguments={{...}})`** '
             f'— argument shapes match the registered tool schema.',
             '**Tool-name discipline (critical):** Pass each tool name to '
             '`call_mcp_tool(tool_name=...)` **exactly as listed below** — the names '

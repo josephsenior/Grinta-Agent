@@ -12,10 +12,11 @@ def _build_numbered_rules(rules: list[str]) -> str:
 
 def _build_agent_execution_block(
     terminal_command_tool: str,
+    editor_available: bool,
     tracker_on: bool,
     criteria_on: bool,
     think_execution_rule: str,
-    terminal_manager_rule: str,
+    terminal_routing_rule: str,
 ) -> tuple[str, str, str, str]:
     """Build execution block for agent mode (can_edit=True)."""
     _ = criteria_on
@@ -23,9 +24,14 @@ def _build_agent_execution_block(
     planning_parts: list[str] = []
     if tracker_on:
         planning_parts.append('`task_state`')
-    planning_parts.append(f'`{terminal_command_tool}`')
-    planning_parts.append('the public file API tools')
-    if len(planning_parts) == 2:
+    if terminal_routing_rule:
+        planning_parts.append(f'`{terminal_command_tool}`')
+    planning_parts.append(
+        'the public file API tools' if editor_available else 'the native discovery tools'
+    )
+    if len(planning_parts) == 1:
+        planning_tool_list = planning_parts[0]
+    elif len(planning_parts) == 2:
         planning_tool_list = f'{planning_parts[0]} and {planning_parts[1]}'
     else:
         planning_tool_list = (
@@ -39,29 +45,36 @@ def _build_agent_execution_block(
         '   - **Blocked verification:** state the concrete blocker (no harness, missing dependency/credential, '
         'environment cannot install/build/run, unsafe/destructive check, or no meaningful runnable check) before the final summary.'
     )
-    rules: list[str] = [
-        '**File changes require tool calls** — never claim "I created/edited" without an editor tool invocation.',
-        f'To run commands, use `{terminal_command_tool}`; prose is not execution.',
-        think_execution_rule,
-        '**Never fabricate outcomes** — if a tool fails, report it honestly.',
-    ]
-    if terminal_manager_rule:
-        rules.append(terminal_manager_rule)
+    rules: list[str] = []
+    if editor_available:
+        rules.append(
+            '**File changes require tool calls** — never claim "I created/edited" without an editor tool invocation.'
+        )
+    if terminal_routing_rule:
+        rules.append(
+            f'To run commands, use `{terminal_command_tool}(action=...)`; prose is not execution.'
+        )
+    rules.extend(
+        [
+            think_execution_rule,
+            '**Never fabricate outcomes** — if a tool fails, report it honestly.',
+        ]
+    )
+    if terminal_routing_rule:
+        rules.append(terminal_routing_rule)
     rules += [
-        '**Verify before final summary** — run the narrowest relevant proof: reproducer, tests, lint, or typecheck'
+        '**Verify before final summary** — follow `<VERIFICATION_POLICY>`'
         + (
-            '; for substantial tracked work, use `task_state(audit)` to record evidence '
-            'and reconcile the overall objective before deciding to finish'
+            '; for substantial tracked work, record evidence with `task_state(audit)`'
             if tracker_on
             else ''
         )
-        + '. If verification cannot run, state the concrete blocker: no test/build harness exists, missing dependency or credential, environment cannot install/build/run, verification would be unsafe/destructive, or the task has no meaningful runnable check. Do not use vague excuses like "not applicable."\n'
-        f'{done_criteria_block}',
+        + ', then apply `<COMPLETION_CONTRACT>`.',
         '**No unchanged retries after failure** — change strategy or escalate with hypothesis, action/outcome, and ruled-out paths.',
         '**Tests must track real APIs** — Before adding or changing test code, **read** the implementation module(s) you are testing in this session and align mocks, fixtures, and calls with the **actual** signatures and return shapes. Do not assume parity with a different module or an earlier draft from memory.',
         '**Postmortem on failing tests** — After a test failure, state the likely root cause class (wrong assumed API vs mock shape vs implementation bug vs flake), then change **one** lever and re-run a **narrow** test command; avoid blind rewrite loops.',
         '**Tests are executable evidence, not absolute truth.** When tests fail, diagnose whether the failure indicates an implementation bug, stale/incorrect test expectation, fixture/mock mismatch, environment issue, or flake. Fix implementation when tests expose a real defect. Update tests only when evidence shows they are stale, incorrect, or inconsistent with the requested behavior/current API. Never edit tests merely to manufacture a pass — including silently relaxing tolerances or skipping cases without an explained reason.',
-        '**Non-test failures** — After tool/build/lint/runtime failure, state the **root-cause class** in one phrase (wrong path/symbol vs stale assumption vs environment vs defect); then follow `<ERROR_RECOVERY>`.',
+        '**Non-test failures** — After tool/build/lint/runtime failure, state the **root-cause class** in one phrase (wrong path/symbol vs stale assumption vs environment vs defect); then follow `<ERROR_RECOVERY_POLICY>`.',
     ]
     numbered = _build_numbered_rules(rules)
     execution_rules_body = (
@@ -125,7 +138,8 @@ def _render_critical(
     render_partial: Callable[..., str],
     terminal_command_tool: str,
     *,
-    terminal_manager_available: bool,
+    terminal_available: bool,
+    editor_available: bool = True,
     tracker_on: bool,
     criteria_on: bool = True,
     checkpoints_on: bool,
@@ -137,17 +151,17 @@ def _render_critical(
         is_plan_mode,
     )
 
-    can_edit = not (is_chat_mode(mode) or is_plan_mode(mode))
+    is_agent_mode = not (is_chat_mode(mode) or is_plan_mode(mode))
 
     think_execution_rule = '**Reasoning alone does not execute** — after reasoning, you must still call tools.'
-    terminal_manager_rule = (
-        f'**Shell vs interactive terminal** — use `{terminal_command_tool}` exclusively for one-shot commands '
-        f'(build, test, install, git). NEVER use `terminal_manager` for one-shot commands.\n'
-        f'**Background servers:** start interactive programs (REPLs, ssh, background servers) using `terminal_manager action=open`. '
-        'Then use `terminal_manager action=wait` (pattern like `listening on|ready`) or `action=logs`/`read` '
-        'if needed; use `action=list` to inspect sessions and `action=stop` when finished. '
+    terminal_routing_rule = (
+        f'**One terminal, two lifecycles** — use `{terminal_command_tool}(action=run)` for one-shot '
+        'environment inspection, build, test, install, and git commands. '
+        f'Use `{terminal_command_tool}(action=start)` for interactive programs, REPLs, ssh, and background servers. '
+        'Then use `action=wait` for a readiness pattern, `action=read` or `action=input` as needed, '
+        'and `action=kill` when finished. '
         'Fresh background output may already appear in context — do not poll if you already have it.'
-        if terminal_manager_available and can_edit
+        if terminal_available and is_agent_mode
         else ''
     )
 
@@ -155,18 +169,18 @@ def _render_critical(
         '- **Treating a completed `task_state` milestone as completion of a broader '
         'user objective.** Reconcile the recorded overall objective, contract '
         'conditions, and remaining tasks before deciding to write the final summary.'
-        if tracker_on and can_edit
+        if tracker_on and is_agent_mode
         else ''
     )
     acceptance_criteria_antipattern = ''
     destructive_ops_antipattern = (
         '- **Running `rm`, `Remove-Item`, force pushes, or other destructive ops without explicit confirmation from the user.**'
-        if can_edit
+        if is_agent_mode and (terminal_available or editor_available)
         else ''
     )
     _ = checkpoints_on
 
-    if can_edit:
+    if is_agent_mode:
         (
             execution_rules_body,
             edit_context_antipattern,
@@ -174,10 +188,11 @@ def _render_critical(
             done_criteria_block,
         ) = _build_agent_execution_block(
             terminal_command_tool,
+            editor_available,
             tracker_on,
             criteria_on,
             think_execution_rule,
-            terminal_manager_rule,
+            terminal_routing_rule,
         )
     else:
         (
@@ -196,7 +211,6 @@ def _render_critical(
     return render_partial(
         'system_partial_04_critical.md',
         terminal_command_tool=terminal_command_tool,
-        terminal_manager_rule=terminal_manager_rule,
         think_execution_rule=think_execution_rule,
         edit_context_antipattern=edit_context_antipattern,
         task_tracker_antipattern=task_tracker_antipattern,

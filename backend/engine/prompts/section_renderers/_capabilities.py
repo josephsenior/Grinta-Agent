@@ -265,7 +265,7 @@ def _render_system_capabilities(
 
 
 def _render_mcp_status_line(config: Any) -> str:
-    """Render the ``External MCP tools`` bullet.
+    """Render the user-configured MCP server status bullet.
 
     Reads :data:`get_mcp_bootstrap_status` (set by
     :func:`add_mcp_tools_to_agent`) so the prompt always reflects
@@ -274,7 +274,10 @@ def _render_mcp_status_line(config: Any) -> str:
     tool names when the catalogue is empty.
     """
     if not getattr(config, 'enable_mcp', True):
-        return '- **External MCP tools**: disabled.'
+        return (
+            '- **User-configured MCP servers**: disabled. Bundled native integrations '
+            'such as `web_*` and `docs_*` remain governed by their own capability lines.'
+        )
 
     mcp_status: dict[str, Any] = {}
     bootstrap = getattr(config, 'mcp_capability_status', None)
@@ -297,7 +300,7 @@ def _render_mcp_status_line(config: Any) -> str:
 
     if remote_tool_count > 0 and connected_clients > 0:
         return (
-            f'- **External MCP tools**: {remote_tool_count} tool'
+            f'- **User-configured MCP servers**: {remote_tool_count} tool'
             f'{"s" if remote_tool_count != 1 else ""} from '
             f'{connected_clients} connected server'
             f'{"s" if connected_clients != 1 else ""}. See the per-turn '
@@ -306,32 +309,32 @@ def _render_mcp_status_line(config: Any) -> str:
         )
     if state == 'mcp_disabled':
         return (
-            '- **External MCP tools**: disabled (`mcp_config.enabled=false` in '
+            '- **User-configured MCP servers**: disabled (`mcp_config.enabled=false` in '
             '`settings.json`). Enable in **Settings → MCP Servers** to '
             'route calls through `call_mcp_tool`.'
         )
     if state == 'no_servers_configured':
         return (
-            '- **External MCP tools**: none configured. Add a server in '
+            '- **User-configured MCP servers**: none configured. Add a server in '
             '**Settings → MCP Servers**; connected tools appear under the '
             'per-turn `<MCP_TOOLS>` section.'
         )
     if state in ('no_clients_connected', 'fetch_failed') and last_error:
         return (
-            f'- **External MCP tools**: none reachable ({last_error}). '
+            f'- **User-configured MCP servers**: none reachable ({last_error}). '
             'Check **Settings → MCP Servers** or set `APP_MCP_DEBUG=1` for '
             'connection logs.'
         )
     if state in ('no_clients_connected', 'fetch_failed'):
         return (
-            '- **External MCP tools**: none reachable. Check '
+            '- **User-configured MCP servers**: none reachable. Check '
             '**Settings → MCP Servers** for connection state.'
         )
     # Unknown / healthy-but-empty: same canonical message. The model
     # needs ONE stable answer for "is MCP working?" — not a per-state
     # essay.
     return (
-        '- **External MCP tools**: none connected. Configure servers in '
+        '- **User-configured MCP servers**: none connected. Configure servers in '
         '**Settings → MCP Servers**; tools appear under the per-turn '
         '`<MCP_TOOLS>` section once a server is enabled and reachable.'
     )

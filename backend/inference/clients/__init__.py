@@ -20,6 +20,9 @@ from backend.inference.clients.base import (  # noqa: F401
     get_shared_async_http_client,
     get_shared_http_client,
 )
+from backend.inference.clients.codex_app_server import (
+    CodexAppServerClient,  # noqa: F401
+)
 from backend.inference.clients.factory import get_direct_client  # noqa: F401
 from backend.inference.clients.openai_client import (  # noqa: F401
     OpenAIClient,
@@ -55,6 +58,7 @@ def __getattr__(name: str):
 
 __all__ = [
     'AnthropicClient',
+    'CodexAppServerClient',
     'Anthropic',
     'AsyncAnthropic',
     'DirectLLMClient',

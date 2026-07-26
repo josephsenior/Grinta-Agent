@@ -33,13 +33,16 @@ def _render_routing(
 
     mode = normalize_interaction_mode(getattr(config, 'mode', 'agent'))
     can_edit = not (is_chat_mode(mode) or is_plan_mode(mode))
+    terminal_available = bool(getattr(config, 'enable_terminal', True))
 
     lsp_available = _lsp_available(config)
     debugger_available = can_edit and _debugger_available(config)
     working_memory_on = getattr(config, 'enable_working_memory', True)
     tracker_on = getattr(config, 'enable_task_tracker_tool', True)
     criteria_on = getattr(config, 'enable_acceptance_criteria_tool', True)
-    if not is_windows:
+    if not terminal_available:
+        env_line = ''
+    elif not is_windows:
         env_line = 'Use **bash** for environment actions (install, build, test, git, processes). '
     elif windows_with_bash:
         env_line = (
@@ -53,6 +56,11 @@ def _render_routing(
         windows_with_bash=windows_with_bash,
         shell_is_powershell=shell_is_powershell,
     )
+    if not terminal_available:
+        discovery = (
+            'Repo/source intelligence: follow `<DISCOVERY_ROUTING>` and use native '
+            'read-only tools; no terminal tool is available in this runtime.'
+        )
     batch_cmds = env_line + discovery
     lsp_routing = (
         '- **Known file + symbol position, precise definition/references/hover** → `lsp`'
@@ -92,7 +100,12 @@ def _render_routing(
             '- **Read & Edit:** Follow `<EDITOR_AND_FILE_OPERATIONS>` — '
             'do not use shell commands to write source files.'
         )
-        shell_and_execution_ladder = '- **Shell & Execution:** Use the terminal strictly for build/test/git/processes.'
+        shell_and_execution_ladder = (
+            '- **Shell & Execution:** Use `terminal` for environment/runtime inspection, '
+            'builds, tests, git, and process lifecycles. Use `<DISCOVERY_ROUTING>` for repository intelligence.'
+            if terminal_available
+            else ''
+        )
 
     return render_partial(
         'system_partial_00_routing.md',

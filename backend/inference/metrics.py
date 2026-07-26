@@ -33,6 +33,8 @@ class TokenUsage(BaseModel):
     model: str = Field(default='')
     prompt_tokens: int = Field(default=0)
     completion_tokens: int = Field(default=0)
+    #: Tokens consumed internally while the model reasons, when reported by the provider.
+    reasoning_tokens: int = Field(default=0)
     cache_read_tokens: int = Field(default=0)
     cache_write_tokens: int = Field(default=0)
     context_window: int = Field(default=0)
@@ -50,6 +52,7 @@ class TokenUsage(BaseModel):
             model=self.model,
             prompt_tokens=self.prompt_tokens + other.prompt_tokens,
             completion_tokens=self.completion_tokens + other.completion_tokens,
+            reasoning_tokens=self.reasoning_tokens + other.reasoning_tokens,
             cache_read_tokens=self.cache_read_tokens + other.cache_read_tokens,
             cache_write_tokens=self.cache_write_tokens + other.cache_write_tokens,
             context_window=max(self.context_window, other.context_window),
@@ -208,6 +211,7 @@ class Metrics:
         response_id: str,
         usage_estimated: bool = False,
         *,
+        reasoning_tokens: int = 0,
         full_request_tokens: int = 0,
         usable_input_tokens: int = 0,
     ) -> None:
@@ -217,6 +221,7 @@ class Metrics:
             model=self.model_name,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
+            reasoning_tokens=reasoning_tokens,
             cache_read_tokens=cache_read_tokens,
             cache_write_tokens=cache_write_tokens,
             context_window=context_window,
@@ -231,6 +236,7 @@ class Metrics:
             model=self.model_name,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
+            reasoning_tokens=reasoning_tokens,
             cache_read_tokens=cache_read_tokens,
             cache_write_tokens=cache_write_tokens,
             context_window=context_window,

@@ -58,6 +58,7 @@ KNOWN_PROVIDER_PREFIXES: frozenset[str] = frozenset(
     {
         'anthropic',
         'cerebras',
+        'codex',
         'deepinfra',
         'deepseek',
         'digitalocean',
@@ -403,6 +404,7 @@ def provider_label(provider: str | None) -> str:
     labels = {
         'anthropic': 'Anthropic',
         'cerebras': 'Cerebras',
+        'codex': 'OpenAI Codex (ChatGPT)',
         'deepinfra': 'DeepInfra',
         'deepseek': 'DeepSeek',
         'digitalocean': 'DigitalOcean',

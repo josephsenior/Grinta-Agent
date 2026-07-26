@@ -20,6 +20,8 @@ class HUDState:
     model: str = '(not set)'
     #: Total billed/processed tokens across recorded LLM calls.
     total_tokens: int = 0
+    #: Cumulative internal reasoning tokens, when supplied by the active provider.
+    reasoning_tokens: int = 0
     #: Current context-window pressure. This is the largest prompt/context size
     #: observed since the most recent condensation, not cumulative token spend.
     context_tokens: int = 0
@@ -514,6 +516,9 @@ class HUDBar:
         )
         if resolved_total_tokens > 0:
             self.state.total_tokens = resolved_total_tokens
+        self.state.reasoning_tokens = int(
+            getattr(accumulated_usage, 'reasoning_tokens', 0) or 0
+        )
         resolved_calls = self._resolve_call_count(
             usages=usages,
             response_latencies=response_latencies,
@@ -535,6 +540,9 @@ class HUDBar:
         prompt_tokens = int(getattr(accumulated_usage, 'prompt_tokens', 0) or 0)
         completion_tokens = int(getattr(accumulated_usage, 'completion_tokens', 0) or 0)
         self.state.total_tokens = prompt_tokens + completion_tokens
+        self.state.reasoning_tokens = int(
+            getattr(accumulated_usage, 'reasoning_tokens', 0) or 0
+        )
         self.state.context_limit = int(
             getattr(accumulated_usage, 'context_window', 0) or 0
         )
@@ -605,6 +613,10 @@ class HUDBar:
         )
         if resolved_total_tokens > 0:
             self.state.total_tokens = resolved_total_tokens
+        if isinstance(accumulated_usage, dict):
+            self.state.reasoning_tokens = int(
+                accumulated_usage.get('reasoning_tokens', 0) or 0
+            )
         resolved_calls = self._resolve_call_count(
             usages=usages if isinstance(usages, list) else [],
             response_latencies=metrics.get('response_latencies', []),
@@ -624,6 +636,9 @@ class HUDBar:
         if prompt <= 0 and int(accumulated_usage.get('context_window', 0) or 0) <= 0:
             return False
         self.state.total_tokens = prompt + completion
+        self.state.reasoning_tokens = int(
+            accumulated_usage.get('reasoning_tokens', 0) or 0
+        )
         self.state.context_limit = int(accumulated_usage.get('context_window', 0) or 0)
         self.state.token_usage_estimated = bool(
             accumulated_usage.get('usage_estimated', False)

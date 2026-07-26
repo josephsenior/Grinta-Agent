@@ -109,6 +109,25 @@ def test_hud_displays_accumulated_tokens_while_preserving_context_pressure() -> 
     assert '200/8.2K' in rendered or '430 · 200/8192' in rendered
 
 
+def test_hud_shows_reported_reasoning_tokens() -> None:
+    hud = HUDBar()
+    metrics = Metrics()
+    metrics.add_token_usage(
+        prompt_tokens=100,
+        completion_tokens=50,
+        cache_read_tokens=0,
+        cache_write_tokens=0,
+        context_window=4096,
+        response_id='resp-1',
+        reasoning_tokens=40,
+    )
+
+    hud.update_from_llm_metrics(metrics)
+
+    assert hud.state.reasoning_tokens == 40
+    assert 'R:40' in hud._format().plain
+
+
 def test_hud_context_pressure_does_not_drop_on_smaller_later_call() -> None:
     hud = HUDBar()
     metrics = Metrics()

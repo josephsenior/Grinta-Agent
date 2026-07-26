@@ -410,6 +410,23 @@ def _collect_user_choices(
     if not provider:
         console.print('[dim]No changes made.[/dim]')
         return None
+    if provider == 'codex':
+        try:
+            from backend.inference.clients.codex_app_server import CodexAppServerClient
+
+            console.print('[dim]Opening ChatGPT sign-in and loading Codex models…[/]')
+            codex_client = CodexAppServerClient()
+            try:
+                models = codex_client.list_available_models()
+            finally:
+                codex_client.close()
+            if models:
+                local_models = {**local_models, 'codex': models}
+        except Exception as exc:
+            console.print(
+                f'[{CLR_STATUS_WARN}]Could not load your Codex model catalog: {exc}[/]',
+                style=CLR_STATUS_WARN,
+            )
     preset = _PROVIDER_PRESETS[provider]
     model = _prompt_model(console, provider, local_models)
     if not model or not model.strip():

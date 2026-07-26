@@ -194,7 +194,8 @@ def _render_tool_reference(
 def _render_critical(
     terminal_command_tool: str,
     *,
-    terminal_manager_available: bool,
+    terminal_available: bool,
+    editor_available: bool,
     tracker_on: bool,
     criteria_on: bool = True,
     checkpoints_on: bool,
@@ -203,7 +204,8 @@ def _render_critical(
     return _render_critical_impl(
         _render_partial,
         terminal_command_tool,
-        terminal_manager_available=terminal_manager_available,
+        terminal_available=terminal_available,
+        editor_available=editor_available,
         tracker_on=tracker_on,
         criteria_on=criteria_on,
         checkpoints_on=checkpoints_on,
@@ -387,16 +389,13 @@ def _collect_system_prompt_sections(
             '**Model identity:** The deployment calls you through an API using the configured '
             'model id below.\n'
             f'Configured model id: `{model_id}`\n\n'
-            '<OPERATING_CONTRACT>\n'
+            '<SCOPE_AND_PRECEDENCE>\n'
             '- Write production-quality code by default.\n'
-            '- State your approach before implementing.\n'
-            '- Calibrate confidence to evidence . Be decisive when tool observations are sufficient; state uncertainty when something is unverified.\n'
+            '- State your approach alongside the first implementation tool call when it materially helps the user follow the work.\n'
+            '- Calibrate confidence to evidence. Be decisive when tool observations are sufficient; state uncertainty when something remains unverified.\n'
             '- Keep scope anchored to the latest explicit user objective. You may act on adjacent issues that are clearly required for the requested change to be correct (for example, a bug in a helper you touched, or a broken call site your edit created).\n'
-            '- A debugging subproblem or implementation milestone is not a new request boundary. Completing it does not narrow a broader objective unless the user changed scope.\n'
-            '- Stop at the user objective boundary for pure style, refactors, or unrelated investigations — note them in the final summary instead of acting on them.\n'
-            '- When the overall requested change is implemented and appropriately verified, stop and give the final summary. If one required check is blocked, continue other safe in-scope work; report the blocker and stop only when no meaningful required work can proceed.\n'
-            '- Before final, silently check: latest objective answered, no actionable required work remains, verification status is clear, and recorded task state matches reality. Do not turn unfinished requested work into optional next steps.\n'
-            '</OPERATING_CONTRACT>',
+            '- Follow the active mode protocol and the canonical policy sections below. When policies overlap, security and explicit user instructions take precedence, followed by the more specific policy.\n'
+            '</SCOPE_AND_PRECEDENCE>',
         ),
     ]
     from backend.core.interaction_modes import (
@@ -421,7 +420,7 @@ def _collect_system_prompt_sections(
     if is_plan_mode(mode):
         plan_tools_line = (
             'For substantial plans, use `task_state(set)` to record the overall '
-            'objective, contract conditions, and tasks — see `<TASK_STATE>`. Do not '
+            'objective, contract conditions, and tasks — see `<TASK_STATE_POLICY>`. Do not '
             'audit in Plan mode because executable evidence does not exist yet.\n'
             if bool(getattr(config, 'enable_task_tracker_tool', True))
             else ''
@@ -454,6 +453,8 @@ def _collect_system_prompt_sections(
             (
                 'simplified_agent_protocol',
                 'Drive the request through your tools.\n\n'
+                'Intermediate prose may accompany tool calls for approach, risk, or progress updates. '
+                'Plain prose without a tool call is final and ends the run.\n\n'
                 'When you need input from the user to continue, see `<ASK_USER_TOOL>`.\n\n'
                 'When your work is complete, write a comprehensive final summary covering:\n'
                 '- What you did\n'
@@ -464,15 +465,28 @@ def _collect_system_prompt_sections(
                 'Writing that summary ends the run. You do not need to call any special tool to signal completion. Your final response IS the completion.',
             )
         )
-    sections.extend(
-        _shell_identity_sections(
-            is_windows=is_windows,
-            windows_with_bash=windows_with_bash,
-            shell_is_powershell=shell_is_powershell,
+    if bool(getattr(config, 'enable_terminal', True)):
+        sections.extend(
+            _shell_identity_sections(
+                is_windows=is_windows,
+                windows_with_bash=windows_with_bash,
+                shell_is_powershell=shell_is_powershell,
+            )
         )
-    )
 
     sections += [
+        (
+            'security_risk_policy',
+            _render_security(
+                cli_mode,
+                enable_web=web_on,
+                enable_docs=docs_on,
+                enable_lsp=lsp_available,
+                enable_terminal=bool(getattr(config, 'enable_terminal', True)),
+                enable_editor=bool(getattr(config, 'enable_editor', True)),
+                autonomy_level=getattr(config, 'autonomy_level', 'balanced'),
+            ),
+        ),
         (
             'system_partial_00_routing',
             _render_routing(
@@ -485,12 +499,12 @@ def _collect_system_prompt_sections(
             ),
         ),
         (
-            'security_risk_policy',
-            _render_security(
-                cli_mode,
-                enable_web=web_on,
-                enable_docs=docs_on,
-                autonomy_level=getattr(config, 'autonomy_level', 'balanced'),
+            'system_partial_02_tools',
+            _render_tool_reference(
+                config,
+                is_windows=is_windows,
+                windows_with_bash=windows_with_bash,
+                shell_is_powershell=shell_is_powershell,
             ),
         ),
         (
@@ -501,15 +515,6 @@ def _collect_system_prompt_sections(
                 windows_with_bash=windows_with_bash,
                 shell_is_powershell=shell_is_powershell,
                 semantic_recall_active=semantic_recall_active,
-            ),
-        ),
-        (
-            'system_partial_02_tools',
-            _render_tool_reference(
-                config,
-                is_windows=is_windows,
-                windows_with_bash=windows_with_bash,
-                shell_is_powershell=shell_is_powershell,
             ),
         ),
         (
@@ -538,7 +543,11 @@ def _collect_system_prompt_sections(
     sections.append(('system_partial_03_tail', _render_interaction_tail(config)))
 
     # Worked-examples partial — agent mode only; edit-heavy examples mislead Chat/Plan.
-    if not is_small_model and not (is_chat_mode(mode) or is_plan_mode(mode)):
+    if (
+        not is_small_model
+        and bool(getattr(config, 'enable_editor', True))
+        and not (is_chat_mode(mode) or is_plan_mode(mode))
+    ):
         sections.append(
             (
                 'system_partial_05_examples',
@@ -563,9 +572,10 @@ def _collect_system_prompt_sections(
             'system_partial_04_critical',
             _render_critical(
                 resolved_terminal_tool,
-                terminal_manager_available=bool(
+                terminal_available=bool(
                     getattr(config, 'enable_terminal', True)
                 ),
+                editor_available=bool(getattr(config, 'enable_editor', True)),
                 tracker_on=bool(getattr(config, 'enable_task_tracker_tool', True)),
                 criteria_on=bool(
                     getattr(config, 'enable_acceptance_criteria_tool', True)

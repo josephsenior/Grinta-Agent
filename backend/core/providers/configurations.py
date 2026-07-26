@@ -96,6 +96,21 @@ PROVIDER_FALLBACK_PATTERNS: dict[str, list[str]] = {}
 DEFAULT_API_KEY_MIN_LENGTH = 10
 
 PROVIDER_CONFIGURATIONS: dict[str, dict[str, Any]] = {
+    # Codex app-server owns ChatGPT OAuth tokens.  Grinta must never ask for,
+    # persist, or proxy those credentials as an API key.
+    'codex': {
+        'name': 'codex',
+        'env_var': '',
+        'requires_protocol': True,
+        'supports_streaming': True,
+        'required_params': {'model'},
+        'optional_params': {'timeout'},
+        'forbidden_params': {'api_key', 'base_url', 'custom_llm_provider'},
+        'api_key_prefixes': [],
+        'api_key_min_length': 0,
+        'handles_own_routing': True,
+        'requires_custom_llm_provider': False,
+    },
     'openai': {
         'name': 'openai',
         'env_var': 'OPENAI_API_KEY',

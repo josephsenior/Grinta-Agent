@@ -12,12 +12,14 @@ from backend.inference.catalog.provider_catalog import PROVIDER_DEFAULT_URLS
 _CATEGORY_BY_KEY: dict[str, str] = {key: category for key, _, category in _PROVIDERS}
 
 _LOCAL_BASE_URLS: dict[str, str] = {
+    'codex': '',
     'ollama': 'http://localhost:11434',
     'lm_studio': 'http://localhost:1234/v1',
     'vllm': 'http://localhost:8000/v1',
 }
 
 _LOCAL_DEFAULT_MODELS: dict[str, str] = {
+    'codex': 'codex/default',
     'ollama': 'ollama/llama3.2',
     'lm_studio': 'lm_studio/local-model',
     'vllm': 'vllm/local-model',
@@ -25,6 +27,8 @@ _LOCAL_DEFAULT_MODELS: dict[str, str] = {
 
 
 def _help_text(key: str, label: str, category: str) -> str:
+    if key == 'codex':
+        return 'OpenAI Codex app-server (sign in with ChatGPT; uses Codex plan/credits)'
     if category == 'local':
         return f'Local {label}'
     if key == 'openai':

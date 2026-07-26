@@ -48,6 +48,9 @@ def _validate_api_key_or_local(
     api_key_value: str | None, config: Any, resolver: Any
 ) -> None:
     """Raise AuthenticationError if API key missing and model is not local."""
+    provider = str(getattr(config, 'custom_llm_provider', '') or '').strip().lower()
+    if provider == 'codex' or str(getattr(config, 'model', '')).startswith('codex/'):
+        return
     if api_key_value or _is_local_model(config, resolver):
         return
     logger.error('No API key available for model: %s', config.model)

@@ -31,7 +31,11 @@ def _render_tool_reference(
     )
 
     mode = normalize_interaction_mode(getattr(config, 'mode', 'agent'))
-    can_edit = not (is_chat_mode(mode) or is_plan_mode(mode))
+    can_edit = (
+        not (is_chat_mode(mode) or is_plan_mode(mode))
+        and bool(getattr(config, 'enable_editor', True))
+    )
+    terminal_available = bool(getattr(config, 'enable_terminal', True))
 
     explore = _explore_hint(config)
     confirm_cmd = (
@@ -43,7 +47,14 @@ def _render_tool_reference(
         )
         + ' Prefer editors over shell directory guessing.'
     )
-    if not is_windows or windows_with_bash:
+    if not terminal_available:
+        confirm_cmd = (
+            f'When paths are uncertain, use {explore} and follow `<DISCOVERY_ROUTING>`. '
+            'Prefer native file tools over guessing.'
+        )
+    if not terminal_available:
+        proc_find = ''
+    elif not is_windows or windows_with_bash:
         proc_find = 'Never `pkill -f` broadly — `ps`/`grep` then `kill <PID>`.'
     else:
         proc_find = (
@@ -85,6 +96,10 @@ def _render_tool_reference(
             '- Prefer surgical targeted edits for existing files; full-file overwrites only when genuinely necessary.\n'
             '- Batched or cross-file refactors: `multiedit` (multiple replace_string operations across one or more files).\n'
             '- File API rule: one change on one file -> `replace_string`; anything batched -> `multiedit`.\n'
+            '- Re-read policy: do not re-read a file you just wrote in the same turn except '
+            'when grounding tests or public API contracts against it, when an edit observation '
+            'contains `[DIFF_CODEC` or `[EDIT_OBSERVATION_TRUNCATED]`, or when fresh context is '
+            'required to resolve an edit failure. Follow any observation footer.\n'
             '- Undo: `undo_last_edit` reverts the last content edit on an existing file. '
             'It cannot undo file creation — delete the file explicitly instead.\n'
             '- Never write source via shell. Use real newlines/quotes, not serialized JSON strings.\n\n'

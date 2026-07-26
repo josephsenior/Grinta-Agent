@@ -349,6 +349,13 @@ class LLM(RetryMixin, DebugMixin):
         usage = response.usage
         prompt_tokens = usage.get('prompt_tokens', 0)
         completion_tokens = usage.get('completion_tokens', 0)
+        reasoning_tokens = usage.get('reasoning_tokens', 0)
+        if not reasoning_tokens and 'completion_tokens_details' in usage:
+            details: Any = usage['completion_tokens_details']
+            if hasattr(details, 'reasoning_tokens'):
+                reasoning_tokens = details.reasoning_tokens
+            elif isinstance(details, dict):
+                reasoning_tokens = details.get('reasoning_tokens', 0)
         usage_estimated = bool(usage.get('is_estimated', False))
 
         # Extract cache tokens from provider-specific nested structures
@@ -389,6 +396,7 @@ class LLM(RetryMixin, DebugMixin):
             context_window=self._get_context_window_for_metrics(),
             response_id=response.id,
             usage_estimated=usage_estimated,
+            reasoning_tokens=int(reasoning_tokens or 0),
             full_request_tokens=full_request_tokens,
             usable_input_tokens=usable_input_tokens,
         )
@@ -402,6 +410,7 @@ class LLM(RetryMixin, DebugMixin):
                     'tokens': {
                         'prompt': prompt_tokens,
                         'completion': completion_tokens,
+                        'reasoning': reasoning_tokens,
                         'cache_read': cache_read,
                         'cache_write': cache_write,
                     },

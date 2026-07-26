@@ -511,7 +511,7 @@ class TestOrchestratorPromptManager:
         assert 'Configured MCP servers' not in result
         # The system prompt DOES mention MCP at the capability level so
         # the model never has to guess.
-        assert 'External MCP tools' in result
+        assert 'User-configured MCP servers' in result
         assert 'call_mcp_tool' in result
 
         assert '<MCP_TOOLS>' in addendum
@@ -665,6 +665,8 @@ def _base_config(**overrides: object) -> SimpleNamespace:
             overrides.get('enable_condensation_request', False)
         ),
         enable_terminal=bool(overrides.get('enable_terminal', True)),
+        enable_editor=bool(overrides.get('enable_editor', True)),
+        enable_mcp=bool(overrides.get('enable_mcp', True)),
         enable_debugger=bool(overrides.get('enable_debugger', False)),
         enable_web=bool(overrides.get('enable_web', True)),
         enable_docs=bool(overrides.get('enable_docs', True)),
@@ -969,7 +971,7 @@ class TestBuildSystemPromptRenders:
             function_calling_mode='native',
         )
         assert '<COMMON_PATTERNS>' in result
-        assert '<TASK_STATE>' in result
+        assert '<TASK_STATE_POLICY>' in result
         assert 'Use `task_state` for durable multi-step cognition.' in result
         assert 'contract records WHAT must remain true' in result
         assert 'record verification evidence with `audit`' in result
@@ -1122,7 +1124,123 @@ class TestBuildSystemPromptRenders:
             config=_base_config(enable_terminal=False),
             function_calling_mode='native',
         )
-        assert 'do not refer to `terminal`' not in result
+        assert '`terminal`' not in result
+        assert 'terminal(action=' not in result
+        assert '<SHELL_IDENTITY>' not in result
+        assert 'terminal_manager' not in result
+
+    def test_editor_disabled_omits_write_tool_policy(self) -> None:
+        result = self._assert_renders_cleanly(
+            active_llm_model='gpt-4o',
+            is_windows=False,
+            config=_base_config(enable_editor=False),
+            function_calling_mode='native',
+        )
+
+        for unavailable_tool in (
+            '`create_file`',
+            '`replace_string`',
+            '`multiedit`',
+            '`undo_last_edit`',
+        ):
+            assert unavailable_tool not in result
+        assert 'File changes require tool calls' not in result
+        assert '<COMMON_PATTERNS>' not in result
+
+    def test_enabled_terminal_uses_unified_runtime_actions(self) -> None:
+        result = self._assert_renders_cleanly(
+            active_llm_model='gpt-4o',
+            is_windows=False,
+            config=_base_config(enable_terminal=True),
+            function_calling_mode='native',
+        )
+
+        assert '`terminal(action=run)`' in result
+        assert '`terminal(action=start)`' in result
+        assert 'action=wait' in result
+        assert 'action=read' in result
+        assert 'action=kill' in result
+        assert 'terminal_manager' not in result
+
+    def test_canonical_policy_sections_have_single_owners(self) -> None:
+        import re
+
+        result = self._assert_renders_cleanly(
+            active_llm_model='gpt-4o',
+            is_windows=False,
+            config=_base_config(enable_task_tracker_tool=True),
+            function_calling_mode='native',
+        )
+
+        for tag in (
+            'AUTONOMY_VS_ASKING_MATRIX',
+            'DISCOVERY_ROUTING',
+            'EDITOR_AND_FILE_OPERATIONS',
+            'TASK_STATE_POLICY',
+            'VERIFICATION_POLICY',
+            'ERROR_RECOVERY_POLICY',
+            'COMPLETION_CONTRACT',
+        ):
+            assert len(re.findall(rf'(?m)^<{tag}>$', result)) == 1
+            assert len(re.findall(rf'(?m)^</{tag}>$', result)) == 1
+
+        assert '<WHEN_TO_USE_CONTEXT>' not in result
+        assert '<OPERATING_CONTRACT>' not in result
+        assert '<ERROR_RECOVERY>' not in result
+        assert '<TASK_STATE>' not in result
+        assert '[DIFF_CODEC' in result
+        assert '[EDIT_OBSERVATION_TRUNCATED]' in result
+        assert 'grounding tests or public API contracts' in result
+
+    def test_intermediate_prose_may_accompany_tool_calls(self) -> None:
+        result = self._assert_renders_cleanly(
+            active_llm_model='gpt-4o',
+            is_windows=False,
+            config=_base_config(),
+            function_calling_mode='native',
+        )
+
+        assert 'Intermediate prose may accompany tool calls' in result
+        assert 'Plain prose without a tool call is final and ends the run' in result
+        assert (
+            'state two concrete failure modes in the same assistant turn as the next tool call'
+            in result
+        )
+
+    def test_hard_won_antipattern_corpus_is_preserved(self) -> None:
+        result = self._assert_renders_cleanly(
+            active_llm_model='gpt-4o',
+            is_windows=False,
+            config=_base_config(enable_task_tracker_tool=True),
+            function_calling_mode='native',
+        )
+
+        for failure_mode in (
+            'Editing existing content without current context',
+            'Treating a completed `task_state` milestone as completion',
+            'Inventing tool names or tool prefixes',
+            'Asking the user a question in plain prose mid-turn',
+            'Guessing file paths or symbol names',
+            'Fabricating tool outputs or pretending an action succeeded',
+            'Silently relaxing test tolerances or thresholds',
+            'Emitting JSON planning blobs or structured analysis as plain text',
+        ):
+            assert failure_mode in result
+
+    def test_mcp_wording_distinguishes_bundled_and_user_configured_tools(
+        self,
+    ) -> None:
+        result = self._assert_renders_cleanly(
+            active_llm_model='gpt-4o',
+            is_windows=False,
+            config=_base_config(enable_mcp=False),
+            function_calling_mode='native',
+        )
+
+        assert 'User-configured MCP servers' in result
+        assert 'Bundled native integrations' in result
+        assert 'Web (`web_search`' in result
+        assert 'Library docs (`docs_resolve`' in result
 
     def test_lsp_available(self) -> None:
         with patch(

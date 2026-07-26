@@ -197,7 +197,7 @@ class TestMCPCapabilityStatus:
             parallel_tool_calls_provider_flag=True,
             mode='agent',
         )
-        assert 'External MCP tools' in out
+        assert 'User-configured MCP servers' in out
         assert 'none connected' in out
         assert 'Settings' in out  # points the user at the right panel
 
@@ -236,7 +236,7 @@ class TestMCPCapabilityStatus:
             mode='agent',
         )
         assert 'disabled' in out
-        assert 'External MCP tools' in out
+        assert 'User-configured MCP servers' in out
 
     def test_capabilities_block_reports_mcp_disabled_via_config(self) -> None:
         from backend.engine.prompts.section_renderers._capabilities import (
@@ -253,7 +253,7 @@ class TestMCPCapabilityStatus:
             mode='agent',
         )
         assert 'disabled' in out
-        assert 'External MCP tools' in out
+        assert 'User-configured MCP servers' in out
 
     def test_capabilities_block_reports_no_servers_configured(self) -> None:
         from backend.engine.prompts.section_renderers._capabilities import (

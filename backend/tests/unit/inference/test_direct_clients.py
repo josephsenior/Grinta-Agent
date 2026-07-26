@@ -11,6 +11,7 @@ from backend.inference.clients import (
     _pool_key,
     get_direct_client,
 )
+from backend.inference.clients.codex_app_server import CodexAppServerClient
 
 # ---------------------------------------------------------------------------
 # Helper: mock the SDK constructors to avoid real HTTP clients
@@ -31,6 +32,116 @@ def _mock_openai_sdk():
             return_value=MagicMock(spec=True),
         ),
     ]
+
+
+def test_codex_model_list_uses_account_catalog() -> None:
+    client = CodexAppServerClient()
+    with (
+        patch.object(client, '_ensure_started'),
+        patch.object(
+            client,
+            '_request',
+            side_effect=[
+                {
+                    'data': [
+                        {'id': 'first-id', 'model': 'gpt-5.6-luna'},
+                        {'id': 'fallback-id'},
+                    ],
+                    'nextCursor': 'next',
+                },
+                {'data': [{'id': 'second-id', 'model': 'gpt-5.4-mini'}]},
+            ],
+        ),
+    ):
+        assert client.list_available_models() == [
+            'gpt-5.6-luna',
+            'fallback-id',
+            'gpt-5.4-mini',
+        ]
+
+
+def test_codex_thread_params_pass_reasoning_effort_to_app_server() -> None:
+    client = CodexAppServerClient(model_name='gpt-5.6-sol')
+    params = client._thread_params('xhigh')
+    assert params['model'] == 'gpt-5.6-sol'
+    assert params['sandbox'] == 'workspace-write'
+    assert params['config'] == {
+        'model_reasoning_effort': 'xhigh',
+        'model_reasoning_summary': 'detailed',
+    }
+
+
+def test_codex_stream_turn_forwards_reasoning_to_the_transcript() -> None:
+    client = CodexAppServerClient()
+    emitted = []
+    with (
+        patch.object(client, '_ensure_started'),
+        patch.object(
+            client,
+            '_request',
+            side_effect=[{'thread': {'id': 'thread-1'}}, {'turn': {'id': 'turn-1'}}],
+        ),
+        patch.object(
+            client,
+            '_read',
+            side_effect=[
+                {
+                    'method': 'item/reasoning/summaryTextDelta',
+                    'params': {'turnId': 'turn-1', 'delta': 'Checking the request. '},
+                },
+                {
+                    'method': 'item/agentMessage/delta',
+                    'params': {'turnId': 'turn-1', 'delta': 'Done.'},
+                },
+                {
+                    'method': 'turn/completed',
+                    'params': {'turn': {'id': 'turn-1'}},
+                },
+            ],
+        ),
+    ):
+        client._stream_turn([{'role': 'user', 'content': 'Hi'}], 'high', emitted.append)
+
+    assert emitted == [
+        {'reasoning_content': 'Checking the request. '},
+        {'content': 'Done.'},
+    ]
+
+
+def test_codex_turn_usage_includes_reasoning_tokens() -> None:
+    client = CodexAppServerClient()
+    with patch.object(
+        client,
+        '_read',
+        side_effect=[
+            {
+                'method': 'thread/tokenUsage/updated',
+                'params': {
+                    'turnId': 'turn-1',
+                    'tokenUsage': {
+                        'total': {
+                            'inputTokens': 100,
+                            'outputTokens': 50,
+                            'reasoningOutputTokens': 40,
+                            'totalTokens': 150,
+                        }
+                    },
+                },
+            },
+            {
+                'method': 'item/agentMessage/delta',
+                'params': {'delta': 'Hello'},
+            },
+            {
+                'method': 'turn/completed',
+                'params': {'turn': {'id': 'turn-1'}},
+            },
+        ],
+    ):
+        content, usage = client._wait_for_turn('turn-1')
+
+    assert content == 'Hello'
+    assert usage['reasoning_tokens'] == 40
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +237,11 @@ class TestGetDirectClientRouting:
         client = get_direct_client('openai/gpt-5', api_key='sk-test')
         assert type(client).__name__ == 'OpenAIClient'
         assert client._model_name == 'gpt-5'
+
+    def test_codex_routes_to_app_server(self):
+        client = get_direct_client('codex/default', api_key='')
+        assert type(client).__name__ == 'CodexAppServerClient'
+        assert client._model_name == 'default'
 
     @patch('backend.inference.clients.Anthropic')
     @patch('backend.inference.clients.AsyncAnthropic')
