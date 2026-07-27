@@ -48,7 +48,9 @@ class TestShadowRepoInit:
 
         ws = _make_workspace(tmp_path)
         repo = ShadowRepo(workspace_root=ws)
-        expected = ws / '.grinta' / 'shadow_repo'
+        from backend.core.workspace_resolution import workspace_grinta_root
+
+        expected = workspace_grinta_root(ws) / 'rollback' / 'shadow_repo'
         assert repo._shadow_dir == expected
 
     def test_reinit_reopens_existing(self, tmp_path):

@@ -418,7 +418,12 @@ class RecoveryService:
                     await self._set_awaiting_user_input_if_allowed(controller)
                     return True
 
-        if not _recovery_may_set_state(controller, AgentState.RATE_LIMITED):
+        retry_state = (
+            AgentState.RATE_LIMITED
+            if isinstance(exc, _RATE_LIMITED_EXCEPTIONS)
+            else AgentState.RETRYING
+        )
+        if not _recovery_may_set_state(controller, retry_state):
             logger.info(
                 'Skipping queued-retry recovery transition (state=%s); '
                 'error was still recorded.',
@@ -428,7 +433,7 @@ class RecoveryService:
 
         scheduled = await self._schedule_queued_retry(controller, exc)
         if scheduled:
-            await self._context.set_agent_state(AgentState.RATE_LIMITED)
+            await self._context.set_agent_state(retry_state)
             return True
 
         logger.warning(

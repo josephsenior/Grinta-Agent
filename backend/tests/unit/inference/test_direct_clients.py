@@ -13,7 +13,10 @@ from backend.inference.clients import (
     _pool_key,
     get_direct_client,
 )
-from backend.inference.clients.codex_app_server import CodexResponsesClient
+from backend.inference.clients.codex_app_server import (
+    CodexResponsesClient,
+    _find_codex_executable,
+)
 
 # ---------------------------------------------------------------------------
 # Helper: mock the SDK constructors to avoid real HTTP clients
@@ -35,6 +38,22 @@ def _mock_openai_sdk():
         ),
     ]
 
+
+def test_codex_executable_resolution_accepts_windows_desktop_install() -> None:
+    desktop_executable = r'C:\Users\user\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe'
+    with (
+        patch('backend.inference.clients.codex_app_server.sys.platform', 'win32'),
+        patch(
+            'backend.inference.clients.codex_app_server.shutil.which',
+            side_effect=[None, desktop_executable],
+        ) as which,
+    ):
+        assert _find_codex_executable() == desktop_executable
+
+    assert which.call_args_list == [
+        (('codex.cmd',),),
+        (('codex.exe',),),
+    ]
 
 def test_codex_model_list_uses_account_catalog() -> None:
     client = CodexResponsesClient()

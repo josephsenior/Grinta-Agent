@@ -84,7 +84,7 @@ class TestRecoveryService:
         assert err_obs.content == 'LLM provider timed out.'
         assert err_obs.notify_ui_only is True
         ctrl.retry_service.schedule_retry_after_failure.assert_awaited_once()
-        mock_context.set_agent_state.assert_awaited_once_with(AgentState.RATE_LIMITED)
+        mock_context.set_agent_state.assert_awaited_once_with(AgentState.RETRYING)
 
     @pytest.mark.asyncio
     async def test_timeout_without_retry_queue_returns_to_user_input(
@@ -175,7 +175,7 @@ class TestRecoveryService:
         assert err_obs.notify_ui_only is True
         assert 'Transient provider or network issue' in err_obs.content
         ctrl.retry_service.schedule_retry_after_failure.assert_awaited_once_with(exc)
-        mock_context.set_agent_state.assert_awaited_once_with(AgentState.RATE_LIMITED)
+        mock_context.set_agent_state.assert_awaited_once_with(AgentState.RETRYING)
 
     @pytest.mark.asyncio
     async def test_rate_limit_does_not_pollute_agent_context(self, mock_context, ctrl):

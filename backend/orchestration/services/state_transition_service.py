@@ -32,6 +32,7 @@ VALID_TRANSITIONS: dict[AgentState, frozenset[AgentState]] = {
             AgentState.FINISHED,
             AgentState.ERROR,
             AgentState.RATE_LIMITED,
+            AgentState.RETRYING,
             AgentState.AWAITING_USER_INPUT,
             AgentState.AWAITING_USER_CONFIRMATION,
             AgentState.REJECTED,
@@ -82,6 +83,14 @@ VALID_TRANSITIONS: dict[AgentState, frozenset[AgentState]] = {
             AgentState.AWAITING_USER_INPUT,
             AgentState.STOPPED,
             AgentState.ERROR,
+        }
+    ),
+    AgentState.RETRYING: frozenset(
+        {
+            AgentState.RUNNING,
+            AgentState.STOPPED,
+            AgentState.ERROR,
+            AgentState.AWAITING_USER_INPUT,
         }
     ),
     AgentState.RATE_LIMITED: frozenset(

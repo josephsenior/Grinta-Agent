@@ -136,6 +136,7 @@ class AgentState(str, Enum):
     ERROR = 'error'
     AWAITING_USER_CONFIRMATION = 'awaiting_user_confirmation'
     RATE_LIMITED = 'rate_limited'
+    RETRYING = 'retrying'
 
 
 class ObservationType(str, Enum):

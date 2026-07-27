@@ -42,6 +42,20 @@ class CodexAppServerError(RuntimeError):
     """Raised when Codex authentication or inference cannot complete."""
 
 
+def _find_codex_executable() -> str | None:
+    """Resolve the Codex CLI across Windows package formats.
+
+    The desktop installer exposes ``codex.exe``, while npm-based installs
+    commonly expose ``codex.cmd``. Looking up only the latter makes a valid
+    desktop installation invisible to Grinta.
+    """
+    names = ('codex.cmd', 'codex.exe', 'codex') if sys.platform == 'win32' else ('codex',)
+    for name in names:
+        executable = shutil.which(name)
+        if executable:
+            return executable
+    return None
+
 def _get(value: Any, key: str, default: Any = None) -> Any:
     if isinstance(value, dict):
         return value.get(key, default)
@@ -490,11 +504,7 @@ class CodexResponsesClient(DirectLLMClient):
     def _ensure_started(self) -> None:
         if self._process and self._process.poll() is None:
             return
-        executable = (
-            shutil.which('codex.cmd')
-            if sys.platform == 'win32'
-            else shutil.which('codex')
-        )
+        executable = _find_codex_executable()
         if not executable:
             raise CodexAppServerError(
                 'Codex CLI is required to manage ChatGPT OAuth. Install Codex, '

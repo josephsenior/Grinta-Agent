@@ -158,13 +158,19 @@ class ProjectMemoryService:
         self.workspace_root = workspace_root
 
     def _memory_file_path(self) -> Path:
-        if self.workspace_root is not None:
-            p = self.workspace_root / '.grinta' / 'project_memory.md'
-            p.parent.mkdir(parents=True, exist_ok=True)
-            return p
+        """Return private app-data storage, migrating the legacy in-repo file."""
         from backend.core.workspace_resolution import workspace_agent_state_dir
 
-        return workspace_agent_state_dir() / 'project_memory.md'
+        canonical = workspace_agent_state_dir(self.workspace_root) / 'project_memory.md'
+        if self.workspace_root is not None:
+            legacy = self.workspace_root / '.grinta' / 'project_memory.md'
+            if not canonical.exists() and legacy.is_file():
+                try:
+                    legacy.replace(canonical)
+                except OSError:
+                    # Leave the legacy file intact if a cross-volume move fails.
+                    pass
+        return canonical
 
     def load(self) -> list[ProjectMemoryEntry]:
         p = self._memory_file_path()

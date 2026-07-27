@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import ssl
+import sys
 import threading
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
@@ -29,6 +31,15 @@ _POOL_LIMITS = httpx.Limits(
 _shared_sync_clients: dict[str, httpx.Client] = {}
 _shared_async_clients: dict[str, httpx.AsyncClient] = {}
 _pool_lock = threading.Lock()
+
+_HTTPX_VERIFY: ssl.SSLContext | bool = True
+if sys.platform == 'win32':
+    try:
+        import truststore
+    except ImportError:
+        logger.warning('truststore is unavailable; falling back to Python CA bundle.')
+    else:
+        _HTTPX_VERIFY = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
 
 def _normalize_timeout_seconds(timeout: float | int | None) -> float | None:
@@ -176,6 +187,7 @@ def get_shared_http_client(provider: str, base_url: str | None = None) -> httpx.
                     limits=_POOL_LIMITS,
                     timeout=_shared_llm_pool_timeout(),
                     follow_redirects=True,
+                verify=_HTTPX_VERIFY,
                 )
                 logger.debug('Created shared sync httpx pool for %s', key)
     return _shared_sync_clients[key]
@@ -193,6 +205,7 @@ def get_shared_async_http_client(
                     limits=_POOL_LIMITS,
                     timeout=_shared_llm_pool_timeout(),
                     follow_redirects=True,
+                verify=_HTTPX_VERIFY,
                 )
                 logger.debug('Created shared async httpx pool for %s', key)
     return _shared_async_clients[key]

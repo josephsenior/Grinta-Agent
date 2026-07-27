@@ -1,7 +1,7 @@
 """pygit2-backed shadow repository for fast, unified workspace checkpoints.
 
 Provides a private bare git object-store (``ShadowRepo``) that lives in
-``.grinta/shadow_repo/`` -- completely independent of any ``.git`` the
+``~/.grinta/workspaces/<id>/rollback/shadow_repo/`` -- completely independent of any ``.git`` the
 workspace project may or may not have.  Every checkpoint is a pygit2
 commit; no subprocess is ever spawned.
 
@@ -74,7 +74,15 @@ class ShadowRepo:
         self._pygit2 = pygit2
         self._workspace_root = Path(workspace_root).resolve()
         if shadow_dir is None:
-            self._shadow_dir = self._workspace_root / '.grinta' / _SHADOW_DIR_NAME
+            from backend.core.workspace_resolution import workspace_grinta_root
+
+            self._shadow_dir = workspace_grinta_root(self._workspace_root) / 'rollback' / _SHADOW_DIR_NAME
+            legacy = self._workspace_root / '.grinta' / _SHADOW_DIR_NAME
+            if not self._shadow_dir.exists() and legacy.is_dir():
+                try:
+                    shutil.move(str(legacy), str(self._shadow_dir))
+                except OSError:
+                    logger.warning('Could not migrate legacy shadow repo from %s', legacy)
         else:
             self._shadow_dir = Path(shadow_dir).resolve()
         self._shadow_dir.mkdir(parents=True, exist_ok=True)
