@@ -1637,7 +1637,7 @@ class TestOrchestratorPromptManagerExtended:
         opm = OrchestratorPromptManager(
             prompt_dir, resolved_llm_model_id='openai/gpt-4o'
         )
-        assert opm._active_llm_model_id() == 'openai/gpt-4o'
+        assert opm._active_llm_model_id() == 'gpt-4o'
 
     def test_active_llm_model_id_fallback_from_app_config(self, prompt_dir):
         from backend.utils.prompt import OrchestratorPromptManager
@@ -1654,7 +1654,7 @@ class TestOrchestratorPromptManagerExtended:
             resolved_llm_model_id='',
             app_config=mock_app_config,
         )
-        assert opm._active_llm_model_id() == 'anthropic/claude-sonnet-4-6'
+        assert opm._active_llm_model_id() == 'claude-sonnet-4-6'
         mock_app_config.get_llm_config_from_agent_config.assert_called_once_with(
             mock_agent_config
         )

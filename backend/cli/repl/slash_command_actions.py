@@ -267,11 +267,17 @@ def cmd_model(host: Any, parsed: Any) -> bool:
         return True
     update_model(new_model)
     host._config = load_app_config()
+    apply_active = getattr(host, '_apply_llm_config_to_active_session', None)
+    runtime_status = (
+        apply_active(host._config)
+        if callable(apply_active)
+        else 'saved for the next turn'
+    )
     host._hud.update_model(get_current_model(host._config))
     provider, model = HUDBar.describe_model(get_current_model(host._config))
     if host._renderer is not None:
         host._renderer.add_system_message(
-            f'Model switched to provider: {provider}  model: {model}. Changes apply to the next session.',
+            f'Model switched to provider: {provider}  model: {model} ({runtime_status}).',
             title='model',
         )
     return True

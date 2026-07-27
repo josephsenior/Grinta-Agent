@@ -38,9 +38,11 @@ class ScreenActionsMixin:
         if sidebar.has_class('-hidden'):
             sidebar.remove_class('-hidden')
             left_col.styles.width = '78%'
+            self._sidebar_user_hidden = False
         else:
             sidebar.add_class('-hidden')
             left_col.styles.width = '100%'
+            self._sidebar_user_hidden = True
 
     def action_show_help(self) -> None:
         """Show help information."""

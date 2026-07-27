@@ -14,7 +14,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Label, Select, Static
+from textual.widgets import Button, Label, Select, Static
 
 from backend.cli.tui.transcript_typography import esc_hint_markup
 from backend.cli.tui.widgets.prompt_text_area import PromptTextArea  # noqa: F401
@@ -594,6 +594,9 @@ class HUD(Vertical):
     # model · context · cost essentials only.
     COMPACT_THRESHOLD = 90
 
+    class ControlsRequested(Message):
+        """Request the compact HUD controls drawer."""
+
     def compose(self) -> ComposeResult:
         with Horizontal(id='hud-line-2-row'):
             yield Label(id='hud-line-2-ws')
@@ -629,12 +632,22 @@ class HUD(Vertical):
                 esc_hint_markup('Interrupt'),
                 id='hud-hint-interrupt',
             )
+            yield Button('Controls', id='hud-controls-button', classes='-hidden')
             yield Label(id='hud-line-1-help')
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == 'hud-controls-button':
+            event.stop()
+            self.post_message(self.ControlsRequested())
 
     def on_resize(self, event: events.Resize) -> None:
         """Toggle compact mode when the terminal gets too narrow."""
         compact = event.size.width < self.COMPACT_THRESHOLD
         for widget_id in (
+            'hud-label-mode',
+            'hud-mode',
+            'hud-label-autonomy',
+            'hud-autonomy',
             'hud-label-reasoning',
             'hud-reasoning',
         ):
@@ -647,6 +660,14 @@ class HUD(Vertical):
             else:
                 w.remove_class('-hidden')
 
+        try:
+            button = self.query_one('#hud-controls-button', Button)
+            if compact:
+                button.remove_class('-hidden')
+            else:
+                button.add_class('-hidden')
+        except Exception:
+            pass
 
 class RendererDrainRequested(Message):
     """Message requesting the screen to drain queued renderer events."""

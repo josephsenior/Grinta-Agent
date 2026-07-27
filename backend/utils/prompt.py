@@ -177,6 +177,12 @@ class PromptManager:
             latest_user_message.content.append(TextContent(text=reminder_text))
 
 
+def _logical_model_name(model: str) -> str:
+    """Remove transport-only provider prefixes from model-facing prompt text."""
+    from backend.inference.provider_resolver import get_resolver
+
+    return get_resolver().strip_provider_prefix(model)
+
 class OrchestratorPromptManager(PromptManager):
     """PromptManager subclass that injects orchestrator-specific defaults.
 
@@ -211,9 +217,9 @@ class OrchestratorPromptManager(PromptManager):
         self.semantic_recall_active: bool = False
 
     def _active_llm_model_id(self) -> str:
-        """Model id for self-identification in the system prompt."""
+        """Logical model name for self-identification in the system prompt."""
         if self._resolved_llm_model_id:
-            return self._resolved_llm_model_id
+            return _logical_model_name(self._resolved_llm_model_id)
         if self._app_config is not None and self._config is not None:
             try:
                 llm_cfg = getattr(
@@ -229,7 +235,7 @@ class OrchestratorPromptManager(PromptManager):
                         else None
                     )
                     if model:
-                        return str(model).strip()
+                        return _logical_model_name(str(model).strip())
             except Exception:
                 pass
         return ''

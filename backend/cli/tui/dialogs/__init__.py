@@ -9,6 +9,7 @@ from backend.cli.tui.dialogs.add_mcp import GrintaAddMCPDialog
 from backend.cli.tui.dialogs.add_skill import GrintaAddSkillDialog
 from backend.cli.tui.dialogs.confirm import ConfirmWidget, GrintaConfirmDialog
 from backend.cli.tui.dialogs.help import GrintaHelpDialog
+from backend.cli.tui.dialogs.hud_controls import GrintaHUDControlsDialog
 from backend.cli.tui.dialogs.manage_mcp import GrintaManageMCPDialog
 from backend.cli.tui.dialogs.manage_skills import GrintaManageSkillsDialog
 from backend.cli.tui.dialogs.sessions import GrintaSessionsDialog
@@ -18,6 +19,7 @@ __all__ = [
     'ConfirmWidget',
     'GrintaAddMCPDialog',
     'GrintaAddSkillDialog',
+    'GrintaHUDControlsDialog',
     'GrintaConfirmDialog',
     'GrintaHelpDialog',
     'GrintaManageMCPDialog',

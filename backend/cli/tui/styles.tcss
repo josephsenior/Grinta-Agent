@@ -571,6 +571,21 @@ HUD,
     text-align: right;
 }
 
+#hud-controls-button {
+    height: 1;
+    min-width: 0;
+    margin: 0 1 0 0;
+    padding: 0 1;
+    background: #16243a;
+    color: #c8d4e8;
+    border: none;
+}
+
+#hud-controls-button:hover,
+#hud-controls-button:focus {
+    background: #243b5d;
+}
+
 #hud-line-2 {
     height: 1;
     color: #8f9fc1;
@@ -1136,6 +1151,11 @@ Toast.-error { border-left: wide #f05757; }
 
 /* HUD compact mode: hide the reasoning label + select on narrow terminals. */
 #hud-label-reasoning.-hidden,
-#hud-reasoning.-hidden {
+#hud-reasoning.-hidden,
+#hud-label-mode.-hidden,
+#hud-mode.-hidden,
+#hud-label-autonomy.-hidden,
+#hud-autonomy.-hidden,
+#hud-controls-button.-hidden {
     display: none;
 }

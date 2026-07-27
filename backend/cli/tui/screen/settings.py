@@ -13,6 +13,7 @@ from backend.cli.tui.dialogs import (  # noqa: F401
 )
 from backend.cli.tui.widgets.collapsible import CollapsibleSection, SidebarRow
 from backend.cli.tui.widgets.small import (
+    HUD,
     InputBar,
 )
 from backend.core.interaction_modes import (
@@ -59,6 +60,47 @@ class ScreenSettingsMixin:
 
     def on_resize(self, event: events.Resize) -> None:
         self._resize_input_bar()
+        try:
+            sidebar = self.query_one('#sidebar')
+            left_column = self.query_one('#left-column')
+            if event.size.width < 100:
+                sidebar.add_class('-hidden')
+                left_column.styles.width = '100%'
+            elif not getattr(self, '_sidebar_user_hidden', False):
+                sidebar.remove_class('-hidden')
+                left_column.styles.width = '78%'
+        except Exception:
+            pass
+
+    @work
+    async def on_hud_controls_requested(self, event: HUD.ControlsRequested) -> None:
+        """Open all session controls when the compact HUD cannot fit selects."""
+        event.stop()
+        from backend.cli.tui.dialogs import GrintaHUDControlsDialog
+
+        mode = self._active_interaction_mode()
+        autonomy = self._current_autonomy_level()
+        reasoning = self._current_reasoning_effort()
+        result = await self.app.push_screen_wait(
+            GrintaHUDControlsDialog(
+                mode=mode,
+                autonomy=autonomy,
+                reasoning=reasoning,
+                mode_options=[
+                    (value.capitalize(), value) for value in VISIBLE_INTERACTION_MODES
+                ],
+                autonomy_options=[
+                    (value.capitalize(), value)
+                    for value in ('conservative', 'balanced', 'full')
+                ],
+                reasoning_options=self._hud_reasoning_select_options(),
+            )
+        )
+        if result:
+            self._apply_mode(result['mode'])
+            self._apply_autonomy_level(result['autonomy'])
+            self._apply_hud_reasoning_effort(result['reasoning'])
+
 
     def _apply_autonomy_level(self, new_level: str) -> None:
         if getattr(self, '_hud_autonomy_syncing', False):
