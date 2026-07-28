@@ -69,7 +69,6 @@ def _format_diff_delta(added: int, removed: int) -> str:
     return ' '.join(parts) if parts else '0'
 
 
-_INLINE_OUTPUT_LINES = 4
 _INLINE_PAYLOAD_LINES = 8
 
 
@@ -119,21 +118,41 @@ def _command_text(command: str) -> Text:
 
 
 def _command_output_preview(command: str, output: str) -> Group:
-    """Full command plus a small output tail for inline shell/terminal cards."""
+    """Render the complete command and output for inline shell/terminal cards."""
     renderables: list[Any] = [_section_label('Command'), _command_text(command)]
-    preview, hidden = _bounded_text(
-        output,
-        max_lines=_INLINE_OUTPUT_LINES,
-        tail=True,
-    )
-    if preview:
+    rendered_output = (output or '').rstrip('\n')
+    if rendered_output:
         from backend.cli.tui.transcript_typography import TX_BODY_DIM
 
-        renderables.extend((_section_label('Output'), Text(preview, style=TX_BODY_DIM)))
-        omitted = _hidden_lines_text(hidden, earlier=True)
-        if omitted is not None:
-            renderables.insert(-1, omitted)
+        renderables.extend(
+            (_section_label('Output'), Text(rendered_output, style=TX_BODY_DIM))
+        )
     return Group(*renderables)
+
+
+def _terminal_inline_widgets(
+    command: str,
+    output: str,
+    *,
+    title: str,
+) -> list[Static]:
+    """Build a full-height terminal surface with no nested scrolling."""
+    chrome = Text()
+    chrome.append('●', style='#E24B4A')
+    chrome.append(' ●', style='#D9A441')
+    chrome.append(' ●', style='#639922')
+    chrome.append(f'  {title.upper()}', style='#70839c')
+    widgets = [
+        Static(chrome, classes='terminal-chrome'),
+        Static(_command_text(command), classes='terminal-command'),
+        Static('', classes='terminal-output scan-inline-content'),
+    ]
+    rendered_output = (output or '').rstrip('\n')
+    if rendered_output:
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        widgets[-1].update(Text(rendered_output, style=TX_BODY_DIM))
+    return widgets
 
 
 def _payload_preview(
@@ -267,8 +286,7 @@ class EditCard(ScanLineCard):
     """File edit summary with its syntax-aware diff visible in the transcript.
 
     Shared across ``create_file``, ``insert_text``, ``replace_string``,
-    ``multiedit``, and ``undo_last_edit``. The detail screen remains available
-    as a full-screen overflow view for large diffs.
+    ``multiedit``, and ``undo_last_edit``.
     """
 
     DEFAULT_CSS = """
@@ -313,6 +331,11 @@ class EditCard(ScanLineCard):
         else:
             self.add_class('-created' if is_create else '-edited')
         self._finalize_state()
+
+    @property
+    def has_detail(self) -> bool:
+        """Edits are complete inline, so they do not need an expand action."""
+        return False
 
     @property
     def state_border_color(self) -> str:
@@ -377,14 +400,26 @@ class EditCard(ScanLineCard):
 
             payload = decode_diff_view_payload(self._encoded_diff)
             if payload is not None:
+                patch = payload.get('patch')
+                old_content = payload.get('old')
+                new_content = payload.get('new')
+                if patch:
+                    full_row_budget = len(str(patch).splitlines()) + 1
+                else:
+                    full_row_budget = (
+                        len((old_content or '').splitlines())
+                        + len((new_content or '').splitlines())
+                        + 1
+                    )
                 widgets.append(
                     UnifiedDiffView(
                         path=str(payload.get('path') or self._display_path),
-                        old_content=payload.get('old'),
-                        new_content=payload.get('new'),
-                        patch=payload.get('patch'),
-                        max_lines=min(int(payload.get('max_lines') or 200), 200),
+                        old_content=old_content,
+                        new_content=new_content,
+                        patch=patch,
+                        max_lines=max(full_row_budget, 1),
                         n_context=int(payload.get('n_context') or 2),
+                        inline_expanded=True,
                     )
                 )
             else:
@@ -423,7 +458,43 @@ class EditCard(ScanLineCard):
 
 
 class ShellCard(ScanLineCard):
-    """Shell command with exact command text and a bounded output tail inline."""
+    """Shell command rendered as a complete inline terminal surface."""
+
+    DEFAULT_CSS = """
+    ShellCard > .scan-inline, TerminalCard > .scan-inline {
+        width: 100%;
+        height: auto;
+        margin: 0 0 1 2;
+        padding: 0;
+        border: solid #1b2b3e;
+        background: #05080d;
+        color: #a9b7c9;
+    }
+    ShellCard > .scan-inline > .terminal-chrome,
+    TerminalCard > .scan-inline > .terminal-chrome {
+        width: 100%;
+        height: 1;
+        padding: 0 1;
+        background: #111827;
+        color: #70839c;
+    }
+    ShellCard > .scan-inline > .terminal-command,
+    TerminalCard > .scan-inline > .terminal-command {
+        width: 100%;
+        height: auto;
+        padding: 1 1 0 1;
+        background: #05080d;
+        color: #d7e0ec;
+    }
+    ShellCard > .scan-inline > .terminal-output,
+    TerminalCard > .scan-inline > .terminal-output {
+        width: 100%;
+        height: auto;
+        padding: 0 1 1 1;
+        background: #05080d;
+        color: #9aa8b8;
+    }
+    """
 
     def __init__(
         self,
@@ -442,6 +513,11 @@ class ShellCard(ScanLineCard):
         self.cwd = cwd
         self.is_background = is_background
         self._apply_initial_state()
+
+    @property
+    def has_detail(self) -> bool:
+        """The complete command and output already live in the transcript."""
+        return False
 
     def _apply_initial_state(self) -> None:
         if self.is_background:
@@ -469,9 +545,10 @@ class ShellCard(ScanLineCard):
         return self._latest_line()
 
     def _line_text(self) -> str:
-        return self._scan_summary_line(
-            _scan_label_with_icon('Shell'), self.command, detail_max=50
-        )
+        label = _scan_label_with_icon('Shell')
+        if self.cwd:
+            return self._scan_summary_line(label, self.cwd, detail_max=60)
+        return f'[{self.state_border_color}]{label}[/]'
 
     def _delta_text(self) -> str:
         if self._state == 'background':
@@ -484,6 +561,20 @@ class ShellCard(ScanLineCard):
 
     def _inline_renderable(self) -> Group:
         return _command_output_preview(self.command, self.output)
+
+    def _inline_widgets(self) -> list[Static]:
+        return _terminal_inline_widgets(self.command, self.output, title='Shell')
+
+    def _refresh_inline_body(self) -> None:
+        try:
+            command = self.query_one('.terminal-command', Static)
+            output = self.query_one('.terminal-output', Static)
+        except Exception:
+            return
+        command.update(_command_text(self.command))
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        output.update(Text((self.output or '').rstrip('\n'), style=TX_BODY_DIM))
 
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail import ShellDetailScreen
@@ -511,8 +602,7 @@ class ShellCard(ScanLineCard):
 class TerminalCard(ScanLineCard):
     """Terminal interaction — one transcript card per agent command.
 
-    The exact command and a small scrollback tail are always visible. Detail
-    retains the complete session scrollback for long-running processes.
+    The exact command and complete session output are always visible.
     """
 
     def __init__(
@@ -534,6 +624,11 @@ class TerminalCard(ScanLineCard):
         self.scrollback = scrollback
         self.exit_code = exit_code
         self._apply_initial_state()
+
+    @property
+    def has_detail(self) -> bool:
+        """The complete session output already lives in the transcript."""
+        return False
 
     def _apply_initial_state(self) -> None:
         if self.exit_code == 0:
@@ -565,6 +660,22 @@ class TerminalCard(ScanLineCard):
     def _inline_renderable(self) -> Group:
         command = self.command or '(interactive session)'
         return _command_output_preview(command, self.scrollback)
+
+    def _inline_widgets(self) -> list[Static]:
+        command = self.command or '(interactive session)'
+        title = self.session_label or 'Terminal'
+        return _terminal_inline_widgets(command, self.scrollback, title=title)
+
+    def _refresh_inline_body(self) -> None:
+        try:
+            command = self.query_one('.terminal-command', Static)
+            output = self.query_one('.terminal-output', Static)
+        except Exception:
+            return
+        command.update(_command_text(self.command or '(interactive session)'))
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        output.update(Text((self.scrollback or '').rstrip('\n'), style=TX_BODY_DIM))
 
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail import TerminalDetailScreen

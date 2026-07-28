@@ -67,6 +67,8 @@ async def test_tui_file_edit_create_renders_compact_create_card(mock_config):
 
         inline_diffs = list(cards[0].query(UnifiedDiffView).results())
         assert len(inline_diffs) == 1
+        assert inline_diffs[0].has_class('-compact')
+        assert not inline_diffs[0].has_class('-scrollable')
         assert any(row.text == 'alpha' for row in inline_diffs[0]._rows)
         assert any(row.text == 'beta' for row in inline_diffs[0]._rows)
 

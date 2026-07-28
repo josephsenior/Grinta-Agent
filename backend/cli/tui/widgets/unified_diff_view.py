@@ -561,6 +561,7 @@ class UnifiedDiffView(VerticalScroll):
         max_lines: int = 200,
         n_context: int = DIFF_VIEW_CONTEXT_LINES,
         fill: bool = False,
+        inline_expanded: bool = False,
         id: str | None = None,
     ) -> None:
         rows = build_diff_view_rows(
@@ -573,6 +574,8 @@ class UnifiedDiffView(VerticalScroll):
         )
         if fill:
             scroll_class = '-detail'
+        elif inline_expanded:
+            scroll_class = '-compact'
         else:
             scroll_class = (
                 '-scrollable' if len(rows) > DIFF_VIEW_VISIBLE_LINES else '-compact'
