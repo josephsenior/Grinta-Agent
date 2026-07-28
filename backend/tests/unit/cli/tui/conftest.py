@@ -19,6 +19,14 @@ def isolate_repo_settings(tmp_path, monkeypatch):
     )
 
 
+@pytest.fixture(autouse=True)
+def disable_background_bootstrap(monkeypatch):
+    """Keep headless TUI tests from starting real bootstrap worker threads."""
+    from backend.cli.tui.app import GrintaScreen
+
+    monkeypatch.setattr(GrintaScreen, '_start_background_bootstrap', lambda self: None)
+
+
 @pytest.fixture
 def mock_config():
     config = MagicMock()

@@ -165,15 +165,12 @@ async def test_tui_shell_command_reuses_single_card(mock_config):
 
         cards = list(s.query(ShellCard).results())
         assert len(cards) == 1, f'Expected 1 ShellCard, got {len(cards)}'
-        assert 'pytest -q' in str(cards[0]._line_text())
+        assert 'pytest -q' not in str(cards[0]._line_text())
         assert cards[0]._state == 'done'
-        inline_body = cards[0].query_one('.scan-inline-content')
-        inline_parts = [
-            getattr(part, 'plain', '')
-            for part in inline_body._content.renderables  # noqa: SLF001
-        ]
-        assert any('$ pytest -q' in part for part in inline_parts)
-        assert any('2 passed' in part for part in inline_parts)
+        command_body = cards[0].query_one('.terminal-command')
+        output_body = cards[0].query_one('.terminal-output')
+        assert '$ pytest -q' in command_body._content.plain  # noqa: SLF001
+        assert '2 passed' in output_body._content.plain  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -295,13 +292,10 @@ async def test_tui_terminal_close_updates_existing_session_card(mock_config):
         assert len(cards) == 1
         assert cards[0].state == 'done'
         assert 'Closed terminal session.' in cards[0].scrollback
-        inline_body = cards[0].query_one('.scan-inline-content')
-        inline_parts = [
-            getattr(part, 'plain', '')
-            for part in inline_body._content.renderables  # noqa: SLF001
-        ]
-        assert any('$ npm run dev' in part for part in inline_parts)
-        assert any('Closed terminal session.' in part for part in inline_parts)
+        command_body = cards[0].query_one('.terminal-command')
+        output_body = cards[0].query_one('.terminal-output')
+        assert '$ npm run dev' in command_body._content.plain  # noqa: SLF001
+        assert 'Closed terminal session.' in output_body._content.plain  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -374,7 +368,9 @@ async def test_tui_shell_command_reuses_card_with_multiline_command(mock_config)
         assert cards[0]._state == 'done'
         line = str(cards[0]._line_text())
         assert '\n' not in line
-        assert 'import sys' in line
+        assert 'import sys' not in line
+        command_body = cards[0].query_one('.terminal-command')
+        assert 'import sys' in command_body._content.plain  # noqa: SLF001
 
 
 @pytest.mark.asyncio

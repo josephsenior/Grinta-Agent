@@ -40,7 +40,6 @@ async def test_tui_update_hud_state(mock_config, monkeypatch):
     """Verify update_hud folds runtime info into the two-line HUD."""
     console = RichConsole()
     loop = asyncio.get_running_loop()
-    monkeypatch.setattr(GrintaScreen, '_start_background_bootstrap', lambda self: None)
     app = GrintaTUIApp(config=mock_config, console=console, loop=loop)
 
     async with app.run_test(size=(120, 36)) as pilot:
@@ -277,7 +276,6 @@ async def test_tui_hud_autonomy_sync_uses_agent_config_without_applying_default(
     loop = asyncio.get_running_loop()
     agent_config = SimpleNamespace(mode='agent', autonomy_level='full')
     mock_config.get_agent_config.return_value = agent_config
-    monkeypatch.setattr(GrintaScreen, '_start_background_bootstrap', lambda self: None)
     app = GrintaTUIApp(config=mock_config, console=console, loop=loop)
 
     async with app.run_test(size=(120, 36)) as pilot:
@@ -315,7 +313,6 @@ async def test_tui_hud_autonomy_render_shows_runtime_level(
     agent_config = SimpleNamespace(mode='agent', autonomy_level='balanced')
     mock_config.default_agent = 'Orchestrator'
     mock_config.get_agent_config.return_value = agent_config
-    monkeypatch.setattr(GrintaScreen, '_start_background_bootstrap', lambda self: None)
     app = GrintaTUIApp(config=mock_config, console=console, loop=loop)
 
     async with app.run_test(size=(120, 36)) as pilot:

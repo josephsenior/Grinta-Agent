@@ -166,6 +166,7 @@ def test_edit_card_create():
     assert '+48' in card._delta_text()
     assert '✓' in card._delta_text()
     assert card.state == 'done'
+    assert card.has_detail is False
 
 
 def test_edit_card_failed_syntax():
@@ -254,19 +255,20 @@ def test_shell_card_running():
     line = _line_text(card)
     assert '$ Shell' in line or 'Shell' in line
     assert f'[{NAVY_RUNNING}]…[/]' in card._delta_text()
-    assert 'npm install' in line
+    assert 'npm install' not in line
+    assert card.has_detail is False
 
 
-def test_shell_card_multiline_command_renders_single_line():
+def test_shell_card_multiline_command_is_not_duplicated_in_headline():
     command = 'python3 -c "\nimport sys\nsys.path.insert(0, \'.\')\nprint(1)"'
     card = ShellCard(command=command)
     line = _line_text(card)
     assert '\n' not in line
-    assert 'import sys' in line
-    assert 'sys.path.insert' in line
+    assert 'import sys' not in line
+    assert 'sys.path.insert' not in line
 
 
-def test_shell_card_shows_full_command_and_bounded_output_inline():
+def test_shell_card_shows_full_command_and_output_inline():
     command = 'python -c "\nprint(1)\nprint(2)"'
     output = '\n'.join(f'line {index}' for index in range(7))
     card = ShellCard(command=command, output=output, exit_code=0)
@@ -275,8 +277,8 @@ def test_shell_card_shows_full_command_and_bounded_output_inline():
     assert '$ python -c "' in inline
     assert 'print(1)' in inline
     assert 'print(2)"' in inline
-    assert 'line 0' not in inline
-    assert '3 earlier lines hidden' in inline
+    assert 'line 0' in inline
+    assert 'hidden' not in inline
     assert 'line 6' in inline
 
 
@@ -386,6 +388,7 @@ def test_terminal_card_running():
     assert 's1' in _line_text(card)
     assert '/project/grinta' in _line_text(card)
     assert f'[{NAVY_RUNNING}]…[/]' in card._delta_text()
+    assert card.has_detail is False
 
 
 def test_terminal_card_done():
