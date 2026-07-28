@@ -183,6 +183,7 @@ def _logical_model_name(model: str) -> str:
 
     return get_resolver().strip_provider_prefix(model)
 
+
 class OrchestratorPromptManager(PromptManager):
     """PromptManager subclass that injects orchestrator-specific defaults.
 

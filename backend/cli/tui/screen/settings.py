@@ -101,7 +101,6 @@ class ScreenSettingsMixin:
             self._apply_autonomy_level(result['autonomy'])
             self._apply_hud_reasoning_effort(result['reasoning'])
 
-
     def _apply_autonomy_level(self, new_level: str) -> None:
         if getattr(self, '_hud_autonomy_syncing', False):
             return

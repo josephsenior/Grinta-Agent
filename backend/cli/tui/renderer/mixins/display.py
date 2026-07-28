@@ -810,7 +810,7 @@ class RendererDisplayMixin:
         self._sync_transcript_viewport()
 
     def _append_scan_line_card(self, card: Any) -> Any:
-        """Append a 1-line :class:`ScanLineCard` to the transcript feed."""
+        """Append a :class:`ScanLineCard` action block to the transcript feed."""
         self._flush_orient_burst()
         self.commit_live_thinking()
         self._register_widget_event_id(card)

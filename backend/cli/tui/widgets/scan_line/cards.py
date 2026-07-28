@@ -1,11 +1,13 @@
-"""Concrete ScanLineCard subclasses — one per agent action type.
-
-Each card is exactly 1 line tall with a ``⤢`` detail button.
-"""
+"""Concrete transcript action cards — one per agent action type."""
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
+
+from rich.console import Group
+from rich.text import Text
+from textual.widgets import Static
 
 from backend.cli.theme import NAVY_RUNNING
 from backend.cli.tui.widgets.glyphs import glyph as _glyph
@@ -65,6 +67,91 @@ def _format_diff_delta(added: int, removed: int) -> str:
     if removed:
         parts.append(f'-{removed}')
     return ' '.join(parts) if parts else '0'
+
+
+_INLINE_OUTPUT_LINES = 4
+_INLINE_PAYLOAD_LINES = 8
+
+
+def _bounded_text(
+    text: str,
+    *,
+    max_lines: int,
+    tail: bool = False,
+) -> tuple[str, int]:
+    """Return a bounded transcript preview and the number of hidden lines."""
+    lines = (text or '').strip().splitlines()
+    if not lines:
+        return '', 0
+    hidden = max(0, len(lines) - max_lines)
+    kept = lines[-max_lines:] if tail and hidden else lines[:max_lines]
+    return '\n'.join(kept), hidden
+
+
+def _section_label(label: str) -> Text:
+    from backend.cli.tui.transcript_typography import TX_META
+
+    return Text(label.upper(), style=TX_META)
+
+
+def _hidden_lines_text(hidden: int, *, earlier: bool = False) -> Text | None:
+    if hidden <= 0:
+        return None
+    from backend.cli.tui.transcript_typography import TX_MUTED
+
+    position = ' earlier' if earlier else ''
+    label = 'line' if hidden == 1 else 'lines'
+    return Text(f'… {hidden}{position} {label} hidden', style=TX_MUTED)
+
+
+def _command_text(command: str) -> Text:
+    """Render a command exactly as submitted, including multiline commands."""
+    from backend.cli.tui.transcript_typography import TX_BODY, TX_KEY_HINT
+
+    lines = (command or '').splitlines() or ['']
+    rendered = Text()
+    for index, line in enumerate(lines):
+        if index:
+            rendered.append('\n')
+        rendered.append('$ ' if index == 0 else '  ', style=TX_KEY_HINT)
+        rendered.append(line, style=TX_BODY)
+    return rendered
+
+
+def _command_output_preview(command: str, output: str) -> Group:
+    """Full command plus a small output tail for inline shell/terminal cards."""
+    renderables: list[Any] = [_section_label('Command'), _command_text(command)]
+    preview, hidden = _bounded_text(
+        output,
+        max_lines=_INLINE_OUTPUT_LINES,
+        tail=True,
+    )
+    if preview:
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        renderables.extend((_section_label('Output'), Text(preview, style=TX_BODY_DIM)))
+        omitted = _hidden_lines_text(hidden, earlier=True)
+        if omitted is not None:
+            renderables.insert(-1, omitted)
+    return Group(*renderables)
+
+
+def _payload_preview(
+    body: str,
+    *,
+    label: str = 'Result',
+    max_lines: int = _INLINE_PAYLOAD_LINES,
+) -> Group | None:
+    preview, hidden = _bounded_text(body, max_lines=max_lines)
+    if not preview:
+        return None
+    from backend.cli.tui.renderer.prep import prep_markdown
+
+    renderables: list[Any] = [_section_label(label), prep_markdown(preview)]
+    omitted = _hidden_lines_text(hidden)
+    if omitted is not None:
+        renderables.append(omitted)
+    return Group(*renderables)
 
 
 _RUNNING_ELLIPSIS_FRAMES = ('…', '..', '.')
@@ -131,6 +218,7 @@ _SCAN_LINE_ICONS: dict[str, str] = {
     'Updated': '⊜',
     'Viewed': '⊙',
     'Audited': '⊠',
+    'Tasks': '▣',
 }
 
 
@@ -176,11 +264,11 @@ class AgentMessageCard(ScanLineCard):
 
 
 class EditCard(ScanLineCard):
-    """1-line file edit summary — full diff in detail screen.
+    """File edit summary with its syntax-aware diff visible in the transcript.
 
     Shared across ``create_file``, ``insert_text``, ``replace_string``,
-    ``multiedit``, and ``undo_last_edit``.  Only the file
-    path + delta appear in the 1-line summary.
+    ``multiedit``, and ``undo_last_edit``. The detail screen remains available
+    as a full-screen overflow view for large diffs.
     """
 
     DEFAULT_CSS = """
@@ -279,6 +367,44 @@ class EditCard(ScanLineCard):
             return f'{delta}  {status}'
         return delta or status
 
+    def _inline_widgets(self) -> list:
+        widgets: list = []
+        if self._encoded_diff:
+            from backend.cli.tui.widgets.unified_diff_view import (
+                UnifiedDiffView,
+                decode_diff_view_payload,
+            )
+
+            payload = decode_diff_view_payload(self._encoded_diff)
+            if payload is not None:
+                widgets.append(
+                    UnifiedDiffView(
+                        path=str(payload.get('path') or self._display_path),
+                        old_content=payload.get('old'),
+                        new_content=payload.get('new'),
+                        patch=payload.get('patch'),
+                        max_lines=min(int(payload.get('max_lines') or 200), 200),
+                        n_context=int(payload.get('n_context') or 2),
+                    )
+                )
+            else:
+                from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+                widgets.append(
+                    Static(
+                        Text(self._encoded_diff, style=TX_BODY_DIM),
+                        classes='scan-inline-content',
+                    )
+                )
+        if self._syntax_error:
+            widgets.append(
+                Static(
+                    Text(f'Syntax error: {self._syntax_error}', style='#E24B4A'),
+                    classes='scan-inline-error',
+                )
+            )
+        return widgets
+
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail import EditDetailScreen
 
@@ -297,7 +423,7 @@ class EditCard(ScanLineCard):
 
 
 class ShellCard(ScanLineCard):
-    """1-line shell command summary — full output in detail screen."""
+    """Shell command with exact command text and a bounded output tail inline."""
 
     def __init__(
         self,
@@ -356,6 +482,9 @@ class ShellCard(ScanLineCard):
             running_tail=self._latest_line() if self._state == 'running' else '',
         )
 
+    def _inline_renderable(self) -> Group:
+        return _command_output_preview(self.command, self.output)
+
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail import ShellDetailScreen
 
@@ -380,10 +509,10 @@ class ShellCard(ScanLineCard):
 
 
 class TerminalCard(ScanLineCard):
-    """1-line terminal interaction — one card per agent command.
+    """Terminal interaction — one transcript card per agent command.
 
-    Summary shows session label + cwd + latest output line.
-    Detail shows full session scrollback.
+    The exact command and a small scrollback tail are always visible. Detail
+    retains the complete session scrollback for long-running processes.
     """
 
     def __init__(
@@ -433,6 +562,10 @@ class TerminalCard(ScanLineCard):
             running_tail=self._latest_line() if self._state == 'running' else '',
         )
 
+    def _inline_renderable(self) -> Group:
+        command = self.command or '(interactive session)'
+        return _command_output_preview(command, self.scrollback)
+
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail import TerminalDetailScreen
 
@@ -458,7 +591,7 @@ class TerminalCard(ScanLineCard):
 
 
 class BrowserCard(ScanLineCard):
-    """1-line browser action summary — full URL + actions in detail."""
+    """Browser action with current activity/result context visible inline."""
 
     def __init__(
         self,
@@ -505,6 +638,16 @@ class BrowserCard(ScanLineCard):
             return _status_indicator_markup('done')
         return _status_indicator_markup(self._state)
 
+    def _inline_renderable(self) -> Group | None:
+        parts: list[str] = []
+        if self.full_url:
+            parts.append(self.full_url)
+        if self.action:
+            parts.append(self.action)
+        if self.extracted:
+            parts.append(self.extracted)
+        return _payload_preview('\n'.join(parts), label='Browser')
+
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail import BrowserDetailScreen
 
@@ -528,7 +671,7 @@ class BrowserCard(ScanLineCard):
 
 
 class DebuggerCard(ScanLineCard):
-    """1-line debugger state summary — stack + locals in detail."""
+    """Debugger state with a bounded stack/locals preview inline."""
 
     def __init__(
         self,
@@ -571,6 +714,16 @@ class DebuggerCard(ScanLineCard):
             return _status_indicator_markup('done')
         return _status_indicator_markup(self._state)
 
+    def _inline_renderable(self) -> Group | None:
+        lines: list[str] = []
+        if self._stack:
+            lines.append('Stack')
+            lines.extend(str(frame) for frame in self._stack[:4])
+        if self._variables:
+            lines.append('Locals')
+            lines.extend(f'{name} = {value}' for name, value in self._variables[:4])
+        return _payload_preview('\n'.join(lines), label='Debugger')
+
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail import DebuggerDetailScreen
 
@@ -593,11 +746,7 @@ class DebuggerCard(ScanLineCard):
 
 
 class DelegateCard(ScanLineCard):
-    """1-line delegated worker summary with an inline transcript result."""
-
-    @property
-    def has_detail(self) -> bool:
-        return False
+    """Delegated worker summary with a bounded result visible inline."""
 
     def __init__(
         self,
@@ -641,16 +790,35 @@ class DelegateCard(ScanLineCard):
             return _status_indicator_markup('done')
         return _status_indicator_markup('failed')
 
+    def _inline_renderable(self) -> Group:
+        preview = _payload_preview(self._result, label='Worker result')
+        if preview is not None:
+            return preview
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        return Group(
+            _section_label('Worker'),
+            Text(self._worker or 'Working…', style=TX_BODY_DIM),
+        )
+
+    def build_detail_screen(self) -> DetailScreen:
+        from backend.cli.tui.screens.detail.payload import PayloadDetailScreen
+
+        return PayloadDetailScreen(
+            kind='Delegate',
+            heading=_truncate(self._delegate_task, 80),
+            body=self._result or '(worker is still running)',
+            meta_parts=[self._worker] if self._worker else None,
+            accent=self.state_border_color,
+            title='Delegated work',
+        )
+
 
 # ── MCPCard ────────────────────────────────────────────────────────────
 
 
 class MCPCard(ScanLineCard):
-    """1-line MCP tool call with an inline transcript result."""
-
-    @property
-    def has_detail(self) -> bool:
-        return False
+    """MCP tool call with arguments and a bounded result visible inline."""
 
     def __init__(
         self,
@@ -715,16 +883,57 @@ class MCPCard(ScanLineCard):
             return _status_indicator_markup('done')
         return _status_indicator_markup('failed')
 
+    def _arguments_text(self) -> str:
+        if not self._arguments:
+            return ''
+        return json.dumps(self._arguments, indent=2, ensure_ascii=False, default=str)
+
+    def _inline_renderable(self) -> Group:
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        renderables: list[Any] = []
+        arguments = self._arguments_text()
+        if arguments:
+            args_preview, args_hidden = _bounded_text(arguments, max_lines=4)
+            renderables.extend(
+                (_section_label('Arguments'), Text(args_preview, style=TX_BODY_DIM))
+            )
+            omitted = _hidden_lines_text(args_hidden)
+            if omitted is not None:
+                renderables.append(omitted)
+        result = _payload_preview(self._result, label='Result')
+        if result is not None:
+            renderables.append(result)
+        elif not renderables:
+            renderables.extend(
+                (_section_label('Result'), Text('Waiting…', style=TX_BODY_DIM))
+            )
+        return Group(*renderables)
+
+    def build_detail_screen(self) -> DetailScreen:
+        from backend.cli.tui.screens.detail.payload import PayloadDetailScreen
+
+        arguments = self._arguments_text()
+        sections: list[str] = []
+        if arguments:
+            sections.append(f'Arguments\n\n```json\n{arguments}\n```')
+        if self._result:
+            sections.append(f'Result\n\n{self._result}')
+        return PayloadDetailScreen(
+            kind='Tool',
+            heading=self._name,
+            body='\n\n'.join(sections) or '(tool is still running)',
+            meta_parts=self._meta_lines,
+            accent=self.state_border_color,
+            title=f'Tool  {self._name}',
+        )
+
 
 # ── PayloadCard ────────────────────────────────────────────────────────
 
 
 class PayloadCard(ScanLineCard):
-    """Generic artifact row with an inline transcript payload."""
-
-    @property
-    def has_detail(self) -> bool:
-        return False
+    """Generic artifact row with a bounded inline transcript payload."""
 
     def __init__(
         self,
@@ -749,12 +958,26 @@ class PayloadCard(ScanLineCard):
     def _delta_text(self) -> str:
         return _status_indicator_markup(self._state)
 
+    def _inline_renderable(self) -> Group | None:
+        return _payload_preview(self._body)
+
+    def build_detail_screen(self) -> DetailScreen:
+        from backend.cli.tui.screens.detail.payload import PayloadDetailScreen
+
+        return PayloadDetailScreen(
+            kind=self._label,
+            heading=self._detail,
+            body=self._body,
+            accent=self.state_border_color,
+            title=f'{self._label}  {_truncate(self._detail, 60)}',
+        )
+
 
 # ── CompactionCard ─────────────────────────────────────────────────────
 
 
 class CompactionCard(ScanLineCard):
-    """1-line context compaction summary — full summary in detail screen."""
+    """Context compaction with a bounded summary visible inline."""
 
     def __init__(self, *, summary: str = '', id: str | None = None) -> None:
         super().__init__(id=id)
@@ -811,6 +1034,17 @@ class CompactionCard(ScanLineCard):
     def _delta_text(self) -> str:
         return _status_indicator_markup(self._state)
 
+    def _inline_renderable(self) -> Group:
+        preview = _payload_preview(self.summary, label='Summary')
+        if preview is not None:
+            return preview
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        return Group(
+            _section_label('Summary'),
+            Text('Building summary…', style=TX_BODY_DIM),
+        )
+
     def refresh_summary(self) -> None:
         if self._state == 'running':
             self._refresh_line()
@@ -832,11 +1066,135 @@ class CompactionCard(ScanLineCard):
         return screen
 
 
+# ── TaskStateCard ─────────────────────────────────────────────────────
+
+
+class TaskStateCard(ScanLineCard):
+    """Structured task-state update rendered without raw serialization."""
+
+    @property
+    def has_detail(self) -> bool:
+        return False
+
+    def __init__(
+        self,
+        command: str,
+        *,
+        revision: int | None = None,
+        objective: str = '',
+        tasks: list[dict[str, Any]] | None = None,
+        id: str | None = None,
+    ) -> None:
+        super().__init__(id=id)
+        self._command = str(command or 'view').strip().lower()
+        self._revision = revision
+        self._objective = objective.strip()
+        self._tasks = list(tasks or [])
+        self.set_state('done')
+
+    @staticmethod
+    def _normalized_status(task: dict[str, Any]) -> str:
+        status = str(task.get('status') or 'todo').strip().lower()
+        aliases = {
+            'pending': 'todo',
+            'completed': 'done',
+            'running': 'in_progress',
+            'cancelled': 'skipped',
+            'canceled': 'skipped',
+        }
+        return aliases.get(status, status)
+
+    @classmethod
+    def _status_text(cls, task: dict[str, Any]) -> Text:
+        status = cls._normalized_status(task)
+        colors = {
+            'todo': '#6f83aa',
+            'in_progress': NAVY_RUNNING,
+            'done': '#639922',
+            'blocked': '#eacb8a',
+            'skipped': '#54597b',
+        }
+        icons = {
+            'todo': _glyph('○'),
+            'in_progress': _glyph('●'),
+            'done': _glyph('✓'),
+            'blocked': _glyph('⚠'),
+            'skipped': _glyph('·'),
+        }
+        description = str(
+            task.get('description')
+            or task.get('title')
+            or task.get('task')
+            or task.get('id')
+            or 'Untitled task'
+        ).strip()
+        task_id = str(task.get('id') or '').strip()
+        rendered = Text()
+        rendered.append(f'{icons.get(status, _glyph("•"))} ', style=colors.get(status))
+        if task_id:
+            rendered.append(f'{task_id} ', style='#6f83aa')
+        rendered.append(description, style='#c8d4e8')
+        if status == 'blocked':
+            reason = str(task.get('blocked_reason') or task.get('reason') or '').strip()
+            if reason:
+                rendered.append(f' — {reason}', style='#eacb8a')
+        return rendered
+
+    def _progress(self) -> tuple[int, int]:
+        total = len(self._tasks)
+        done = sum(1 for task in self._tasks if self._normalized_status(task) == 'done')
+        return done, total
+
+    def _line_text(self) -> str:
+        done, total = self._progress()
+        detail_parts: list[str] = []
+        if total:
+            detail_parts.append(f'{done}/{total} complete')
+        if self._revision is not None:
+            detail_parts.append(f'revision {self._revision}')
+        detail = ' · '.join(detail_parts) or self._command.replace('_', ' ')
+        return self._scan_summary_line(
+            _scan_label_with_icon('Tasks'),
+            detail,
+            detail_max=70,
+        )
+
+    def _delta_text(self) -> str:
+        return _status_indicator_markup('done')
+
+    def _inline_renderable(self) -> Group:
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        renderables: list[Any] = []
+        if self._objective:
+            renderables.extend(
+                (
+                    _section_label('Objective'),
+                    Text(self._objective, style=TX_BODY_DIM),
+                )
+            )
+        if self._tasks:
+            renderables.append(_section_label('Plan'))
+            visible = self._tasks[:8]
+            renderables.extend(self._status_text(task) for task in visible)
+            hidden = len(self._tasks) - len(visible)
+            if hidden:
+                renderables.append(
+                    Text(
+                        f'… {hidden} more task{"s" if hidden != 1 else ""} in the sidebar',
+                        style='#54597b',
+                    )
+                )
+        if not renderables:
+            renderables.append(Text('No tasks recorded.', style=TX_BODY_DIM))
+        return Group(*renderables)
+
+
 # ── AcceptanceCriteriaCard ───────────────────────────────────────────────
 
 
 class AcceptanceCriteriaCard(ScanLineCard):
-    """1-line acceptance criteria summary — full bullet list in detail screen."""
+    """Acceptance criteria with a bounded checklist visible inline."""
 
     _VERBS: dict[str, str] = {
         'view': 'Viewed',
@@ -900,6 +1258,36 @@ class AcceptanceCriteriaCard(ScanLineCard):
 
     def _delta_text(self) -> str:
         return _status_indicator_markup(self._state)
+
+    def _inline_renderable(self) -> Group:
+        from backend.cli.tui.transcript_typography import TX_BODY_DIM
+
+        renderables: list[Any] = []
+        for item in self._criteria_list[:8]:
+            assertion = str(
+                item.get('assertion')
+                or item.get('description')
+                or item.get('criterion')
+                or ''
+            ).strip()
+            if not assertion:
+                continue
+            satisfied = item.get('satisfied')
+            icon = _glyph('✓') if satisfied is True else _glyph('○')
+            color = '#639922' if satisfied is True else '#c8d4e8'
+            renderables.append(Text(f'{icon} {assertion}', style=color))
+        hidden = len(self._criteria_list) - min(len(self._criteria_list), 8)
+        if hidden:
+            renderables.append(
+                Text(
+                    f'… {hidden} more {"criteria" if hidden != 1 else "criterion"}',
+                    style='#54597b',
+                )
+            )
+        if not renderables:
+            message = self._status_message or 'Waiting for criteria…'
+            renderables.append(Text(message, style=TX_BODY_DIM))
+        return Group(*renderables)
 
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail.acceptance_criteria import (

@@ -1,7 +1,7 @@
-"""Terminal session event handlers (run, input, read, observation).
+"""Terminal session handlers with inline commands and bounded output tails.
 
-Appends one :class:`TerminalCard` per agent command.  A session scrollback
-buffer tracks full output for detail screens.
+Appends one :class:`TerminalCard` per agent command. A session scrollback
+buffer retains complete output for the overflow detail view.
 """
 
 from __future__ import annotations

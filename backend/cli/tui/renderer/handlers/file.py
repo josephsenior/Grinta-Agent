@@ -1,6 +1,6 @@
 """File read / edit event handlers for the TUI renderer.
 
-Mounts :class:`EditCard` (1-line scan row with ⤢ detail) per edit.
+Mounts :class:`EditCard` with an inline diff and overflow detail per edit.
 Supports multiedit splitting — one card per entry in
 ``FileEditAction.structured_payload.file_edits[]``.
 """

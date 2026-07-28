@@ -1,7 +1,4 @@
-"""Shell / CmdRun event handlers for the TUI renderer.
-
-Mounts :class:`ShellCard` scan-line rows with ⤢ detail screens.
-"""
+"""Shell / CmdRun handlers with inline commands and bounded output tails."""
 
 from __future__ import annotations
 

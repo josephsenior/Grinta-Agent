@@ -726,7 +726,12 @@ def test_async_execute_clamps_completion_budget_before_stream_call(monkeypatch):
         mcp_tools_provider=lambda: {},
     )
 
-    params = {'messages': [{'role': 'user', 'content': 'x' * 2800}]}
+    params = {
+        'messages': [{'role': 'user', 'content': 'x' * 2800}],
+        # Keep this test independent of tokenizer/platform differences while
+        # exercising the context-window completion clamp.
+        '_prompt_accounting': {'full_request_tokens': 800},
+    }
     expected = executor._apply_context_window_preflight(dict(params))
 
     asyncio.run(

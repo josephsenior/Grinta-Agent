@@ -207,6 +207,7 @@ async def test_tui_hud_reasoning_sync_does_not_apply_setting(mock_config, monkey
 async def test_tui_hud_reasoning_effort_persists(mock_config, monkeypatch):
     console = RichConsole()
     loop = asyncio.get_running_loop()
+    monkeypatch.setattr(GrintaScreen, '_start_background_bootstrap', lambda self: None)
     app = GrintaTUIApp(config=mock_config, console=console, loop=loop)
     monkeypatch.setattr(
         GrintaScreen,
