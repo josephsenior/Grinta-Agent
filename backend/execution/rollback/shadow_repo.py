@@ -76,13 +76,19 @@ class ShadowRepo:
         if shadow_dir is None:
             from backend.core.workspace_resolution import workspace_grinta_root
 
-            self._shadow_dir = workspace_grinta_root(self._workspace_root) / 'rollback' / _SHADOW_DIR_NAME
+            self._shadow_dir = (
+                workspace_grinta_root(self._workspace_root)
+                / 'rollback'
+                / _SHADOW_DIR_NAME
+            )
             legacy = self._workspace_root / '.grinta' / _SHADOW_DIR_NAME
             if not self._shadow_dir.exists() and legacy.is_dir():
                 try:
                     shutil.move(str(legacy), str(self._shadow_dir))
                 except OSError:
-                    logger.warning('Could not migrate legacy shadow repo from %s', legacy)
+                    logger.warning(
+                        'Could not migrate legacy shadow repo from %s', legacy
+                    )
         else:
             self._shadow_dir = Path(shadow_dir).resolve()
         self._shadow_dir.mkdir(parents=True, exist_ok=True)

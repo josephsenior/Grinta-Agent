@@ -15,6 +15,7 @@ from backend.cli.tui.widgets.scan_line import (
     PayloadCard,
     ScanLineCard,
     ShellCard,
+    TaskStateCard,
     TerminalCard,
     _compact_path,
     _extract_syntax_error,
@@ -38,6 +39,16 @@ class _TestCard(ScanLineCard):
 
 def _line_text(card: ScanLineCard) -> str:
     return str(card._line_text())
+
+
+def _plain_renderable(renderable) -> str:
+    plain = getattr(renderable, 'plain', None)
+    if isinstance(plain, str):
+        return plain
+    children = getattr(renderable, 'renderables', None)
+    if children is not None:
+        return '\n'.join(_plain_renderable(child) for child in children)
+    return str(renderable)
 
 
 # ── ScanLineCard base ──────────────────────────────────────────────────
@@ -255,6 +266,20 @@ def test_shell_card_multiline_command_renders_single_line():
     assert 'sys.path.insert' in line
 
 
+def test_shell_card_shows_full_command_and_bounded_output_inline():
+    command = 'python -c "\nprint(1)\nprint(2)"'
+    output = '\n'.join(f'line {index}' for index in range(7))
+    card = ShellCard(command=command, output=output, exit_code=0)
+    inline = _plain_renderable(card._inline_renderable())
+
+    assert '$ python -c "' in inline
+    assert 'print(1)' in inline
+    assert 'print(2)"' in inline
+    assert 'line 0' not in inline
+    assert '3 earlier lines hidden' in inline
+    assert 'line 6' in inline
+
+
 # ── CompactionCard ─────────────────────────────────────────────────────
 
 
@@ -411,6 +436,18 @@ def test_terminal_card_detail_screen():
     assert isinstance(screen, TerminalDetailScreen)
 
 
+def test_terminal_card_shows_exact_command_and_output_tail_inline():
+    card = TerminalCard(
+        session_id='s1',
+        command='npm run dev -- --host 0.0.0.0',
+        scrollback='booting\ncompiling\nready',
+    )
+    inline = _plain_renderable(card._inline_renderable())
+    assert '$ npm run dev -- --host 0.0.0.0' in inline
+    assert 'booting' in inline
+    assert 'ready' in inline
+
+
 # ── BrowserCard ────────────────────────────────────────────────────────
 
 
@@ -493,7 +530,8 @@ def test_delegate_card_running_then_done():
     card.complete(result='done', success=True)
     assert card.state == 'done'
     assert '✓' in card._delta_text()
-    assert not card.has_detail
+    assert card.has_detail
+    assert card.build_detail_screen()._body == 'done'
 
 
 def test_mcp_card_merges_result():
@@ -501,12 +539,33 @@ def test_mcp_card_merges_result():
     card.complete(result='snippet', success=True)
     assert card.state == 'done'
     assert '⊛ Called' in _line_text(card) or 'search_docs' in _line_text(card)
-    assert not card.has_detail
+    assert card.has_detail
+    assert 'snippet' in card.build_detail_screen()._body
 
 
-def test_payload_card_has_no_detail_screen():
+def test_payload_card_keeps_inline_payload_and_overflow_detail():
     card = PayloadCard('Found', 'MyClass', 'class MyClass: ...')
     assert 'ƒ Found' in _line_text(card)
+    assert card.has_detail
+    assert 'class MyClass' in card.build_detail_screen()._body
+
+
+def test_task_state_card_formats_objective_and_statuses():
+    card = TaskStateCard(
+        'set',
+        revision=4,
+        objective='Improve transcript UX',
+        tasks=[
+            {'id': '1', 'description': 'Render task state', 'status': 'done'},
+            {'id': '2', 'description': 'Verify output', 'status': 'in_progress'},
+        ],
+    )
+    inline = _plain_renderable(card._inline_renderable())
+
+    assert '1/2 complete' in _line_text(card)
+    assert 'Improve transcript UX' in inline
+    assert '1 Render task state' in inline
+    assert '2 Verify output' in inline
     assert not card.has_detail
 
 

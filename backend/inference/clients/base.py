@@ -187,7 +187,7 @@ def get_shared_http_client(provider: str, base_url: str | None = None) -> httpx.
                     limits=_POOL_LIMITS,
                     timeout=_shared_llm_pool_timeout(),
                     follow_redirects=True,
-                verify=_HTTPX_VERIFY,
+                    verify=_HTTPX_VERIFY,
                 )
                 logger.debug('Created shared sync httpx pool for %s', key)
     return _shared_sync_clients[key]
@@ -205,7 +205,7 @@ def get_shared_async_http_client(
                     limits=_POOL_LIMITS,
                     timeout=_shared_llm_pool_timeout(),
                     follow_redirects=True,
-                verify=_HTTPX_VERIFY,
+                    verify=_HTTPX_VERIFY,
                 )
                 logger.debug('Created shared async httpx pool for %s', key)
     return _shared_async_clients[key]
