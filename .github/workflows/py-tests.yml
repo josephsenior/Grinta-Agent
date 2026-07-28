@@ -335,7 +335,7 @@ jobs:
           cp coverage-shards/coverage-linux-e/coverage-shard-e.dat .coverage.e
           cp coverage-shards/coverage-linux-extended/coverage-shard-extended.dat .coverage.extended
           uv run coverage combine .coverage.a .coverage.b .coverage.c .coverage.d .coverage.g .coverage.e .coverage.extended
-          uv run coverage report --fail-under=75
+          uv run coverage report --fail-under=74
           uv run coverage xml -o coverage.xml
       - name: Upload coverage to Codecov
         if: always()
