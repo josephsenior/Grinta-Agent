@@ -40,7 +40,9 @@ def _mock_openai_sdk():
 
 
 def test_codex_executable_resolution_accepts_windows_desktop_install() -> None:
-    desktop_executable = r'C:\Users\user\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe'
+    desktop_executable = (
+        r'C:\Users\user\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe'
+    )
     with (
         patch('backend.inference.clients.codex_app_server.sys.platform', 'win32'),
         patch(
@@ -54,6 +56,7 @@ def test_codex_executable_resolution_accepts_windows_desktop_install() -> None:
         (('codex.cmd',),),
         (('codex.exe',),),
     ]
+
 
 def test_codex_model_list_uses_account_catalog() -> None:
     client = CodexResponsesClient()

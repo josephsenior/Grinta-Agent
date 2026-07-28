@@ -1,19 +1,19 @@
 """Transcript display tiers for TUI tool rendering.
 
-The live TUI renders tool activity in exactly two tiers:
+The live TUI renders tool activity in two tiers:
 
 - **Orient** — a flat single-line :class:`OrientLine` row (no body, no
   expansion). Used for lightweight reads / lookups. See
   :data:`ORIENT_TOOL_NAMES`.
-- **Action** — a single-line :class:`ScanLineCard` summary with a state-colored
-  left pipe and a ``⤢`` affordance. The full payload (diff, output, scrollback,
-  stack, result) lives in a pushed full-screen ``DetailScreen``; the feed row
-  itself never grows. Used for everything heavier than an orient read. See
-  :data:`ACTION_TOOL_NAMES`.
+- **Action** — a :class:`ScanLineCard` with a state-colored headline and a
+  curated inline payload preview. Diffs, commands, task progress, and bounded
+  output are readable without leaving the transcript. A ``⤢`` affordance can
+  still open a full-screen ``DetailScreen`` for overflow. Used for everything
+  heavier than an orient read. See :data:`ACTION_TOOL_NAMES`.
 
-There is no inline collapsed/expanded body in the live feed — expansion always
-means a detail screen on the screen stack (open with Enter/Space on a focused
-card, the ``⤢`` button, or a click).
+Inline bodies are intentionally bounded so the transcript remains scannable.
+Expansion means opening the complete payload on the screen stack (Enter/Space
+on a focused card, the ``⤢`` button, or a click).
 
 These name sets are a reference for which tier a tool belongs to. They are not
 imported by the render pipeline (which keys off event/observation types in

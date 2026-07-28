@@ -52,6 +52,7 @@ _VALID_CLIENTS: frozenset[str] = frozenset(
     {
         'openai_compatible',
         'openai_native',
+        'codex_app_server',
         'anthropic_native',
         'anthropic_compatible',
         'google_native',

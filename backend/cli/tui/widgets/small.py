@@ -669,6 +669,7 @@ class HUD(Vertical):
         except Exception:
             pass
 
+
 class RendererDrainRequested(Message):
     """Message requesting the screen to drain queued renderer events."""
 

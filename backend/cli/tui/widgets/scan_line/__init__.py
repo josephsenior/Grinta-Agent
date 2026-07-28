@@ -1,8 +1,8 @@
-"""Scan-line action cards: 1-line transcript rows with detail-screen expand.
+"""Transcript action cards with inline payload previews and overflow detail.
 
 Each card mirrors OrientLine/ThinkingIndicator chrome (background #090d18,
-left pipe, padding) with fixed ``height: 1`` and a ``⤢`` button that pushes
-a :class:`DetailScreen`.
+left pipe, padding). Useful payload is visible in the feed; a ``⤢`` button may
+push a :class:`DetailScreen` for full overflow content.
 
 Subclasses override ``_line_text()`` and ``build_detail_screen()``.
 """
@@ -21,6 +21,7 @@ from backend.cli.tui.widgets.scan_line.cards import (
     MCPCard,
     PayloadCard,
     ShellCard,
+    TaskStateCard,
     TerminalCard,
     _compact_path,
     _extract_syntax_error,
@@ -38,6 +39,7 @@ __all__ = [
     'MCPCard',
     'PayloadCard',
     'ShellCard',
+    'TaskStateCard',
     'TerminalCard',
     'BrowserCard',
     'CompactionCard',

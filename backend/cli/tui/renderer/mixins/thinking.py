@@ -326,9 +326,6 @@ class RendererThinkingMixin:
             self._append_scan_line_card(
                 PayloadCard(card.verb, card.detail, body or intent.text)
             )
-            from backend.cli.tui.widgets.activity_card import ToolResult
-
-            self._append_transcript_widget(ToolResult(card.verb, intent.text))
         return True
 
     def _code_artifact_card(self, intent: ThinkingRenderIntent) -> ActivityCard:

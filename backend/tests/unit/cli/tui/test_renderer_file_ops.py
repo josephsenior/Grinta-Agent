@@ -63,6 +63,14 @@ async def test_tui_file_edit_create_renders_compact_create_card(mock_config):
         line = str(cards[0]._line_text())
         assert 'demo.txt' in line
         assert '+2' in cards[0]._delta_text()
+        from backend.cli.tui.widgets.unified_diff_view import UnifiedDiffView
+
+        inline_diffs = list(cards[0].query(UnifiedDiffView).results())
+        assert len(inline_diffs) == 1
+        assert inline_diffs[0].has_class('-compact')
+        assert not inline_diffs[0].has_class('-scrollable')
+        assert any(row.text == 'alpha' for row in inline_diffs[0]._rows)
+        assert any(row.text == 'beta' for row in inline_diffs[0]._rows)
 
 
 @pytest.mark.asyncio

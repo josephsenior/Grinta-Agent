@@ -1,8 +1,7 @@
-"""Canonical task-state handlers that keep the Tasks sidebar current."""
+"""Canonical task-state handlers for the sidebar and structured transcript card."""
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 from backend.ledger.action import TaskStateAction
@@ -18,6 +17,7 @@ def _handle_task_state_action(
     orch: 'RendererEventProcessorMixin', event: TaskStateAction
 ) -> None:
     """Task-state commands are represented only by the persistent sidebar."""
+    del orch, event
 
 
 def _handle_task_state_observation(
@@ -31,9 +31,23 @@ def _handle_task_state_observation(
         orch._last_task_sidebar_signature = None
         orch._refresh_tasks_sidebar()
 
-    content = str(getattr(event, 'content', '') or '').strip()
-    if not content:
-        content = json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False)
-    from backend.cli.tui.widgets.activity_card import ToolResult
+    contract = state.get('contract') if isinstance(state, dict) else None
+    objective = (
+        str(contract.get('objective') or '').strip()
+        if isinstance(contract, dict)
+        else ''
+    )
+    revision = getattr(event, 'revision', None)
+    if revision is None and isinstance(state, dict):
+        revision = state.get('revision')
 
-    orch._append_transcript_widget(ToolResult('Task state', content))
+    from backend.cli.tui.widgets.scan_line import TaskStateCard
+
+    orch._append_scan_line_card(
+        TaskStateCard(
+            str(getattr(event, 'command', '') or 'view'),
+            revision=revision if isinstance(revision, int) else None,
+            objective=objective,
+            tasks=list(tasks) if isinstance(tasks, list) else [],
+        )
+    )

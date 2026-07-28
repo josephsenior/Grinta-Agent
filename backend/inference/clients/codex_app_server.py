@@ -49,12 +49,15 @@ def _find_codex_executable() -> str | None:
     commonly expose ``codex.cmd``. Looking up only the latter makes a valid
     desktop installation invisible to Grinta.
     """
-    names = ('codex.cmd', 'codex.exe', 'codex') if sys.platform == 'win32' else ('codex',)
+    names = (
+        ('codex.cmd', 'codex.exe', 'codex') if sys.platform == 'win32' else ('codex',)
+    )
     for name in names:
         executable = shutil.which(name)
         if executable:
             return executable
     return None
+
 
 def _get(value: Any, key: str, default: Any = None) -> Any:
     if isinstance(value, dict):

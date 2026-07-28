@@ -165,8 +165,12 @@ async def test_tui_shell_command_reuses_single_card(mock_config):
 
         cards = list(s.query(ShellCard).results())
         assert len(cards) == 1, f'Expected 1 ShellCard, got {len(cards)}'
-        assert 'pytest -q' in str(cards[0]._line_text())
+        assert 'pytest -q' not in str(cards[0]._line_text())
         assert cards[0]._state == 'done'
+        command_body = cards[0].query_one('.terminal-command')
+        output_body = cards[0].query_one('.terminal-output')
+        assert '$ pytest -q' in command_body._content.plain  # noqa: SLF001
+        assert '2 passed' in output_body._content.plain  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -288,6 +292,10 @@ async def test_tui_terminal_close_updates_existing_session_card(mock_config):
         assert len(cards) == 1
         assert cards[0].state == 'done'
         assert 'Closed terminal session.' in cards[0].scrollback
+        command_body = cards[0].query_one('.terminal-command')
+        output_body = cards[0].query_one('.terminal-output')
+        assert '$ npm run dev' in command_body._content.plain  # noqa: SLF001
+        assert 'Closed terminal session.' in output_body._content.plain  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -360,7 +368,9 @@ async def test_tui_shell_command_reuses_card_with_multiline_command(mock_config)
         assert cards[0]._state == 'done'
         line = str(cards[0]._line_text())
         assert '\n' not in line
-        assert 'import sys' in line
+        assert 'import sys' not in line
+        command_body = cards[0].query_one('.terminal-command')
+        assert 'import sys' in command_body._content.plain  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -751,10 +761,13 @@ async def test_tui_acceptance_criteria_renders_scan_line_card(mock_config):
 @pytest.mark.asyncio
 async def test_tui_task_state_refreshes_sidebar_and_transcript(
     mock_config,
+    monkeypatch,
 ):
+    from backend.cli.tui.app import GrintaScreen
     from backend.ledger.action import TaskStateAction
     from backend.ledger.observation import TaskStateObservation
 
+    monkeypatch.setattr(GrintaScreen, '_start_background_bootstrap', lambda self: None)
     console = RichConsole()
     loop = asyncio.get_running_loop()
     app = GrintaTUIApp(config=mock_config, console=console, loop=loop)
@@ -801,8 +814,14 @@ async def test_tui_task_state_refreshes_sidebar_and_transcript(
         assert len(rows) == 2
 
         from backend.cli.tui.widgets.activity_card import ToolResult
+        from backend.cli.tui.widgets.scan_line import TaskStateCard
 
-        assert len(list(s.query(ToolResult).results())) == 1
+        task_state_cards = list(s.query(TaskStateCard).results())
+        assert len(task_state_cards) == 1
+        assert task_state_cards[0]._objective == 'Ship task-state cards'
+        assert task_state_cards[0]._tasks == state['plan']['tasks']
+        assert '1/2 complete' in str(task_state_cards[0]._line_text())
+        assert len(list(s.query(ToolResult).results())) == 0
 
 
 @pytest.mark.asyncio

@@ -1,12 +1,13 @@
-"""ScanLineCard — 1-line feed row with state-driven left pipe and ⤢ detail button."""
+"""ScanLineCard — transcript action row with an always-visible inline preview."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from textual import events
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
+from textual.widget import Widget
 from textual.widgets import Static
 
 from backend.cli.theme import NAVY_RUNNING
@@ -52,14 +53,15 @@ def _expand_label(state: str) -> str:
 
 
 class ScanLineCard(Container):
-    """1-line transcript card matching OrientLine/ThinkingIndicator chrome.
+    """Transcript action card matching OrientLine/ThinkingIndicator chrome.
 
     State management
     ----------------
     Call :meth:`set_state` to transition through queued / running / done / failed.
     CSS classes (``queued``, ``running``, ``done``, ``failed``) drive the left
-    border color.  Detail screens open only when the user focuses a card and
-    presses Enter/Space, clicks the row, or uses the ``⤢`` affordance.
+    border color.  Subclasses can expose the useful part of their payload via
+    :meth:`_inline_widgets`; detail screens are an overflow affordance rather
+    than the only way to understand an action.
 
     Refresh
     -------
@@ -97,6 +99,41 @@ class ScanLineCard(Container):
     ScanLineCard > Horizontal {{
         width: 100%;
         height: auto;
+    }}
+    ScanLineCard > .scan-inline {{
+        width: 100%;
+        height: auto;
+        margin: 0;
+        padding: 0 0 1 2;
+        color: #9aa8b8;
+    }}
+    ScanLineCard > .scan-inline > .scan-inline-content {{
+        width: 100%;
+        height: auto;
+        color: #9aa8b8;
+    }}
+    ScanLineCard > .scan-inline > .scan-inline-command {{
+        width: 100%;
+        height: auto;
+        color: #c8d4e8;
+    }}
+    ScanLineCard > .scan-inline > .scan-inline-output {{
+        width: 100%;
+        height: auto;
+        margin: 1 0 0 0;
+        color: #9aa8b8;
+    }}
+    ScanLineCard > .scan-inline > .scan-inline-error {{
+        width: 100%;
+        height: auto;
+        margin: 1 0 0 0;
+        color: #E24B4A;
+    }}
+    ScanLineCard > .scan-inline > UnifiedDiffView {{
+        width: 100%;
+        margin: 0;
+        border: solid #151d30;
+        background: #070b14;
     }}
     ScanLineCard #scan-summary {{
         width: 1fr;
@@ -196,6 +233,30 @@ class ScanLineCard(Container):
         """Rich markup string for the right-aligned delta slot.  Override for +/- stats."""
         return ''
 
+    def _inline_renderable(self) -> Any | None:
+        """Return the payload preview rendered below the headline.
+
+        Text-based cards can override this method. Cards that need richer
+        widgets, such as unified diffs, should override :meth:`_inline_widgets`.
+        """
+        return None
+
+    def _inline_widgets(self) -> list[Widget]:
+        """Build widgets that remain visible directly in the transcript."""
+        renderable = self._inline_renderable()
+        if renderable is None:
+            return []
+        return [Static(renderable, classes='scan-inline-content')]
+
+    def _refresh_inline_body(self) -> None:
+        """Refresh a mounted text preview after live tool data changes."""
+        try:
+            body = self.query_one('.scan-inline-content', Static)
+        except Exception:
+            return
+        renderable = self._inline_renderable()
+        body.update(renderable if renderable is not None else '')
+
     def _refresh_line(self) -> None:
         sw = self._summary_widget()
         if sw is not None:
@@ -203,6 +264,7 @@ class ScanLineCard(Container):
         dw = self._delta_widget()
         if dw is not None:
             dw.update(self._delta_text())
+        self._refresh_inline_body()
 
     # ── detail screen factory ───────────────────────────────────────
 
@@ -230,6 +292,9 @@ class ScanLineCard(Container):
             yield Static(self._delta_text(), id='scan-delta')
             if self.has_detail:
                 yield Static(_expand_label(self._state), id='scan-expand')
+        inline_widgets = self._inline_widgets()
+        if inline_widgets:
+            yield Container(*inline_widgets, classes='scan-inline')
 
     def _refresh_expand_label(self) -> None:
         """Refresh the expand-slot text to reflect the current state."""
@@ -265,7 +330,7 @@ class ScanLineCard(Container):
     # ── refresh protocol ────────────────────────────────────────────
 
     def refresh_summary(self) -> None:
-        """Update the 1-line summary from live data sources.
+        """Update the summary and inline preview from live data sources.
 
         Called every 250 ms by the feed refresh loop.  The default
         implementation is a no-op; subclasses that track live output

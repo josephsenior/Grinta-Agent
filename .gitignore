@@ -76,6 +76,7 @@ backend/MagicMock/
 bandit-out.json
 
 # Release assets and generated agent state
+.gemini/
 backend/.grinta/
 rustup-init.exe
 grinta_raft.mp4

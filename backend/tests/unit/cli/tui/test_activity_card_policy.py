@@ -86,7 +86,9 @@ async def test_shell_session_panel_keeps_body_visible_after_completion(
 
 
 @pytest.mark.asyncio
-async def test_record_panel_stays_collapsed_until_user_expands(mock_config) -> None:
+async def test_record_card_shows_inline_preview_and_keeps_full_detail(
+    mock_config,
+) -> None:
     console = RichConsole()
     loop = __import__('asyncio').get_running_loop()
     app = GrintaTUIApp(config=mock_config, console=console, loop=loop)
@@ -115,6 +117,8 @@ async def test_record_panel_stays_collapsed_until_user_expands(mock_config) -> N
         mcp_cards = list(screen.query(MCPCard).results())
         assert len(mcp_cards) == 1
         assert mcp_cards[0].state == 'done'
+        assert 'long result payload' in mcp_cards[0]._result
+        assert len(list(mcp_cards[0].query('.scan-inline-content').results())) == 1
         detail = mcp_cards[0].build_detail_screen()
         assert detail._heading == 'docs_tool'
         assert 'long result payload' in detail._body

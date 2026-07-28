@@ -68,7 +68,6 @@ class TestDisabledServerHints:
         assert hints == []
 
     def test_enabled_server_hint_included(self, tmp_path: Any) -> None:
-
         cfg = _base_config()
         cfg.mcp = SimpleNamespace(
             servers=[
