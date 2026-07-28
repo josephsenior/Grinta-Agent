@@ -4,7 +4,7 @@
   "models": {
     "kimi-k3": {
       "runtime": {
-        "aliases": ["moonshot/kimi-k3", "moonshotai/kimi-k3", "kimi-k3"],
+        "aliases": ["moonshot/kimi-k3", "kimi-k3"],
         "context_window_tokens": 1048576,
         "max_input_tokens": 917504,
         "max_output_tokens": 131072,

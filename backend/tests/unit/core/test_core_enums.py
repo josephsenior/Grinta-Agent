@@ -143,7 +143,7 @@ class TestAgentState:
         assert AgentState.AWAITING_USER_INPUT.value == 'awaiting_user_input'
 
     def test_count(self):
-        assert len(AgentState) == 9
+        assert len(AgentState) == 10
 
 
 class TestObservationType:
