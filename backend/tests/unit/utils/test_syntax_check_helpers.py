@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 from backend.utils.treesitter.syntax_check import (
     SyntaxCheckResult,
     _first_line_column,
     _json_check,
     _python_compile_check,
+    _render_python_syntax_error,
     _toml_check,
+    check_syntax,
     collect_tree_sitter_syntax_errors,
 )
 
@@ -65,3 +68,48 @@ def test_collect_tree_sitter_syntax_errors_walks_nodes() -> None:
     errors = collect_tree_sitter_syntax_errors(root, b'bad', max_errors=3)
     assert len(errors) == 1
     assert 'line 1:1' in errors[0]
+
+
+def test_collect_tree_sitter_syntax_errors_truncates_long_snippet() -> None:
+    long_bytes = b"x" * 100
+    error_node = SimpleNamespace(
+        type='ERROR',
+        is_missing=False,
+        start_point=(0, 0),
+        start_byte=0,
+        end_byte=100,
+        children=[],
+    )
+    root = SimpleNamespace(
+        type='module',
+        is_missing=False,
+        start_point=(0, 0),
+        start_byte=0,
+        end_byte=100,
+        children=[error_node],
+    )
+    errors = collect_tree_sitter_syntax_errors(root, long_bytes)
+    assert "..." in errors[0]
+
+
+def test_check_syntax_unmapped_extension() -> None:
+    res = check_syntax("file.unknown_extension", content="hello")
+    assert res.status == 'skipped'
+    assert 'no parser mapping' in res.detail
+
+
+def test_check_syntax_content_unavailable() -> None:
+    res = check_syntax("non_existent.py", content=None)
+    assert res.status == 'skipped'
+    assert 'unavailable' in res.detail
+
+
+def test_render_python_syntax_error_fallback() -> None:
+    exc = SyntaxError("invalid syntax")
+    exc.lineno = 5
+    exc.offset = 10
+    exc.msg = "syntax error msg"
+
+    with patch("backend.utils.treesitter.treesitter_editor._render_python_syntax_error", side_effect=RuntimeError("renderer fail")):
+        rendered = _render_python_syntax_error(exc, "code", "file.py")
+        assert "line 5:10" in rendered

@@ -186,6 +186,19 @@ class TestCircuitBreakerTransitions:
         await cb.async_call(_ok)
         assert cb.state.failures == 0
 
+    @pytest.mark.asyncio
+    async def test_half_open_probes_exhausted(self):
+        cb = self._make_breaker(threshold=1, base_seconds=0.01)
+        cb.state.state = 'half_open'
+        cb.state.half_open_probes_left = 0
+
+        async def _ok():
+            return 'ok'
+
+        with pytest.raises(RuntimeError, match='circuit_half_open_block'):
+            await cb.async_call(_ok)
+
+
 
 # ---------------------------------------------------------------------------
 # CircuitBreakerManager
@@ -300,3 +313,5 @@ class TestModuleHelpers:
         assert 'blocked_total' in snap
         assert 'open_keys' in snap
         assert 'open_count' in snap
+
+

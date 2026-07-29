@@ -877,3 +877,46 @@ class TestSqliteEventStoreExtendedCoverage:
         mock_conn.execute.side_effect = sqlite3.Error('Integrity check query failed')
         with patch.object(store, '_get_read_conn', return_value=mock_conn):
             assert store.check_application_integrity() is False
+
+
+class TestSQLiteEventStoreExtendedCoverage:
+    def test_max_payload_bytes_env_var(self):
+        import os
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {'GRINTA_SQLITE_EVENT_MAX_PAYLOAD_BYTES': '1048576'}):
+            assert SQLiteEventStore._max_payload_bytes() == 1048576
+
+        with patch.dict(os.environ, {'GRINTA_SQLITE_EVENT_MAX_PAYLOAD_BYTES': 'invalid'}):
+            assert SQLiteEventStore._max_payload_bytes() == 25 * 1024 * 1024
+
+    def test_destructive_delete_when_enabled(self, store: SQLiteEventStore):
+        import os
+        from unittest.mock import patch
+
+        store.write_event(0, {'id': 0, 'action': 'msg'})
+        store.write_event(1, {'id': 1, 'action': 'msg'})
+
+        with patch.dict(os.environ, {'GRINTA_SQLITE_LEDGER_ALLOW_DESTRUCTIVE_DELETE': '1'}):
+            store.delete_event(0)
+            assert store.read_event(0) is None
+            deleted_count = store.delete_from(1)
+            assert deleted_count == 1
+
+    def test_read_event_payload_too_large(self, store: SQLiteEventStore):
+        from unittest.mock import patch
+
+        store.write_event(0, {'id': 0, 'action': 'msg'})
+        with patch.object(store, '_max_payload_bytes', return_value=1):
+            with pytest.raises(ValueError, match="too large"):
+                store.read_event(0)
+
+    def test_write_event_datetime_timestamp(self, store: SQLiteEventStore):
+        from datetime import datetime
+
+        now = datetime.now()
+        store.write_event(0, {'id': 0, 'action': 'msg', 'timestamp': now})
+        read_back = store.read_event(0)
+        assert read_back is not None
+        assert read_back['id'] == 0
+

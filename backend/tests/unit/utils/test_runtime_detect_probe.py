@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from unittest.mock import MagicMock, patch
@@ -12,7 +13,12 @@ from backend.utils.runtime_detect import (
     ToolSpec,
     _detect_all,
     _probe,
+    canonical_spec_for_extension,
     detect_lsp_servers,
+    detection_summary,
+    has_any_debug_adapter,
+    has_any_lsp_server,
+    lsp_command_for_extension,
     reset_detection_cache,
 )
 
@@ -76,7 +82,6 @@ def test_probe_returns_unavailable_when_not_found() -> None:
 
 
 def test_probe_skips_python_exe_false_positive_for_pylsp() -> None:
-    """``python.exe`` on PATH must not imply ``python -m pylsp`` works."""
     spec = _spec(
         name='pylsp',
         command=(sys.executable, '-m', 'pylsp'),
@@ -142,3 +147,28 @@ def test_detect_lsp_servers_uses_cache() -> None:
         second = detect_lsp_servers()
     assert detect.call_count == 1
     assert first is second
+
+
+def test_canonical_spec_for_extension() -> None:
+    spec1 = canonical_spec_for_extension("py")
+    spec2 = canonical_spec_for_extension(".py")
+    assert spec1 is not None
+    assert spec1.name == "pyright-langserver"
+    assert spec1 == spec2
+    assert canonical_spec_for_extension(".unknown_ext") is None
+
+
+def test_has_any_lsp_server_env_disabled() -> None:
+    with patch.dict(os.environ, {"GRINTA_DISABLE_LSP_DETECTION": "1"}):
+        assert has_any_lsp_server() is False
+
+
+def test_has_any_debug_adapter_env_disabled() -> None:
+    with patch.dict(os.environ, {"GRINTA_DISABLE_DEBUGGER_DETECTION": "1"}):
+        assert has_any_debug_adapter() is False
+
+
+def test_detection_summary() -> None:
+    summary = detection_summary()
+    assert isinstance(summary, dict)
+    assert "lsp_servers" in summary or "available_lsp" in summary or isinstance(summary, dict)

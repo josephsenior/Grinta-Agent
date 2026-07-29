@@ -291,3 +291,22 @@ class TestDefaultLinterLintContent:
         assert len(result.errors) == 1
         assert result.errors[0].code == 'python-compile'
         assert "'return' outside function" in result.errors[0].message
+
+    def test_lint_result_lint_file_diff_and_file(self):
+        res = LintResult(errors=[], warnings=[])
+        assert res.lint_file_diff("orig.py", "updated.py") == []
+        assert res.lint_file("file.py") == []
+
+    def test_default_linter_file_diff(self):
+        with patch.object(DefaultLinter, '_check_backend_available', return_value=True):
+            linter = DefaultLinter(backend='tree-sitter')
+        diff_errors = linter.lint_file_diff("orig.py", "updated.py")
+        assert isinstance(diff_errors, list)
+
+    def test_default_linter_no_file_or_content(self):
+        with patch.object(DefaultLinter, '_check_backend_available', return_value=True):
+            linter = DefaultLinter(backend='tree-sitter')
+        res = linter.lint(file_path=None, content=None)
+        assert res.errors == []
+        assert res.warnings == []
+

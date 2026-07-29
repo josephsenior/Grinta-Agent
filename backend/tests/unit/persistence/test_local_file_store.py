@@ -302,3 +302,13 @@ class TestLocalFileStoreCoverageGaps:
         # Test full tree walk chmod
         LocalFileStore._make_tree_writable(str(test_dir))
         # No errors should be raised
+
+    def test_write_fsync_false(self, store):
+        store.write('no_fsync.txt', 'fast content', fsync=False)
+        assert store.read('no_fsync.txt') == 'fast content'
+
+    def test_delete_catch_all_exception(self, store):
+        with patch.object(store, 'get_full_path', side_effect=Exception('Fatal error')):
+            # Delete catches all exceptions without raising
+            store.delete('some_path')
+

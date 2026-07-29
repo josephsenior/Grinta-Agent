@@ -1919,3 +1919,46 @@ def test_build_python_exec_command_matches_active_registry_git_bash_on_windows()
     finally:
         prompt_mod.set_active_tool_registry(None)
         prompt_mod._get_global_tool_registry.cache_clear()
+
+
+class TestPromptManagerExtendedCoverage:
+    def test_add_turns_left_reminder(self):
+        from backend.core.message import Message, TextContent
+        from backend.utils.prompt import PromptManager
+
+        pm = PromptManager(prompt_dir='/tmp')
+        msg = Message(role='user', content=[TextContent(text='Help me')])
+        messages = [msg]
+
+        state = MagicMock()
+        state.iteration_flag.max_value = 10
+        state.iteration_flag.current_value = 3
+
+        pm.add_turns_left_reminder(messages, state)
+        assert len(msg.content) == 2
+        assert '7 turns left' in msg.content[1].text
+
+    def test_inject_lessons_learned_file_exists(self, tmp_path):
+        from backend.utils.prompt import OrchestratorPromptManager
+
+        opm = OrchestratorPromptManager(prompt_dir='/tmp')
+        lessons_dir = tmp_path / '.app'
+        lessons_dir.mkdir(parents=True)
+        lessons_file = lessons_dir / 'lessons.md'
+        lessons_file.write_text('Always run tests before push.', encoding='utf-8')
+
+        with patch('backend.core.workspace_resolution.get_effective_workspace_root', return_value=tmp_path):
+            with patch('backend.core.workspace_resolution.workspace_agent_state_dir', return_value=lessons_dir):
+                result = opm._inject_lessons_learned("Base prompt")
+                assert "REPOSITORY_LESSONS_LEARNED" in result
+                assert "Always run tests before push." in result
+
+    def test_inject_scratchpad_delegates_to_workspace_memory(self):
+        from backend.utils.prompt import OrchestratorPromptManager
+
+        opm = OrchestratorPromptManager(prompt_dir='/tmp')
+        with patch.object(opm, "_inject_workspace_memory", return_value="Injected memory") as mock_inj:
+            res = opm._inject_scratchpad("Content")
+            assert res == "Injected memory"
+            mock_inj.assert_called_once_with("Content")
+

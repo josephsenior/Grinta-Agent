@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -13,6 +14,8 @@ from backend.utils.lsp.lsp_project_routing import LspFileContext
 from backend.utils.lsp.lsp_session import (
     LspSession,
     LspSessionPool,
+    _sessions_disabled,
+    _stderr_debug_enabled,
     reset_lsp_session_pool,
 )
 from backend.utils.lsp.lsp_timeouts import (
@@ -20,6 +23,17 @@ from backend.utils.lsp.lsp_timeouts import (
     init_timeout_for_server,
     query_timeout_for_server,
 )
+
+
+def test_stderr_debug_enabled_and_sessions_disabled_env() -> None:
+    with patch.dict(os.environ, {"GRINTA_LSP_DEBUG_STDERR": "1"}):
+        assert _stderr_debug_enabled() is True
+    with patch.dict(os.environ, {"GRINTA_LSP_DEBUG_STDERR": "0"}):
+        assert _stderr_debug_enabled() is False
+    with patch.dict(os.environ, {"GRINTA_DISABLE_LSP_SESSION": "yes"}):
+        assert _sessions_disabled() is True
+    with patch.dict(os.environ, {"GRINTA_DISABLE_LSP_SESSION": "no"}):
+        assert _sessions_disabled() is False
 
 
 def test_encode_and_feed_content_length_buffer_roundtrip() -> None:
@@ -51,8 +65,6 @@ def test_slow_server_timeouts() -> None:
 
 def test_effective_query_timeout_post_edit_floor() -> None:
     assert effective_query_timeout('jdtls', 3.0, post_edit=True) == 12.0
-    # Non-slow servers now get a 5s post-edit floor so cold one-shot diagnostics
-    # aren't starved by a 3s caller budget.
     assert effective_query_timeout('rust-analyzer', 3.0, post_edit=True) == 5.0
     assert effective_query_timeout('rust-analyzer', 8.0, post_edit=True) == 8.0
     assert effective_query_timeout('jdtls', None) == 45.0
@@ -77,6 +89,7 @@ def test_lsp_session_pool_reuses_alive_session(tmp_path: Path) -> None:
     assert first is mock_session
     assert second is mock_session
     assert mock_session.start.call_count == 1
+
 
 
 def test_lsp_session_wait_publish_diagnostics() -> None:
@@ -112,7 +125,6 @@ def test_lsp_session_wait_publish_diagnostics() -> None:
 
 
 def test_lsp_session_supports_capability(tmp_path: Path) -> None:
-    """supports() maps LSP methods to ServerCapabilities provider keys."""
     ctx = LspFileContext(
         server_name='pyright-langserver',
         command=('pyright-langserver', '--stdio'),
@@ -130,12 +142,37 @@ def test_lsp_session_supports_capability(tmp_path: Path) -> None:
     assert session.supports('textDocument/definition') is True
     assert session.supports('textDocument/codeAction') is False
     assert session.supports('textDocument/documentSymbol') is True
-    # Unknown methods default to supported (don't block unadvertised-but-valid).
     assert session.supports('textDocument/signatureHelp') is True
 
 
+def test_lsp_session_prepare_document_did_open_and_did_change(tmp_path: Path) -> None:
+    ctx = LspFileContext(
+        server_name='pyright-langserver',
+        command=('pyright-langserver', '--stdio'),
+        language_id='python',
+        workspace_root=tmp_path,
+    )
+    session = LspSession(ctx)
+    uri = 'file:///tmp/mod.py'
+    
+    with (
+        patch.object(session, 'ensure_initialized', return_value=True),
+        patch.object(session, '_write_message') as mock_write,
+    ):
+        # First call -> didOpen
+        res1 = session.prepare_document(uri, 'python', 'def foo(): pass')
+        assert res1 is True
+        assert mock_write.call_count == 1
+        assert mock_write.call_args[0][0]['method'] == 'textDocument/didOpen'
+
+        # Second call with updated source -> didChange
+        res2 = session.prepare_document(uri, 'python', 'def foo(): print(1)')
+        assert res2 is True
+        assert mock_write.call_count == 2
+        assert mock_write.call_args[0][0]['method'] == 'textDocument/didChange'
+
+
 def test_lsp_session_ensure_initialized_rejects_error_response(tmp_path: Path) -> None:
-    """An error response to initialize must be rejected and the session closed."""
     ctx = LspFileContext(
         server_name='fake',
         command=('python', '-c', 'pass'),
@@ -166,7 +203,6 @@ def test_lsp_session_ensure_initialized_rejects_error_response(tmp_path: Path) -
 
 
 def test_lsp_session_collect_notifications_early_return(tmp_path: Path) -> None:
-    """Once a matching notification arrives, a grace window gates early return."""
     import time as _time
 
     ctx = LspFileContext(
@@ -186,13 +222,11 @@ def test_lsp_session_collect_notifications_early_return(tmp_path: Path) -> None:
     start = _time.monotonic()
     diags = session.wait_publish_diagnostics(uri, timeout=5.0)
     elapsed = _time.monotonic() - start
-    # Should return well under the 5s timeout thanks to the grace early-return.
     assert elapsed < 1.0
     assert len(diags) == 0
 
 
 def test_lsp_session_stderr_ring_buffer_captures_output(tmp_path: Path) -> None:
-    """Server stderr is captured in the ring buffer (not DEVNULL)."""
     import sys
 
     ctx = LspFileContext(
@@ -213,11 +247,9 @@ def test_lsp_session_stderr_ring_buffer_captures_output(tmp_path: Path) -> None:
     )
     session = LspSession(ctx)
     assert session.start() is True
-    # Wait for the process to exit and the stderr reader to capture lines.
     proc = session._process  # noqa: SLF001
     if proc is not None:
         proc.wait(timeout=5.0)
-    # Give the stderr reader thread a moment to drain.
     import time as _time
 
     _time.sleep(0.2)

@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+import time
+from unittest.mock import MagicMock, patch
 
 from pydantic import SecretStr
 
 from backend.persistence.data_models.settings import (
     Settings,
 )
+from backend.persistence.data_models.user_secrets import UserSecrets
 
 
 class TestSettingsDefaults:
@@ -57,6 +59,13 @@ class TestSettingsDefaults:
     def test_agent_aliases_are_not_mapped(self):
         s = Settings(agent='Orchestrator')
         assert s.agent == 'Orchestrator'
+
+    def test_agent_none_or_empty(self):
+        assert Settings(agent=None).agent is None
+        assert Settings(agent='   ').agent is None
+
+    def test_provider_none(self):
+        assert Settings(llm_provider=None).llm_provider is None
 
 
 class TestKnowledgeBaseProperty:
@@ -116,8 +125,6 @@ class TestValidateApiKey:
         assert Settings._validate_api_key('sk-test') is True
 
     def test_empty_string(self):
-        # Plain empty string passes the try/except path and returns True
-        # because it's not a SecretStr and bool("") catches are bypassed
         assert Settings._validate_api_key('') is True
 
 
@@ -143,6 +150,49 @@ class TestCheckExplicitLlmConfig:
         config.llms = {'llm': llm}
         assert Settings._check_explicit_llm_config(config) is True
 
+    def test_explicit_env_match(self):
+        llm = MagicMock()
+        llm.api_key = SecretStr("secret-123")
+        config = MagicMock()
+        config.llms = {'llm': llm}
+        with patch.dict("os.environ", {"LLM_API_KEY": "secret-123"}):
+            assert Settings._check_explicit_llm_config(config) is True
+
+
+class TestConvertProviderTokens:
+    def test_non_dict_passthrough(self):
+        assert Settings.convert_provider_tokens("string_data") == "string_data"
+
+    def test_convert_dict_with_tokens_and_custom_secrets(self):
+        data = {
+            "secrets_store": {
+                "provider_tokens": {"openai": {"token": "abc"}},
+                "custom_secrets": {"my_key": "val"}
+            }
+        }
+        res = Settings.convert_provider_tokens(data)
+        assert isinstance(res, dict)
+        assert "secret_store" in res
+        store = res["secret_store"]
+        assert isinstance(store, UserSecrets)
+
+
+class TestHasExplicitApiKey:
+    def test_with_explicit_attr(self):
+        config = MagicMock()
+        config._has_explicit_api_key = True
+        assert Settings._has_explicit_api_key(config) is True
+
+    def test_fallback_api_key_attr(self):
+        class DummyConfig:
+            api_key = "sk-dummy"
+        assert Settings._has_explicit_api_key(DummyConfig()) is True
+
+    def test_fallback_no_api_key(self):
+        class DummyConfig:
+            pass
+        assert Settings._has_explicit_api_key(DummyConfig()) is False
+
 
 class TestSettingsCache:
     def setup_method(self):
@@ -167,3 +217,36 @@ class TestSettingsCache:
         assert result is None
         assert mod._settings_from_config_cache is None
         assert mod._settings_from_config_cache_time == 100.0
+
+    def test_get_cached_settings_fresh(self):
+        s = Settings(language="en")
+        now = time.time()
+        Settings._cache_settings_result(s, now)
+        cached = Settings._get_cached_settings(now + 1)
+        assert cached == s
+
+    def test_get_cached_settings_expired(self):
+        s = Settings(language="en")
+        now = time.time()
+        Settings._cache_settings_result(s, now)
+        cached = Settings._get_cached_settings(now + 1000)
+        assert cached is None
+
+
+class TestMergeWithConfigSettings:
+    def test_merge_no_config_settings(self):
+        s = Settings(language="fr")
+        with patch.object(Settings, "from_config", return_value=None):
+            res = s.merge_with_config_settings()
+            assert res == s
+
+    def test_merge_config_with_mcp(self):
+        from backend.core.config.mcp_config import MCPConfig
+
+        s = Settings(language="fr")
+        config_s = Settings(mcp_config=MCPConfig(servers=[]))
+        with patch.object(Settings, "from_config", return_value=config_s):
+            res = s.merge_with_config_settings()
+            assert res.mcp_config == config_s.mcp_config
+
+

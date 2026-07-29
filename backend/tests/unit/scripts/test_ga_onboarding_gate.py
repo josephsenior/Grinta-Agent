@@ -1,15 +1,19 @@
-"""Integration tests for ga_onboarding_gate report scanning."""
+"""Unit tests for ga_onboarding_gate script."""
 
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from backend.scripts.verify.ga_onboarding_gate import (
     _collect_reports,
     _count_ci_smoke,
     _count_interactive,
+    _format_status_table,
     _gate_ready,
     _parse_report,
+    _print_summary,
+    main,
 )
 
 
@@ -38,3 +42,46 @@ def test_gate_not_ready_without_interactive_reports(tmp_path: Path) -> None:
     assert interactive[('source', 'windows')] == 0
     assert ci_smoke[('source', 'windows')] == 1
     assert not _gate_ready(interactive)
+
+
+def test_format_status_table_gate_ready_and_not_ready() -> None:
+    interactive_ready = {
+        ('pipx', 'linux'): 3,
+        ('pipx', 'windows'): 3,
+        ('source', 'linux'): 3,
+        ('source', 'windows'): 3,
+    }
+    table_ready = _format_status_table(interactive_ready, {})
+    assert 'Ready for GA onboarding' in table_ready
+
+    interactive_not_ready = {
+        ('pipx', 'linux'): 1,
+    }
+    table_not_ready = _format_status_table(interactive_not_ready, {})
+    assert 'Not ready for GA sign-off' in table_not_ready
+
+
+def test_print_summary(capsys) -> None:
+    interactive = {('pipx', 'linux'): 3}
+    ci_smoke = {('pipx', 'linux'): 1}
+    _print_summary(interactive, ci_smoke)
+    captured = capsys.readouterr().out
+    assert 'GA onboarding gate summary' in captured
+    assert 'pipx   linux' in captured
+
+
+def test_main_cli_arg_handling(tmp_path: Path) -> None:
+    with (
+        patch('backend.scripts.verify.ga_onboarding_gate._repo_root', return_value=tmp_path),
+        patch('backend.scripts.verify.ga_onboarding_gate._collect_reports', return_value=[]),
+    ):
+        # Without --update-status, returns 1 if not ready
+        exit_code = main([])
+        assert exit_code == 1
+
+        # With --update-status, writes GA_GATE_STATUS.md and returns 0
+        reports_dir = tmp_path / 'docs' / 'onboarding_reports'
+        reports_dir.mkdir(parents=True)
+        exit_code_update = main(['--update-status'])
+        assert exit_code_update == 0
+        assert (reports_dir / 'GA_GATE_STATUS.md').exists()

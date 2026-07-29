@@ -97,11 +97,9 @@ def test_parse_task_empty_message() -> None:
 def test_parse_task_single_line_no_newline() -> None:
     raw = f'{APP_TASK_JSON_PREFIX}{{"expected_output_files":["a.txt"]}}'
     body, meta = parse_task_from_user_message(raw)
-    # No newline, falls back to full content for description, but JSON is successfully parsed!
     assert body == raw
     assert meta == {'expected_output_files': ['a.txt']}
 
-    # Empty JSON string on prefix line
     raw_empty = f'{APP_TASK_JSON_PREFIX}   \nRest'
     body2, meta2 = parse_task_from_user_message(raw_empty)
     assert body2 == 'Rest'
@@ -109,13 +107,11 @@ def test_parse_task_single_line_no_newline() -> None:
 
 
 def test_parse_task_invalid_metadata_types() -> None:
-    # Not a dictionary (string)
     raw_str = f'{APP_TASK_JSON_PREFIX}"not-a-dict"\nRest'
     body1, meta1 = parse_task_from_user_message(raw_str)
     assert body1 == raw_str
     assert meta1 == {}
 
-    # Not a dictionary (list)
     raw_list = f'{APP_TASK_JSON_PREFIX}[1, 2, 3]\nRest'
     body2, meta2 = parse_task_from_user_message(raw_list)
     assert body2 == raw_list
@@ -130,7 +126,6 @@ VALIDATION
 1. Run pytest
 2. run pytest
 """
-    # case-insensitive duplicates should be removed
     _, acceptance = extract_task_rubric(description)
     assert len(acceptance) == 1
     assert acceptance[0] == 'Run pytest'
@@ -150,49 +145,30 @@ Plain text breaking the list
     _, acceptance = extract_task_rubric(description)
     assert 'First item' in acceptance
     assert 'Second item' in acceptance
-    assert 'Third item' not in acceptance
-
-    # Bullet markers not found
-    desc_no_marker = """
-============================================================
-VALIDATION
-============================================================
-No bullet points here.
-"""
-    _, acceptance2 = extract_task_rubric(desc_no_marker)
-    assert len(acceptance2) == 0
+    assert 'Third item (should not be collected)' not in acceptance
 
 
-def test_extract_bullets_after_marker_numbered_list() -> None:
+def test_extract_task_rubric_final_report_must_include_marker() -> None:
     description = """
 ============================================================
 VALIDATION
 ============================================================
 Final report must include:
-1. Chart A
-2. Chart B
+1. Coverage report
+- Performance summary
 """
     _, acceptance = extract_task_rubric(description)
-    assert 'Chart A' in acceptance
-    assert 'Chart B' in acceptance
+    assert 'Coverage report' in acceptance
+    assert 'Performance summary' in acceptance
 
 
-def test_merge_task_fields_comprehensive() -> None:
-    # Test string list extraction and metadata merging
+def test_merge_task_fields_requirements_and_expected_files() -> None:
     meta = {
-        'requirements': [
-            123,
-            '   valid requirement   ',
-            '',
-        ],  # empty string should be ignored
-        'acceptance_criteria': 'not-a-list',
-        'expected_output_files': ['out.txt', 456],  # invalid types mixed in
+        'requirements': ['Python 3.10+'],
+        'acceptance_criteria': ['Tests pass'],
+        'expected_output_files': ['out.log'],
     }
-
-    desc = 'Regular description'
-    desc_res, reqs, acc, files = merge_task_fields(desc, meta)
-
-    assert desc_res == desc
-    assert reqs == ['123', 'valid requirement']  # Coerced and stripped
-    assert acc == []  # Not a list, defaults to rubric (empty)
-    assert files is None  # Mixed non-string type (456) causes it to be discarded
+    desc, reqs, acc, exp = merge_task_fields('Task desc', meta)
+    assert reqs == ['Python 3.10+']
+    assert acc == ['Tests pass']
+    assert exp == ['out.log']

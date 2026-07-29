@@ -53,6 +53,25 @@ def test_lsp_result_format_text_branches() -> None:
     assert isinstance(fallback, str)
 
 
+def test_lsp_query_file_not_found(tmp_path: Path) -> None:
+    client = lc.LspClient()
+    missing_file = tmp_path / "non_existent.py"
+    with patch.object(client, '_get_server_command', return_value=['pyright']):
+        res = client.query('hover', str(missing_file))
+        assert not res.available
+        assert 'File not found' in res.error
+
+
+def test_lsp_query_unknown_command(tmp_path: Path) -> None:
+    py_file = tmp_path / 'x.py'
+    py_file.write_text('x = 1\n', encoding='utf-8')
+    client = lc.LspClient()
+    with patch.object(client, '_get_server_command', return_value=['pyright']):
+        res = client.query('invalid_cmd', str(py_file))
+        assert not res.available
+        assert 'Unknown command' in res.error
+
+
 def test_lsp_query_diagnostics_accepts_process_timeout(tmp_path: Path) -> None:
     py_file = tmp_path / 'x.py'
     py_file.write_text('x = 1\n', encoding='utf-8')
@@ -135,9 +154,6 @@ def test_build_init_msgs_uses_workspace_and_language_id(tmp_path: Path) -> None:
     assert msgs[2]['params']['textDocument']['languageId'] == 'python'
 
 
-# --- Patch 1: JSON-RPC error response surfacing ---
-
-
 def test_error_from_response_extracts_message_and_code() -> None:
     client = lc.LspClient()
     err = client._error_from_response(  # noqa: SLF001
@@ -174,7 +190,6 @@ def test_error_result_surfaces_message() -> None:
 
 
 def test_error_result_no_result_member() -> None:
-    """A response with neither result nor error is surfaced as an error."""
     client = lc.LspClient()
     result = client._error_result(  # noqa: SLF001
         {'jsonrpc': '2.0', 'id': 5}, hint='symbols'
@@ -192,8 +207,37 @@ def test_snippet_from_stderr_extracts_tail() -> None:
     assert snippet == long[-500:]
 
 
+def test_diagnostics_from_payload_and_responses() -> None:
+    client = lc.LspClient()
+    payload = [
+        {
+            'range': {'start': {'line': 2, 'character': 4}},
+            'message': 'syntax error',
+            'severity': 1,
+        }
+    ]
+    locs = client._diagnostics_from_payload('/app/main.py', 'file:///app/main.py', payload)
+    assert len(locs) == 1
+    assert locs[0].line == 3
+    assert locs[0].column == 5
+    assert locs[0].message == 'syntax error'
+    assert locs[0].severity == 1
+
+    responses = [
+        {
+            'method': 'textDocument/publishDiagnostics',
+            'params': {
+                'uri': 'file:///app/main.py',
+                'diagnostics': payload,
+            },
+        }
+    ]
+    resp_locs = client._diagnostics_from_responses('/app/main.py', 'file:///app/main.py', responses)
+    assert len(resp_locs) == 1
+    assert resp_locs[0].line == 3
+
+
 def test_lsp_query_surfaces_jsonrpc_error_in_session_path(tmp_path: Path) -> None:
-    """A JSON-RPC error from the session must be surfaced, not swallowed."""
     py_file = tmp_path / 'f.py'
     py_file.write_text('x = 1\n', encoding='utf-8')
     ctx = lc.LspFileContext(
@@ -222,11 +266,7 @@ def test_lsp_query_surfaces_jsonrpc_error_in_session_path(tmp_path: Path) -> Non
     assert 'method not supported' in result.error
 
 
-# --- Patch 2: capability gating ---
-
-
 def test_lsp_query_capability_gate_blocks_unsupported(tmp_path: Path) -> None:
-    """A session that doesn't advertise a capability returns a clear error."""
     py_file = tmp_path / 'f.py'
     py_file.write_text('x = 1\n', encoding='utf-8')
     ctx = lc.LspFileContext(
@@ -264,9 +304,6 @@ def test_unsupported_result_includes_server_and_method() -> None:
     assert not result.available
     assert 'ruff' in result.error
     assert 'textDocument/hover' in result.error
-
-
-# --- Patch 4: stderr surfacing in one-shot failures ---
 
 
 def test_server_failed_includes_stderr() -> None:
