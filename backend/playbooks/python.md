@@ -25,19 +25,21 @@ Use when the user invokes **`/python`** or **`/py`**, or when writing/editing `.
 from pathlib import Path
 from dataclasses import dataclass
 
+
 @dataclass
 class Config:
     path: Path
     retries: int = 3
 
+
 def load_data(filepath: Path | str) -> dict[str, str]:
     target = Path(filepath)
     if not target.exists():
-        raise FileNotFoundError(f"Cannot find {target}")
+        raise FileNotFoundError(f'Cannot find {target}')
 
-    with target.open("r", encoding="utf-8") as f:
+    with target.open('r', encoding='utf-8') as f:
         # processing logic...
-        return {"status": "ok"}
+        return {'status': 'ok'}
 ```
 
 ## Anti-Patterns to Avoid

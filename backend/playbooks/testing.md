@@ -23,20 +23,23 @@ Use when the user invokes **`/testing`**. Prefer the **project’s** configured 
 ```python
 import pytest
 
+
 @pytest.fixture
 def db():
     s = make_session()
     yield s
     s.close()
 
-@pytest.mark.parametrize("n,expected", [(2, 4), (3, 9)])
+
+@pytest.mark.parametrize('n,expected', [(2, 4), (3, 9)])
 def test_square(n, expected):
     assert n * n == expected
 
+
 def test_api_mocked():
-    with patch("mymod.requests.get") as m:
-        m.return_value.json.return_value = {"ok": True}
-        assert fetch()["ok"] is True
+    with patch('mymod.requests.get') as m:
+        m.return_value.json.return_value = {'ok': True}
+        assert fetch()['ok'] is True
 ```
 
 ## JS/TS (Vitest/Jest) — minimal patterns

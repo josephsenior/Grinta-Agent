@@ -199,7 +199,6 @@ class TestCircuitBreakerTransitions:
             await cb.async_call(_ok)
 
 
-
 # ---------------------------------------------------------------------------
 # CircuitBreakerManager
 # ---------------------------------------------------------------------------
@@ -313,5 +312,3 @@ class TestModuleHelpers:
         assert 'blocked_total' in snap
         assert 'open_keys' in snap
         assert 'open_count' in snap
-
-

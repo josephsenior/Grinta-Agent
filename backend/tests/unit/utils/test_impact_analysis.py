@@ -109,13 +109,13 @@ class TestImpactAnalysis:
     @patch('backend.utils.impact_analysis.shutil.which', return_value=None)
     @patch('backend.utils.impact_analysis.os.walk')
     def test_grep_fallback_locations_python_walk(self, mock_walk, mock_which) -> None:
-        mock_walk.return_value = [
-            ('.', [], ['file1.py'])
-        ]
-        with patch('builtins.open', mock_open_read('def symbol():\n    symbol()\n    # symbol comment')):
+        mock_walk.return_value = [('.', [], ['file1.py'])]
+        with patch(
+            'builtins.open',
+            mock_open_read('def symbol():\n    symbol()\n    # symbol comment'),
+        ):
             locs = _grep_fallback_locations('symbol', 'define.py', 1, search_root='.')
             assert len(locs) >= 0
-
 
     @patch('backend.utils.impact_analysis.subprocess.run')
     @patch('backend.utils.impact_analysis.shutil.which', return_value='rg')
@@ -165,11 +165,15 @@ class TestImpactAnalysis:
         assert len(report.locations) == 50
 
     def test_analyze_symbol_impact_exception(self) -> None:
-        with patch('backend.utils.impact_analysis.TreeSitterEditor', side_effect=RuntimeError("Editor crash")):
+        with patch(
+            'backend.utils.impact_analysis.TreeSitterEditor',
+            side_effect=RuntimeError('Editor crash'),
+        ):
             report = analyze_symbol_impact('src/def.py', 'func')
             assert report is None
 
 
 def mock_open_read(content: str):
     from unittest.mock import mock_open
+
     return mock_open(read_data=content)

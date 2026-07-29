@@ -884,10 +884,14 @@ class TestSQLiteEventStoreExtendedCoverage:
         import os
         from unittest.mock import patch
 
-        with patch.dict(os.environ, {'GRINTA_SQLITE_EVENT_MAX_PAYLOAD_BYTES': '1048576'}):
+        with patch.dict(
+            os.environ, {'GRINTA_SQLITE_EVENT_MAX_PAYLOAD_BYTES': '1048576'}
+        ):
             assert SQLiteEventStore._max_payload_bytes() == 1048576
 
-        with patch.dict(os.environ, {'GRINTA_SQLITE_EVENT_MAX_PAYLOAD_BYTES': 'invalid'}):
+        with patch.dict(
+            os.environ, {'GRINTA_SQLITE_EVENT_MAX_PAYLOAD_BYTES': 'invalid'}
+        ):
             assert SQLiteEventStore._max_payload_bytes() == 25 * 1024 * 1024
 
     def test_destructive_delete_when_enabled(self, store: SQLiteEventStore):
@@ -897,7 +901,9 @@ class TestSQLiteEventStoreExtendedCoverage:
         store.write_event(0, {'id': 0, 'action': 'msg'})
         store.write_event(1, {'id': 1, 'action': 'msg'})
 
-        with patch.dict(os.environ, {'GRINTA_SQLITE_LEDGER_ALLOW_DESTRUCTIVE_DELETE': '1'}):
+        with patch.dict(
+            os.environ, {'GRINTA_SQLITE_LEDGER_ALLOW_DESTRUCTIVE_DELETE': '1'}
+        ):
             store.delete_event(0)
             assert store.read_event(0) is None
             deleted_count = store.delete_from(1)
@@ -908,7 +914,7 @@ class TestSQLiteEventStoreExtendedCoverage:
 
         store.write_event(0, {'id': 0, 'action': 'msg'})
         with patch.object(store, '_max_payload_bytes', return_value=1):
-            with pytest.raises(ValueError, match="too large"):
+            with pytest.raises(ValueError, match='too large'):
                 store.read_event(0)
 
     def test_write_event_datetime_timestamp(self, store: SQLiteEventStore):
@@ -919,4 +925,3 @@ class TestSQLiteEventStoreExtendedCoverage:
         read_back = store.read_event(0)
         assert read_back is not None
         assert read_back['id'] == 0
-

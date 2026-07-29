@@ -294,13 +294,13 @@ class TestDefaultLinterLintContent:
 
     def test_lint_result_lint_file_diff_and_file(self):
         res = LintResult(errors=[], warnings=[])
-        assert res.lint_file_diff("orig.py", "updated.py") == []
-        assert res.lint_file("file.py") == []
+        assert res.lint_file_diff('orig.py', 'updated.py') == []
+        assert res.lint_file('file.py') == []
 
     def test_default_linter_file_diff(self):
         with patch.object(DefaultLinter, '_check_backend_available', return_value=True):
             linter = DefaultLinter(backend='tree-sitter')
-        diff_errors = linter.lint_file_diff("orig.py", "updated.py")
+        diff_errors = linter.lint_file_diff('orig.py', 'updated.py')
         assert isinstance(diff_errors, list)
 
     def test_default_linter_no_file_or_content(self):
@@ -309,4 +309,3 @@ class TestDefaultLinterLintContent:
         res = linter.lint(file_path=None, content=None)
         assert res.errors == []
         assert res.warnings == []
-

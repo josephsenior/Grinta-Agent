@@ -37,27 +37,27 @@ def test_parse_skips_non_content_length_noise() -> None:
 
 
 def test_parse_invalid_length_value() -> None:
-    blob = "Content-Length: invalid\r\n\r\nContent-Length: 8\r\n\r\n{\"a\": 1}"
+    blob = 'Content-Length: invalid\r\n\r\nContent-Length: 8\r\n\r\n{"a": 1}'
     out = parse_content_length_json_messages(blob)
-    assert out == [{"a": 1}]
+    assert out == [{'a': 1}]
 
 
 def test_encode_json_rpc_message() -> None:
-    msg = {"jsonrpc": "2.0", "method": "test", "params": {"key": "val"}}
+    msg = {'jsonrpc': '2.0', 'method': 'test', 'params': {'key': 'val'}}
     encoded = encode_json_rpc_message(msg)
     assert isinstance(encoded, bytes)
-    assert encoded.startswith(b"Content-Length: ")
-    assert b"\r\n\r\n" in encoded
-    
+    assert encoded.startswith(b'Content-Length: ')
+    assert b'\r\n\r\n' in encoded
+
     # Verify feed_content_length_buffer can decode it back
     msgs, leftover = feed_content_length_buffer(encoded)
     assert msgs == [msg]
-    assert leftover == b""
+    assert leftover == b''
 
 
 def test_feed_content_length_buffer_multiple_and_partial() -> None:
-    m1 = {"id": 1, "result": "ok"}
-    m2 = {"id": 2, "result": "done"}
+    m1 = {'id': 1, 'result': 'ok'}
+    m2 = {'id': 2, 'result': 'done'}
     e1 = encode_json_rpc_message(m1)
     e2 = encode_json_rpc_message(m2)
 
@@ -70,27 +70,31 @@ def test_feed_content_length_buffer_multiple_and_partial() -> None:
     # Now append rest of e2
     msgs2, leftover2 = feed_content_length_buffer(leftover + e2[15:])
     assert msgs2 == [m2]
-    assert leftover2 == b""
+    assert leftover2 == b''
 
 
 def test_feed_content_length_buffer_error_branches() -> None:
     # Invalid length int
-    buf1 = b"Content-Length: bad\r\n\r\nContent-Length: 8\r\n\r\n{\"a\": 1}"
+    buf1 = b'Content-Length: bad\r\n\r\nContent-Length: 8\r\n\r\n{"a": 1}'
     msgs1, leftover1 = feed_content_length_buffer(buf1)
-    assert msgs1 == [{"a": 1}]
+    assert msgs1 == [{'a': 1}]
 
     # Incomplete headers / no sep
-    assert feed_content_length_buffer(b"Content-Length: 10") == ([], b"Content-Length: 10")
-    assert feed_content_length_buffer(b"Content-Length: 10\r\n") == ([], b"Content-Length: 10\r\n")
+    assert feed_content_length_buffer(b'Content-Length: 10') == (
+        [],
+        b'Content-Length: 10',
+    )
+    assert feed_content_length_buffer(b'Content-Length: 10\r\n') == (
+        [],
+        b'Content-Length: 10\r\n',
+    )
 
     # Incomplete body
-    buf_inc = b"Content-Length: 100\r\n\r\nshort"
+    buf_inc = b'Content-Length: 100\r\n\r\nshort'
     assert feed_content_length_buffer(buf_inc) == ([], buf_inc)
 
     # Invalid JSON payload
-    buf_invalid = b"Content-Length: 9\r\n\r\n{invalid}"
+    buf_invalid = b'Content-Length: 9\r\n\r\n{invalid}'
     msgs_inv, leftover_inv = feed_content_length_buffer(buf_invalid)
     assert msgs_inv == []
-    assert leftover_inv == b""
-
-
+    assert leftover_inv == b''

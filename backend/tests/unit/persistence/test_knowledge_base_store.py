@@ -90,19 +90,19 @@ def test_get_knowledge_base_store_uses_env_path(tmp_path: Path, monkeypatch) -> 
 
 def test_update_collection_missing_returns_none(tmp_path: Path) -> None:
     store = KnowledgeBaseStore(storage_dir=tmp_path)
-    assert store.update_collection("missing_id", name="New") is None
+    assert store.update_collection('missing_id', name='New') is None
 
 
 def test_load_and_save_disk_exception_handling(tmp_path: Path) -> None:
     store = KnowledgeBaseStore(storage_dir=tmp_path)
     # Write invalid JSON to collections_file
-    store.collections_file.write_text("invalid json")
+    store.collections_file.write_text('invalid json')
     store._load_from_disk()  # Should catch exception without crashing
 
     # Mock open error during _save_to_disk
     from unittest.mock import patch
 
-    with patch("builtins.open", side_effect=PermissionError("Save failed")):
+    with patch('builtins.open', side_effect=PermissionError('Save failed')):
         store._save_to_disk()  # Should catch exception without crashing
 
 
@@ -117,4 +117,3 @@ def test_get_knowledge_base_store_default_path(monkeypatch) -> None:
         assert isinstance(s, KnowledgeBaseStore)
     finally:
         mod._store = old
-

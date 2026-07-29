@@ -27,12 +27,16 @@ We ONLY want to add a new skill, when:
 
 ```python
 from agentskills import open_file, edit_file
-open_file("/workspace/a.txt")
+
+open_file('/workspace/a.txt')
 ```
 
 - Tool/skill retrieval (through bash commands)
 
 ```python
 from agentskills import help_me
-help_me("I want to solve a task that involves reading a bunch of PDFs and reason about them")
+
+help_me(
+    'I want to solve a task that involves reading a bunch of PDFs and reason about them'
+)
 ```

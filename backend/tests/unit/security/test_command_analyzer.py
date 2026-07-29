@@ -6,7 +6,6 @@ import pytest
 
 from backend.security.command_analyzer import (
     CommandAnalyzer,
-    CommandAssessment,
     RiskCategory,
     _collapse_ifs_and_empty_quotes,
     reflection_precheck_should_block,
@@ -97,24 +96,23 @@ class TestWorkspaceCleanupNotCritical:
 
 class TestObfuscationAndConfig:
     def test_ifs_and_empty_quote_collapsing(self):
-        assert _collapse_ifs_and_empty_quotes("rm${IFS}-rf${IFS}/") == "rm -rf /"
-        assert _collapse_ifs_and_empty_quotes("r''m'' -rf /") == "rm -rf /"
-        assert _collapse_ifs_and_empty_quotes("normal_cmd") == "normal_cmd"
+        assert _collapse_ifs_and_empty_quotes('rm${IFS}-rf${IFS}/') == 'rm -rf /'
+        assert _collapse_ifs_and_empty_quotes("r''m'' -rf /") == 'rm -rf /'
+        assert _collapse_ifs_and_empty_quotes('normal_cmd') == 'normal_cmd'
 
     def test_invalid_regex_patterns_in_config(self):
         config = {
-            "blocked_patterns": ["[invalid_regex", "valid_pat.*"],
-            "extra_critical_patterns": ["(?invalid_group"],
+            'blocked_patterns': ['[invalid_regex', 'valid_pat.*'],
+            'extra_critical_patterns': ['(?invalid_group'],
         }
         analyzer = CommandAnalyzer(config)
         assert len(analyzer._blocked_regex) == 1
         assert len(analyzer._extra_critical) == 0
 
     def test_reflection_precheck_should_block(self):
-        should_block, reason = reflection_precheck_should_block("rm -rf /")
+        should_block, reason = reflection_precheck_should_block('rm -rf /')
         assert should_block is True
-        assert "critical" in reason.lower() or "delete" in reason.lower()
+        assert 'critical' in reason.lower() or 'delete' in reason.lower()
 
-        should_block_low, _ = reflection_precheck_should_block("echo hello")
+        should_block_low, _ = reflection_precheck_should_block('echo hello')
         assert should_block_low is False
-

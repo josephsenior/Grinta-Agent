@@ -19,19 +19,22 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
+
 class User(BaseModel):
     name: str
     email: str
 
-@app.post("/users", status_code=201)
-async def create_user(user: User):
-    return {"id": 1, **user.model_dump()}
 
-@app.get("/users/{user_id}")
+@app.post('/users', status_code=201)
+async def create_user(user: User):
+    return {'id': 1, **user.model_dump()}
+
+
+@app.get('/users/{user_id}')
 async def get_user(user_id: int):
     row = db.get(user_id)
     if not row:
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(status_code=404, detail='Not found')
     return row
 ```
 

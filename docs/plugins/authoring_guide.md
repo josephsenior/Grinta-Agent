@@ -11,13 +11,15 @@ A Grinta plugin is a Python package that exposes an `app.plugins` entry point.
 ```python
 from backend.core.plugin import AppPlugin, PluginRegistry
 
+
 class MyPlugin(AppPlugin):
-    name = "my-plugin"
-    version = "0.1.0"
-    
+    name = 'my-plugin'
+    version = '0.1.0'
+
     async def on_action_pre(self, action):
-        print(f"Executing action: {action}")
+        print(f'Executing action: {action}')
         return action
+
 
 def register(registry: PluginRegistry):
     registry.register(MyPlugin())

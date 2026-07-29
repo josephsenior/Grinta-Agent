@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
@@ -68,11 +66,15 @@ class TestAuditLoggerInit:
 
 class TestCredentialRedaction:
     def test_redact_credentials_patterns(self):
-        assert _redact_credentials("") == ""
-        assert "<credential_redacted>" in _redact_credentials("sk-12345678901234567890")
-        assert "<credential_redacted>" in _redact_credentials("ghp_12345678901234567890")
-        assert "<credential_redacted>" in _redact_credentials("Bearer 12345678901234567890")
-        assert _redact_credentials("normal_text_123") == "normal_text_123"
+        assert _redact_credentials('') == ''
+        assert '<credential_redacted>' in _redact_credentials('sk-12345678901234567890')
+        assert '<credential_redacted>' in _redact_credentials(
+            'ghp_12345678901234567890'
+        )
+        assert '<credential_redacted>' in _redact_credentials(
+            'Bearer 12345678901234567890'
+        )
+        assert _redact_credentials('normal_text_123') == 'normal_text_123'
 
 
 # ── _extract_action_content ──────────────────────────────────────────
@@ -112,29 +114,34 @@ class TestAuditLoggerSnapshotAndUpdate:
     async def test_update_entry_snapshot_non_existent(self, tmp_path):
         al = AuditLogger(str(tmp_path))
         # Log file doesn't exist yet -> returns False
-        res = await al.update_entry_snapshot("missing_session", "audit_id", "snap_id")
+        res = await al.update_entry_snapshot('missing_session', 'audit_id', 'snap_id')
         assert res is False
 
     @pytest.mark.asyncio
     async def test_update_entry_snapshot_with_corrupt_and_valid_lines(self, tmp_path):
         al = AuditLogger(str(tmp_path))
-        log_file = al._get_session_log_file("s1")
-        log_file.write_text("invalid_json_line\n{\"id\": \"target_id\", \"filesystem_snapshot_id\": null}\n", encoding="utf-8")
+        log_file = al._get_session_log_file('s1')
+        log_file.write_text(
+            'invalid_json_line\n{"id": "target_id", "filesystem_snapshot_id": null}\n',
+            encoding='utf-8',
+        )
 
-        updated = await al.update_entry_snapshot("s1", "target_id", "snap_123")
+        updated = await al.update_entry_snapshot('s1', 'target_id', 'snap_123')
         assert updated is True
-        content = log_file.read_text(encoding="utf-8")
-        assert "snap_123" in content
+        content = log_file.read_text(encoding='utf-8')
+        assert 'snap_123' in content
 
     def test_read_session_audit_handles_corrupt_json(self, tmp_path):
         al = AuditLogger(str(tmp_path))
-        log_file = al._get_session_log_file("s2")
-        log_file.write_text("invalid json\n", encoding="utf-8")
-        entries = al.read_session_audit("s2")
+        log_file = al._get_session_log_file('s2')
+        log_file.write_text('invalid json\n', encoding='utf-8')
+        entries = al.read_session_audit('s2')
         assert entries == []
 
     def test_export_audit_trail_exception(self, tmp_path):
         al = AuditLogger(str(tmp_path))
-        with patch.object(al, "read_session_audit", side_effect=PermissionError("Read error")):
+        with patch.object(
+            al, 'read_session_audit', side_effect=PermissionError('Read error')
+        ):
             # Should catch exception without crashing
-            al.export_audit_trail("s3", str(tmp_path / "out.json"))
+            al.export_audit_trail('s3', str(tmp_path / 'out.json'))

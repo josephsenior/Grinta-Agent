@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -104,33 +103,42 @@ class TestEnsureMetadataExists:
     async def test_ensure_metadata_creates_on_file_not_found(self):
         validator = ConversationValidator(mode='permissive')
         mock_store = MagicMock()
-        mock_store.get_metadata = AsyncMock(side_effect=FileNotFoundError("Missing metadata"))
+        mock_store.get_metadata = AsyncMock(
+            side_effect=FileNotFoundError('Missing metadata')
+        )
         mock_new_meta = MagicMock()
         validator._create_metadata = AsyncMock(return_value=mock_new_meta)
 
         with (
-            patch("backend.persistence.conversation.conversation_validator.load_app_config"),
-            patch("backend.persistence.conversation.conversation_validator.get_impl") as mock_impl,
+            patch(
+                'backend.persistence.conversation.conversation_validator.load_app_config'
+            ),
+            patch(
+                'backend.persistence.conversation.conversation_validator.get_impl'
+            ) as mock_impl,
         ):
             mock_store_cls = MagicMock()
             mock_store_cls.get_instance = AsyncMock(return_value=mock_store)
             mock_impl.return_value = mock_store_cls
 
-            res = await validator._ensure_metadata_exists("conv_new", "user_1")
+            res = await validator._ensure_metadata_exists('conv_new', 'user_1')
             assert res == mock_new_meta
-            validator._create_metadata.assert_called_once_with(mock_store, "conv_new", "user_1")
+            validator._create_metadata.assert_called_once_with(
+                mock_store, 'conv_new', 'user_1'
+            )
 
 
 class TestValidateStrict:
     @pytest.mark.asyncio
     async def test_strict_anonymous_rejected(self):
         validator = ConversationValidator(mode='strict')
-        with patch.object(validator, "_extract_user_id", return_value=None):
-            with pytest.raises(ConversationAccessDenied, match="Anonymous access is not allowed"):
-                await validator.validate("conv_123", "", None)
+        with patch.object(validator, '_extract_user_id', return_value=None):
+            with pytest.raises(
+                ConversationAccessDenied, match='Anonymous access is not allowed'
+            ):
+                await validator.validate('conv_123', '', None)
 
     @pytest.mark.asyncio
     async def test_create_conversation_validator_factory(self):
         v = create_conversation_validator()
         assert isinstance(v, ConversationValidator)
-

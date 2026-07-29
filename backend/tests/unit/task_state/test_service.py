@@ -130,25 +130,27 @@ def test_set_rejects_invalid_contract_status(tmp_path):
 
 def test_expected_revision_mismatch(tmp_path):
     service = TaskStateService(TaskStateStore(tmp_path))
-    with pytest.raises(ValueError, match="Task state changed since your last review"):
+    with pytest.raises(ValueError, match='Task state changed since your last review'):
         service.apply('review', {'expected_revision': 99})
 
 
 def test_unsupported_action(tmp_path):
     service = TaskStateService(TaskStateStore(tmp_path))
-    with pytest.raises(ValueError, match="Unsupported task_state action"):
+    with pytest.raises(ValueError, match='Unsupported task_state action'):
         service.apply('invalid_action', {})
 
 
 def test_update_task_without_plan(tmp_path):
     service = TaskStateService(TaskStateStore(tmp_path))
-    with pytest.raises(ValueError, match="No plan exists"):
+    with pytest.raises(ValueError, match='No plan exists'):
         service.apply('update_task', {'task_id': 't1', 'status': 'done'})
 
 
 def test_update_task_invalid_status_or_id(tmp_path):
     service = TaskStateService(TaskStateStore(tmp_path))
-    service.apply('set', {'tasks': [{'id': 't1', 'description': 'desc', 'status': 'todo'}]})
+    service.apply(
+        'set', {'tasks': [{'id': 't1', 'description': 'desc', 'status': 'todo'}]}
+    )
 
     with pytest.raises(ValueError, match="Invalid task status 'bad_status'"):
         service.apply('update_task', {'task_id': 't1', 'status': 'bad_status'})
@@ -159,13 +161,13 @@ def test_update_task_invalid_status_or_id(tmp_path):
 
 def test_audit_without_contract(tmp_path):
     service = TaskStateService(TaskStateStore(tmp_path))
-    with pytest.raises(ValueError, match="No contract exists"):
+    with pytest.raises(ValueError, match='No contract exists'):
         service.apply('audit', {'evidence': []})
 
 
 def test_contract_item_validation_errors(tmp_path):
     service = TaskStateService(TaskStateStore(tmp_path))
-    with pytest.raises(ValueError, match="Contract item fields must be lists"):
+    with pytest.raises(ValueError, match='Contract item fields must be lists'):
         service.apply('set', {'requirements': 'not_a_list'})
 
     with pytest.raises(ValueError, match="Invalid requirement source 'bad_source'"):

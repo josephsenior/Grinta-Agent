@@ -311,4 +311,3 @@ class TestLocalFileStoreCoverageGaps:
         with patch.object(store, 'get_full_path', side_effect=Exception('Fatal error')):
             # Delete catches all exceptions without raising
             store.delete('some_path')
-

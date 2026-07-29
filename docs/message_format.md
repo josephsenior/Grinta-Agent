@@ -31,9 +31,12 @@ class Message(BaseModel):
    ```python
    def _string_serializer(self) -> dict:
        # convert content to a single string
-       content = '\n'.join(item.text for item in self.content if isinstance(item, TextContent))
+       content = '\n'.join(
+           item.text for item in self.content if isinstance(item, TextContent)
+       )
        message_dict: dict = {'content': content, 'role': self.role}
        return self._add_tool_call_keys(message_dict)
+
 
    def _list_serializer(self) -> dict:
        content: list[dict] = []

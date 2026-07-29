@@ -1947,18 +1947,25 @@ class TestPromptManagerExtendedCoverage:
         lessons_file = lessons_dir / 'lessons.md'
         lessons_file.write_text('Always run tests before push.', encoding='utf-8')
 
-        with patch('backend.core.workspace_resolution.get_effective_workspace_root', return_value=tmp_path):
-            with patch('backend.core.workspace_resolution.workspace_agent_state_dir', return_value=lessons_dir):
-                result = opm._inject_lessons_learned("Base prompt")
-                assert "REPOSITORY_LESSONS_LEARNED" in result
-                assert "Always run tests before push." in result
+        with patch(
+            'backend.core.workspace_resolution.get_effective_workspace_root',
+            return_value=tmp_path,
+        ):
+            with patch(
+                'backend.core.workspace_resolution.workspace_agent_state_dir',
+                return_value=lessons_dir,
+            ):
+                result = opm._inject_lessons_learned('Base prompt')
+                assert 'REPOSITORY_LESSONS_LEARNED' in result
+                assert 'Always run tests before push.' in result
 
     def test_inject_scratchpad_delegates_to_workspace_memory(self):
         from backend.utils.prompt import OrchestratorPromptManager
 
         opm = OrchestratorPromptManager(prompt_dir='/tmp')
-        with patch.object(opm, "_inject_workspace_memory", return_value="Injected memory") as mock_inj:
-            res = opm._inject_scratchpad("Content")
-            assert res == "Injected memory"
-            mock_inj.assert_called_once_with("Content")
-
+        with patch.object(
+            opm, '_inject_workspace_memory', return_value='Injected memory'
+        ) as mock_inj:
+            res = opm._inject_scratchpad('Content')
+            assert res == 'Injected memory'
+            mock_inj.assert_called_once_with('Content')

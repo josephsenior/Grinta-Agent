@@ -18,7 +18,6 @@ from backend.utils.runtime_detect import (
     detection_summary,
     has_any_debug_adapter,
     has_any_lsp_server,
-    lsp_command_for_extension,
     reset_detection_cache,
 )
 
@@ -150,25 +149,29 @@ def test_detect_lsp_servers_uses_cache() -> None:
 
 
 def test_canonical_spec_for_extension() -> None:
-    spec1 = canonical_spec_for_extension("py")
-    spec2 = canonical_spec_for_extension(".py")
+    spec1 = canonical_spec_for_extension('py')
+    spec2 = canonical_spec_for_extension('.py')
     assert spec1 is not None
-    assert spec1.name == "pyright-langserver"
+    assert spec1.name == 'pyright-langserver'
     assert spec1 == spec2
-    assert canonical_spec_for_extension(".unknown_ext") is None
+    assert canonical_spec_for_extension('.unknown_ext') is None
 
 
 def test_has_any_lsp_server_env_disabled() -> None:
-    with patch.dict(os.environ, {"GRINTA_DISABLE_LSP_DETECTION": "1"}):
+    with patch.dict(os.environ, {'GRINTA_DISABLE_LSP_DETECTION': '1'}):
         assert has_any_lsp_server() is False
 
 
 def test_has_any_debug_adapter_env_disabled() -> None:
-    with patch.dict(os.environ, {"GRINTA_DISABLE_DEBUGGER_DETECTION": "1"}):
+    with patch.dict(os.environ, {'GRINTA_DISABLE_DEBUGGER_DETECTION': '1'}):
         assert has_any_debug_adapter() is False
 
 
 def test_detection_summary() -> None:
     summary = detection_summary()
     assert isinstance(summary, dict)
-    assert "lsp_servers" in summary or "available_lsp" in summary or isinstance(summary, dict)
+    assert (
+        'lsp_servers' in summary
+        or 'available_lsp' in summary
+        or isinstance(summary, dict)
+    )

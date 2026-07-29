@@ -3,21 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from backend.utils.async_helpers import async_utils
 from backend.utils.async_helpers.async_utils import (
-    AsyncException,
     call_async_from_sync,
     call_coro_in_bg_thread,
     call_sync_from_async,
     create_tracked_task,
-    get_active_loop,
-    run_in_loop,
-    run_or_schedule,
-    wait_all,
 )
 
 
@@ -58,23 +53,21 @@ class TestCallAsyncFromSyncTimeoutsAndFallback:
         async def slow_coro():
             await asyncio.sleep(10)
 
-        with pytest.raises(TimeoutError, match="call_async_from_sync timed out"):
+        with pytest.raises(TimeoutError, match='call_async_from_sync timed out'):
             call_async_from_sync(slow_coro, timeout=0.1)
 
     def test_call_async_from_sync_executor_shutdown(self):
         async def quick_coro():
-            return "quick"
+            return 'quick'
 
-        with patch.object(async_utils.EXECUTOR, "_shutdown", True):
+        with patch.object(async_utils.EXECUTOR, '_shutdown', True):
             res = call_async_from_sync(quick_coro)
-            assert res == "quick"
+            assert res == 'quick'
 
     @pytest.mark.asyncio
     async def test_call_coro_in_bg_thread_success(self):
         async def bg_task():
-            return "bg_res"
+            return 'bg_res'
 
         res = await call_coro_in_bg_thread(bg_task, 5.0)
-        assert res == "bg_res"
-
-
+        assert res == 'bg_res'

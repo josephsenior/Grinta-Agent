@@ -82,11 +82,11 @@ def _collect_system_prompt_sections(
     lsp_available = _lsp_available(config)
 
     identity_line = agent_identity.strip() or 'You are Grinta...'
-    
+
     sections: list[tuple[str, str]] = [
         ('identity_header', f'{identity_line}\nModel id: `{model_id}`'),
     ]
-    
+
     # Platform-specific shell identity block
     sections.extend(
         _shell_identity_sections(
@@ -101,10 +101,13 @@ def _collect_system_prompt_sections(
         ('system_partial_00_routing', _render_routing(is_windows, config)),
         ('security_risk_policy', _render_security(cli_mode)),
         ('system_partial_01_autonomy', _render_autonomy(config, is_windows=is_windows)),
-        ('system_partial_02_tools', _render_tool_reference(config, is_windows=is_windows)),
+        (
+            'system_partial_02_tools',
+            _render_tool_reference(config, is_windows=is_windows),
+        ),
         ('system_partial_03_capabilities', _render_system_capabilities(config)),
     ]
-    
+
     # Conditional MCP inclusion
     sections.extend(
         _mcp_or_permissions_sections_for_collect(
@@ -120,8 +123,10 @@ def _collect_system_prompt_sections(
     if not _model_is_small(model_id):
         sections.append(('system_partial_05_examples', _render_examples(config)))
 
-    sections.append(('system_partial_04_critical', _render_critical(resolved_terminal_tool)))
-    
+    sections.append(
+        ('system_partial_04_critical', _render_critical(resolved_terminal_tool))
+    )
+
     return sections
 ```
 

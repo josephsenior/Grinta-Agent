@@ -143,21 +143,21 @@ for cross-cutting concerns:
 
 ```python
 middlewares = [
-    SafetyValidatorMiddleware(self),      # Validate action safety
-    BlackboardMiddleware(self),           # Track action context
-    CircuitBreakerMiddleware(self),       # Prevent cascading failures
-    ProgressPolicyMiddleware(),          # Progress indicators
-    CostQuotaMiddleware(self),            # Budget tracking
-    ContextWindowMiddleware(self),       # Context window management
-    RollbackMiddleware(),                 # State rollback support
-    DestructiveCommandMiddleware(),       # Block dangerous commands
-    PreExecDiffMiddleware(),              # Generate diffs before edits
-    AutoCheckMiddleware(),                # Post-execution validation
-    PostEditDiagnosticsMiddleware(),      # Diagnostics after edits
-    FileStateMiddleware(),                # File-state tracking
-    LoggingMiddleware(self),              # Request/response logging
-    TelemetryMiddleware(self),            # Metrics collection
-    ToolResultValidator(),                # Validate tool outputs
+    SafetyValidatorMiddleware(self),  # Validate action safety
+    BlackboardMiddleware(self),  # Track action context
+    CircuitBreakerMiddleware(self),  # Prevent cascading failures
+    ProgressPolicyMiddleware(),  # Progress indicators
+    CostQuotaMiddleware(self),  # Budget tracking
+    ContextWindowMiddleware(self),  # Context window management
+    RollbackMiddleware(),  # State rollback support
+    DestructiveCommandMiddleware(),  # Block dangerous commands
+    PreExecDiffMiddleware(),  # Generate diffs before edits
+    AutoCheckMiddleware(),  # Post-execution validation
+    PostEditDiagnosticsMiddleware(),  # Diagnostics after edits
+    FileStateMiddleware(),  # File-state tracking
+    LoggingMiddleware(self),  # Request/response logging
+    TelemetryMiddleware(self),  # Metrics collection
+    ToolResultValidator(),  # Validate tool outputs
 ]
 ```
 

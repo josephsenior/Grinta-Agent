@@ -79,9 +79,9 @@ agent_config = config.get_agent_config()
 runtime_config = config.runtime_config
 
 # Use the configuration in your application
-print(f"Using LLM model: {llm_config.model}")
-print(f"Agent memory enabled: {agent_config.memory_enabled}")
-print(f"Runtime timeout: {runtime_config.timeout}")
+print(f'Using LLM model: {llm_config.model}')
+print(f'Agent memory enabled: {agent_config.memory_enabled}')
+print(f'Runtime timeout: {runtime_config.timeout}')
 ```
 
 By using `load_app_config()`, you ensure that all configuration sources are properly loaded and processed, providing a consistent and fully initialized configuration for your application.

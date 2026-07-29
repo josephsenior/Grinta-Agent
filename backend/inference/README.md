@@ -65,17 +65,17 @@ from backend.core.config.llm_config import LLMConfig
 
 # Create LLM instance
 config = LLMConfig(
-    model="claude-sonnet-4-6",
-    api_key="sk-ant-...",
+    model='claude-sonnet-4-6',
+    api_key='sk-ant-...',
     temperature=0.0,
-    max_output_tokens=8000
+    max_output_tokens=8000,
 )
-llm = LLM(config=config, service_id="main")
+llm = LLM(config=config, service_id='main')
 
 # Make completion call
 response = llm.completion(
-    messages=[{"role": "user", "content": "Hello"}],
-    tools=[...]  # Optional function calling
+    messages=[{'role': 'user', 'content': 'Hello'}],
+    tools=[...],  # Optional function calling
 )
 ```
 
@@ -97,13 +97,13 @@ response = llm.completion(
 from backend.inference import LLM
 
 # No base_url needed - auto-discovers Ollama
-llm = LLM(model="ollama/llama3.2")
+llm = LLM(model='ollama/llama3.2')
 
 # Or LM Studio
-llm = LLM(model="lm_studio/qwen2.5-coder")
+llm = LLM(model='lm_studio/qwen2.5-coder')
 
 # Or vLLM
-llm = LLM(model="vllm/mistral-7b")
+llm = LLM(model='vllm/mistral-7b')
 ```
 
 **Discover Available Models:**
@@ -139,15 +139,12 @@ from backend.core.config.api_key_manager import api_key_manager
 
 # Get correct API key for model
 key = api_key_manager.get_api_key_for_model(
-    model="openrouter/gpt-4o",
-    provided_key=None  # Falls back to environment
+    model='openrouter/gpt-4o',
+    provided_key=None,  # Falls back to environment
 )
 
 # Set environment variables
-api_key_manager.set_environment_variables(
-    model="gpt-4o",
-    api_key=key
-)
+api_key_manager.set_environment_variables(model='gpt-4o', api_key=key)
 ```
 
 **Features:**
@@ -165,12 +162,12 @@ Pre-configured settings for 30+ providers:
 from backend.core.config.provider_config import provider_config_manager
 
 # Get provider config
-config = provider_config_manager.get_provider_config("anthropic")
+config = provider_config_manager.get_provider_config('anthropic')
 
 # Validate parameters
 cleaned = provider_config_manager.validate_and_clean_params(
-    provider="anthropic",
-    params={"model": "claude-4", "api_key": "...", "base_url": "..."}
+    provider='anthropic',
+    params={'model': 'claude-4', 'api_key': '...', 'base_url': '...'},
 )
 # Returns: params with forbidden parameters removed
 ```
@@ -244,7 +241,7 @@ if features.supports_reasoning_effort:
 
 ```python
 # Just specify the model
-llm = LLM(model="ollama/llama3.2")
+llm = LLM(model='ollama/llama3.2')
 # Grinta automatically:
 # 1. Detects provider is "ollama"
 # 2. Probes localhost:11434
@@ -278,18 +275,18 @@ When determining where to send API requests, Grinta uses this priority order:
 
 ```python
 # Priority 1: Explicit (highest)
-llm = LLM(model="ollama/llama3.2", base_url="http://gpu-server:11434")
+llm = LLM(model='ollama/llama3.2', base_url='http://gpu-server:11434')
 
 # Priority 2: Environment variable
-os.environ["OLLAMA_HOST"] = "http://192.168.1.100:11434"
-llm = LLM(model="ollama/llama3.2")
+os.environ['OLLAMA_HOST'] = 'http://192.168.1.100:11434'
+llm = LLM(model='ollama/llama3.2')
 
 # Priority 3: Auto-discovery
 # (Grinta automatically probes localhost:11434)
-llm = LLM(model="ollama/llama3.2")
+llm = LLM(model='ollama/llama3.2')
 
 # Priority 4: Default (for cloud providers)
-llm = LLM(model="gpt-4")  # → https://api.openai.com/v1
+llm = LLM(model='gpt-4')  # → https://api.openai.com/v1
 ```
 
 ### Via config.toml
@@ -367,7 +364,7 @@ Edit `backend/inference/model_features.py`:
 ```python
 FUNCTION_CALLING_PATTERNS: list[str] = [
     # ... existing patterns
-    "newprovider/*",  # All newprovider models support function calling
+    'newprovider/*',  # All newprovider models support function calling
 ]
 ```
 
@@ -377,15 +374,10 @@ FUNCTION_CALLING_PATTERNS: list[str] = [
 from backend.inference.llm import LLM
 from backend.core.config.llm_config import LLMConfig
 
-config = LLMConfig(
-    model="newprovider/model-name",
-    api_key="np-your-key"
-)
-llm = LLM(config=config, service_id="test")
+config = LLMConfig(model='newprovider/model-name', api_key='np-your-key')
+llm = LLM(config=config, service_id='test')
 
-response = llm.completion(
-    messages=[{"role": "user", "content": "Hello"}]
-)
+response = llm.completion(messages=[{'role': 'user', 'content': 'Hello'}])
 ```
 
 ## Cost Tracking
@@ -395,7 +387,7 @@ response = llm.completion(
 ```python
 # Cost is automatically tracked in metrics
 llm.metrics.accumulated_cost  # Total cost in USD
-llm.metrics.total_tokens      # Total tokens
+llm.metrics.total_tokens  # Total tokens
 ```
 
 ### Per-Request Cost
@@ -432,8 +424,8 @@ output_cost_per_token = 0.003
 ```python
 # Enable caching
 config = LLMConfig(
-    model="claude-sonnet-4-6",
-    caching_prompt=True  # Enable caching
+    model='claude-sonnet-4-6',
+    caching_prompt=True,  # Enable caching
 )
 
 # First call: Full cost
@@ -456,27 +448,23 @@ response2 = llm.completion(messages=[...])  # Cost: $0.01 (80% savings!)
 ```python
 tools = [
     {
-        "type": "function",
-        "function": {
-            "name": "start_file_edit",
-            "description": "Edit a file with structured commands",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "command": {"type": "string"},
-                    "path": {"type": "string"},
-                    "file_text": {"type": "string"}
-                }
-            }
-        }
+        'type': 'function',
+        'function': {
+            'name': 'start_file_edit',
+            'description': 'Edit a file with structured commands',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'command': {'type': 'string'},
+                    'path': {'type': 'string'},
+                    'file_text': {'type': 'string'},
+                },
+            },
+        },
     }
 ]
 
-response = llm.completion(
-    messages=[...],
-    tools=tools,
-    tool_choice="auto"
-)
+response = llm.completion(messages=[...], tools=tools, tool_choice='auto')
 
 # Parse tool calls
 if response.choices[0].message.tool_calls:
@@ -494,11 +482,11 @@ from backend.core.message import Message
 
 # Image message
 message = Message(
-    role="user",
+    role='user',
     content=[
-        {"type": "text", "text": "What's in this image?"},
-        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}}
-    ]
+        {'type': 'text', 'text': "What's in this image?"},
+        {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,...'}},
+    ],
 )
 
 response = llm.completion(messages=[message])
@@ -508,15 +496,12 @@ response = llm.completion(messages=[message])
 
 ```python
 # Enable streaming
-response = llm.completion(
-    messages=[...],
-    stream=True
-)
+response = llm.completion(messages=[...], stream=True)
 
 # Process chunks
 for chunk in response:
     if chunk.choices[0].delta.content:
-        print(chunk.choices[0].delta.content, end="")
+        print(chunk.choices[0].delta.content, end='')
 ```
 
 ## Metrics
@@ -526,13 +511,13 @@ for chunk in response:
 ```python
 from backend.inference.metrics import Metrics
 
-metrics = Metrics(model_name="claude-4")
+metrics = Metrics(model_name='claude-4')
 
 # Track usage
 metrics.add_token_usage(
     prompt_tokens=1000,
     completion_tokens=500,
-    cache_read_tokens=200  # From prompt cache
+    cache_read_tokens=200,  # From prompt cache
 )
 
 # Track cost
@@ -542,12 +527,12 @@ metrics.add_cost(0.05)  # $0.05
 metrics.add_response_latency(
     latency=0.85,  # 850ms
     prompt_tokens=1000,
-    completion_tokens=500
+    completion_tokens=500,
 )
 
 # Get stats
-print(f"Total cost: ${metrics.accumulated_cost}")
-print(f"Avg latency: {metrics.avg_response_latency}s")
+print(f'Total cost: ${metrics.accumulated_cost}')
+print(f'Avg latency: {metrics.avg_response_latency}s')
 ```
 
 ## Troubleshooting
@@ -609,7 +594,7 @@ LLM_MODEL=gpt-4o-mini
 from backend.inference.capabilities.model_features import get_features
 
 features = get_features(your_model)
-print(f"Function calling: {features.supports_function_calling}")
+print(f'Function calling: {features.supports_function_calling}')
 
 # If False: Use mock function calling (automatic fallback)
 ```
@@ -688,7 +673,7 @@ except RateLimitError:
     time.sleep(60)
 except APIConnectionError:
     # Switch to fallback model
-    llm.config.model = "gpt-4o-mini"
+    llm.config.model = 'gpt-4o-mini'
 ```
 
 ## Provider-Specific Notes

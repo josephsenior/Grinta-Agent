@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from backend.utils.treesitter.syntax_check import (
     SyntaxCheckResult,
@@ -71,7 +71,7 @@ def test_collect_tree_sitter_syntax_errors_walks_nodes() -> None:
 
 
 def test_collect_tree_sitter_syntax_errors_truncates_long_snippet() -> None:
-    long_bytes = b"x" * 100
+    long_bytes = b'x' * 100
     error_node = SimpleNamespace(
         type='ERROR',
         is_missing=False,
@@ -89,27 +89,30 @@ def test_collect_tree_sitter_syntax_errors_truncates_long_snippet() -> None:
         children=[error_node],
     )
     errors = collect_tree_sitter_syntax_errors(root, long_bytes)
-    assert "..." in errors[0]
+    assert '...' in errors[0]
 
 
 def test_check_syntax_unmapped_extension() -> None:
-    res = check_syntax("file.unknown_extension", content="hello")
+    res = check_syntax('file.unknown_extension', content='hello')
     assert res.status == 'skipped'
     assert 'no parser mapping' in res.detail
 
 
 def test_check_syntax_content_unavailable() -> None:
-    res = check_syntax("non_existent.py", content=None)
+    res = check_syntax('non_existent.py', content=None)
     assert res.status == 'skipped'
     assert 'unavailable' in res.detail
 
 
 def test_render_python_syntax_error_fallback() -> None:
-    exc = SyntaxError("invalid syntax")
+    exc = SyntaxError('invalid syntax')
     exc.lineno = 5
     exc.offset = 10
-    exc.msg = "syntax error msg"
+    exc.msg = 'syntax error msg'
 
-    with patch("backend.utils.treesitter.treesitter_editor._render_python_syntax_error", side_effect=RuntimeError("renderer fail")):
-        rendered = _render_python_syntax_error(exc, "code", "file.py")
-        assert "line 5:10" in rendered
+    with patch(
+        'backend.utils.treesitter.treesitter_editor._render_python_syntax_error',
+        side_effect=RuntimeError('renderer fail'),
+    ):
+        rendered = _render_python_syntax_error(exc, 'code', 'file.py')
+        assert 'line 5:10' in rendered

@@ -152,28 +152,28 @@ class TestCheckExplicitLlmConfig:
 
     def test_explicit_env_match(self):
         llm = MagicMock()
-        llm.api_key = SecretStr("secret-123")
+        llm.api_key = SecretStr('secret-123')
         config = MagicMock()
         config.llms = {'llm': llm}
-        with patch.dict("os.environ", {"LLM_API_KEY": "secret-123"}):
+        with patch.dict('os.environ', {'LLM_API_KEY': 'secret-123'}):
             assert Settings._check_explicit_llm_config(config) is True
 
 
 class TestConvertProviderTokens:
     def test_non_dict_passthrough(self):
-        assert Settings.convert_provider_tokens("string_data") == "string_data"
+        assert Settings.convert_provider_tokens('string_data') == 'string_data'
 
     def test_convert_dict_with_tokens_and_custom_secrets(self):
         data = {
-            "secrets_store": {
-                "provider_tokens": {"openai": {"token": "abc"}},
-                "custom_secrets": {"my_key": "val"}
+            'secrets_store': {
+                'provider_tokens': {'openai': {'token': 'abc'}},
+                'custom_secrets': {'my_key': 'val'},
             }
         }
         res = Settings.convert_provider_tokens(data)
         assert isinstance(res, dict)
-        assert "secret_store" in res
-        store = res["secret_store"]
+        assert 'secret_store' in res
+        store = res['secret_store']
         assert isinstance(store, UserSecrets)
 
 
@@ -185,12 +185,14 @@ class TestHasExplicitApiKey:
 
     def test_fallback_api_key_attr(self):
         class DummyConfig:
-            api_key = "sk-dummy"
+            api_key = 'sk-dummy'
+
         assert Settings._has_explicit_api_key(DummyConfig()) is True
 
     def test_fallback_no_api_key(self):
         class DummyConfig:
             pass
+
         assert Settings._has_explicit_api_key(DummyConfig()) is False
 
 
@@ -219,14 +221,14 @@ class TestSettingsCache:
         assert mod._settings_from_config_cache_time == 100.0
 
     def test_get_cached_settings_fresh(self):
-        s = Settings(language="en")
+        s = Settings(language='en')
         now = time.time()
         Settings._cache_settings_result(s, now)
         cached = Settings._get_cached_settings(now + 1)
         assert cached == s
 
     def test_get_cached_settings_expired(self):
-        s = Settings(language="en")
+        s = Settings(language='en')
         now = time.time()
         Settings._cache_settings_result(s, now)
         cached = Settings._get_cached_settings(now + 1000)
@@ -235,18 +237,16 @@ class TestSettingsCache:
 
 class TestMergeWithConfigSettings:
     def test_merge_no_config_settings(self):
-        s = Settings(language="fr")
-        with patch.object(Settings, "from_config", return_value=None):
+        s = Settings(language='fr')
+        with patch.object(Settings, 'from_config', return_value=None):
             res = s.merge_with_config_settings()
             assert res == s
 
     def test_merge_config_with_mcp(self):
         from backend.core.config.mcp_config import MCPConfig
 
-        s = Settings(language="fr")
+        s = Settings(language='fr')
         config_s = Settings(mcp_config=MCPConfig(servers=[]))
-        with patch.object(Settings, "from_config", return_value=config_s):
+        with patch.object(Settings, 'from_config', return_value=config_s):
             res = s.merge_with_config_settings()
             assert res.mcp_config == config_s.mcp_config
-
-

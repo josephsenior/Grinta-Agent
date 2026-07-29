@@ -72,8 +72,14 @@ def test_print_summary(capsys) -> None:
 
 def test_main_cli_arg_handling(tmp_path: Path) -> None:
     with (
-        patch('backend.scripts.verify.ga_onboarding_gate._repo_root', return_value=tmp_path),
-        patch('backend.scripts.verify.ga_onboarding_gate._collect_reports', return_value=[]),
+        patch(
+            'backend.scripts.verify.ga_onboarding_gate._repo_root',
+            return_value=tmp_path,
+        ),
+        patch(
+            'backend.scripts.verify.ga_onboarding_gate._collect_reports',
+            return_value=[],
+        ),
     ):
         # Without --update-status, returns 1 if not ready
         exit_code = main([])

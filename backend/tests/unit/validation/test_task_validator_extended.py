@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from backend.core.enums import FileReadSource
-
 from backend.ledger.action import CmdRunAction
 from backend.ledger.observation import CmdOutputObservation
 from backend.ledger.observation.files import FileEditObservation, FileReadObservation
@@ -417,27 +416,45 @@ class TestCompositeValidatorWeightedVote:
     @pytest.mark.asyncio
     async def test_weighted_vote_passes(self):
         v1 = MagicMock()
-        v1.validate_completion = AsyncMock(return_value=ValidationResult(passed=True, reason="v1 ok", confidence=0.9))
+        v1.validate_completion = AsyncMock(
+            return_value=ValidationResult(passed=True, reason='v1 ok', confidence=0.9)
+        )
         v2 = MagicMock()
-        v2.validate_completion = AsyncMock(return_value=ValidationResult(passed=False, reason="v2 fail", confidence=0.7))
+        v2.validate_completion = AsyncMock(
+            return_value=ValidationResult(
+                passed=False, reason='v2 fail', confidence=0.7
+            )
+        )
         v3 = MagicMock()
-        v3.validate_completion = AsyncMock(return_value=ValidationResult(passed=True, reason="v3 ok", confidence=0.8))
+        v3.validate_completion = AsyncMock(
+            return_value=ValidationResult(passed=True, reason='v3 ok', confidence=0.8)
+        )
 
-        comp = CompositeValidator(validators=[v1, v2, v3], require_all_pass=False, min_confidence=0.7)
-        res = await comp.validate_completion(Task(description="task"), MagicMock())
+        comp = CompositeValidator(
+            validators=[v1, v2, v3], require_all_pass=False, min_confidence=0.7
+        )
+        res = await comp.validate_completion(Task(description='task'), MagicMock())
         assert res.passed is True
-        assert "2/3" in res.reason
+        assert '2/3' in res.reason
 
     @pytest.mark.asyncio
     async def test_weighted_vote_fails(self):
         v1 = MagicMock()
-        v1.validate_completion = AsyncMock(return_value=ValidationResult(passed=False, reason="v1 fail", confidence=0.5))
+        v1.validate_completion = AsyncMock(
+            return_value=ValidationResult(
+                passed=False, reason='v1 fail', confidence=0.5
+            )
+        )
         v2 = MagicMock()
-        v2.validate_completion = AsyncMock(return_value=ValidationResult(passed=False, reason="v2 fail", confidence=0.5))
+        v2.validate_completion = AsyncMock(
+            return_value=ValidationResult(
+                passed=False, reason='v2 fail', confidence=0.5
+            )
+        )
 
-        comp = CompositeValidator(validators=[v1, v2], require_all_pass=False, min_confidence=0.7)
-        res = await comp.validate_completion(Task(description="task"), MagicMock())
+        comp = CompositeValidator(
+            validators=[v1, v2], require_all_pass=False, min_confidence=0.7
+        )
+        res = await comp.validate_completion(Task(description='task'), MagicMock())
         assert res.passed is False
-        assert "insufficient" in res.reason
-
-
+        assert 'insufficient' in res.reason

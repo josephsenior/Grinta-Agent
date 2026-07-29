@@ -26,13 +26,13 @@ from backend.utils.lsp.lsp_timeouts import (
 
 
 def test_stderr_debug_enabled_and_sessions_disabled_env() -> None:
-    with patch.dict(os.environ, {"GRINTA_LSP_DEBUG_STDERR": "1"}):
+    with patch.dict(os.environ, {'GRINTA_LSP_DEBUG_STDERR': '1'}):
         assert _stderr_debug_enabled() is True
-    with patch.dict(os.environ, {"GRINTA_LSP_DEBUG_STDERR": "0"}):
+    with patch.dict(os.environ, {'GRINTA_LSP_DEBUG_STDERR': '0'}):
         assert _stderr_debug_enabled() is False
-    with patch.dict(os.environ, {"GRINTA_DISABLE_LSP_SESSION": "yes"}):
+    with patch.dict(os.environ, {'GRINTA_DISABLE_LSP_SESSION': 'yes'}):
         assert _sessions_disabled() is True
-    with patch.dict(os.environ, {"GRINTA_DISABLE_LSP_SESSION": "no"}):
+    with patch.dict(os.environ, {'GRINTA_DISABLE_LSP_SESSION': 'no'}):
         assert _sessions_disabled() is False
 
 
@@ -89,7 +89,6 @@ def test_lsp_session_pool_reuses_alive_session(tmp_path: Path) -> None:
     assert first is mock_session
     assert second is mock_session
     assert mock_session.start.call_count == 1
-
 
 
 def test_lsp_session_wait_publish_diagnostics() -> None:
@@ -154,7 +153,7 @@ def test_lsp_session_prepare_document_did_open_and_did_change(tmp_path: Path) ->
     )
     session = LspSession(ctx)
     uri = 'file:///tmp/mod.py'
-    
+
     with (
         patch.object(session, 'ensure_initialized', return_value=True),
         patch.object(session, '_write_message') as mock_write,

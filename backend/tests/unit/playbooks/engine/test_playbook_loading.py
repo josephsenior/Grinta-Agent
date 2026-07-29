@@ -12,10 +12,7 @@ from backend.core.errors import PlaybookValidationError
 from backend.playbooks.engine.playbook import (
     BasePlaybook,
     KnowledgePlaybook,
-    RepoPlaybook,
-    TaskPlaybook,
     _collect_markdown_files,
-    _collect_special_files,
     _finalize_loaded_playbook,
     _infer_playbook_type,
 )
@@ -101,42 +98,42 @@ class TestInferPlaybookType:
 
 class TestBasePlaybookMethods:
     def test_from_file_resolve_error(self, tmp_path: Path):
-        f = tmp_path / "test.md"
-        f.write_text("# Test Playbook\nHello", encoding="utf-8")
-        with patch.object(Path, "resolve", side_effect=RuntimeError("Resolution failure")):
+        f = tmp_path / 'test.md'
+        f.write_text('# Test Playbook\nHello', encoding='utf-8')
+        with patch.object(
+            Path, 'resolve', side_effect=RuntimeError('Resolution failure')
+        ):
             pb = BasePlaybook.load(f, playbook_dir=tmp_path)
             assert pb is not None
 
     def test_collect_markdown_files(self, tmp_path: Path):
-        d = tmp_path / "playbooks"
+        d = tmp_path / 'playbooks'
         d.mkdir()
-        valid = d / "valid.md"
-        valid.write_text("# Valid\nContent", encoding="utf-8")
+        valid = d / 'valid.md'
+        valid.write_text('# Valid\nContent', encoding='utf-8')
         files = _collect_markdown_files(d)
         assert len(files) >= 1
 
     def test_read_locked_file_windows_fallback(self, tmp_path: Path):
         if not os.name == 'nt':
-            pytest.skip("Windows only test")
-        f = tmp_path / "locked.md"
-        f.write_text("# Locked file content", encoding="utf-8")
-        
-        with patch("builtins.open", side_effect=PermissionError("File locked")):
+            pytest.skip('Windows only test')
+        f = tmp_path / 'locked.md'
+        f.write_text('# Locked file content', encoding='utf-8')
+
+        with patch('builtins.open', side_effect=PermissionError('File locked')):
             content = BasePlaybook._load_file_content(f, None)
-            assert "# Locked file content" in content
+            assert '# Locked file content' in content
 
 
 class TestSpecializedPlaybookClasses:
     def test_knowledge_playbook_match_trigger(self):
-        meta = PlaybookMetadata(name="review", triggers=["/review"])
+        meta = PlaybookMetadata(name='review', triggers=['/review'])
         pb = KnowledgePlaybook(
-            name="review",
-            content="Review guide",
+            name='review',
+            content='Review guide',
             metadata=meta,
-            source="review.md",
+            source='review.md',
             type=PlaybookType.KNOWLEDGE,
         )
-        assert pb.match_trigger("/review my code") == "/review"
-        assert pb.match_trigger("unrelated") is None
-
-
+        assert pb.match_trigger('/review my code') == '/review'
+        assert pb.match_trigger('unrelated') is None

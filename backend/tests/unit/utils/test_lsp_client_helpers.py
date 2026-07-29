@@ -55,7 +55,7 @@ def test_lsp_result_format_text_branches() -> None:
 
 def test_lsp_query_file_not_found(tmp_path: Path) -> None:
     client = lc.LspClient()
-    missing_file = tmp_path / "non_existent.py"
+    missing_file = tmp_path / 'non_existent.py'
     with patch.object(client, '_get_server_command', return_value=['pyright']):
         res = client.query('hover', str(missing_file))
         assert not res.available
@@ -216,7 +216,9 @@ def test_diagnostics_from_payload_and_responses() -> None:
             'severity': 1,
         }
     ]
-    locs = client._diagnostics_from_payload('/app/main.py', 'file:///app/main.py', payload)
+    locs = client._diagnostics_from_payload(
+        '/app/main.py', 'file:///app/main.py', payload
+    )
     assert len(locs) == 1
     assert locs[0].line == 3
     assert locs[0].column == 5
@@ -232,7 +234,9 @@ def test_diagnostics_from_payload_and_responses() -> None:
             },
         }
     ]
-    resp_locs = client._diagnostics_from_responses('/app/main.py', 'file:///app/main.py', responses)
+    resp_locs = client._diagnostics_from_responses(
+        '/app/main.py', 'file:///app/main.py', responses
+    )
     assert len(resp_locs) == 1
     assert resp_locs[0].line == 3
 
