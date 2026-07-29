@@ -1382,7 +1382,7 @@ requires-dist = [
     { name = "ripgrep", marker = "sys_platform != 'win32'", specifier = "==15.1" },
     { name = "tenacity", specifier = ">=8.5,<10" },
     { name = "termcolor", specifier = ">=3.1,<4" },
-    { name = "textual", specifier = ">=1,<2" },
+    { name = "textual", specifier = ">=1,<9" },
     { name = "tree-sitter", specifier = ">=0.24,<0.27" },
     { name = "tree-sitter-language-pack", specifier = ">=0.7.3,<1.14" },
     { name = "truststore", specifier = ">=0.10,<1" },
