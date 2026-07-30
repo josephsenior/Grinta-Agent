@@ -1,7 +1,7 @@
 # Grinta
 
 <p align="center">
-  <img src="docs/assets/logo.svg" alt="Grinta logo" width="600">
+  <img src="docs/assets/logo.svg" alt="Grinta logo" width="750">
 </p>
 
 ### A local-first autonomous coding agent built to finish long, failure-prone software tasks.
