@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from rich.markup import escape as markup_escape
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
@@ -125,6 +126,7 @@ class ConfirmWidget(Widget):
         verb = self._ACTION_VERBS.get(action_type, action_type.lower())
         if target:
             truncated = target if len(target) <= 72 else target[:69] + '...'
+            truncated = markup_escape(truncated)
             info = (
                 f'[dim]Agent wants to {verb}[/] '
                 f'[white]{truncated}[/] '

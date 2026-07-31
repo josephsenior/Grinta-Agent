@@ -311,11 +311,11 @@ class RendererActionHandlersMixin:
             return
         _chunk_n = getattr(self, '_dbg_chunk_n', 0) + 1
         self._dbg_chunk_n = _chunk_n
-        if _chunk_n % 5 == 1:
+        if _chunk_n % 50 == 1:
             import logging as _logging
 
             _log = _logging.getLogger(__name__)
-            _log.info(
+            _log.debug(
                 '[streaming-dbg] chunk=%d thinking_accumulated len=%d head=%r tail=%r',
                 _chunk_n,
                 len(thinking),

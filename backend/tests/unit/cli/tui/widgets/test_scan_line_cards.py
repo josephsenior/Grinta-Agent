@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from backend.cli.theme import NAVY_RUNNING
 from backend.cli.tui.screens.detail.base import DetailScreen
 from backend.cli.tui.widgets.scan_line import (
@@ -161,10 +163,9 @@ def test_edit_card_create():
         is_create=True,
         syntax_pass=True,
     )
-    assert '+ Created' in _line_text(card)
     assert 'helper.py' in _line_text(card)
-    assert '+48' in card._delta_text()
-    assert '✓' in card._delta_text()
+    assert 'Created' not in _line_text(card)
+    assert card._delta_text() == ''
     assert card.state == 'done'
     assert card.has_detail is False
 
@@ -177,10 +178,9 @@ def test_edit_card_failed_syntax():
         syntax_pass=False,
         syntax_error='unexpected indent at line 47',
     )
-    assert '↲ Edited' in _line_text(card)
-    assert '+12' in card._delta_text()
-    assert '-4' in card._delta_text()
-    assert '✗' in card._delta_text()
+    assert 'raft.py' in _line_text(card)
+    assert 'Edited' not in _line_text(card)
+    assert card._delta_text() == ''
     assert card.state == 'failed'
 
 
@@ -189,15 +189,13 @@ def test_edit_card_unknown_syntax():
         display_path='backend/raft.py',
         added=2,
     )
-    assert '✓' not in card._delta_text()
-    assert '✗' not in card._delta_text()
+    assert card._delta_text() == ''
     assert card.state == 'done'
 
 
 def test_edit_card_zero_delta():
     card = EditCard(display_path='backend/raft.py', added=0, removed=0)
-    assert '↲ Edited' in _line_text(card)
-    assert '[#91abec]↲ Edited[/]' in _line_text(card)
+    assert 'backend/raft.py' in _line_text(card)
     assert card._delta_text() == ''
 
 
@@ -216,11 +214,9 @@ def test_edit_card_undo():
         removed=2,
         is_undo=True,
     )
-    assert '↶ Undo' in _line_text(card)
-    assert '[#91abec]↶ Undo[/]' in _line_text(card)
     assert 'raft.py' in _line_text(card)
-    assert '+1' in card._delta_text()
-    assert '-2' in card._delta_text()
+    assert 'Undo' not in _line_text(card)
+    assert card._delta_text() == ''
 
 
 def test_edit_card_undo_detail_screen():
@@ -234,6 +230,37 @@ def test_edit_card_undo_detail_screen():
     screen = card.build_detail_screen()
     assert screen._kind == 'Undo'
     assert 'raft.py' in screen._heading
+
+
+def test_file_change_chrome_only_shows_file_and_path() -> None:
+    from backend.cli.tui.widgets.scan_line.cards import _file_change_chrome
+
+    chrome = _file_change_chrome('backend/raft.py')
+
+    assert chrome.plain == '▰  backend/raft.py'
+    assert 'SUCCESS' not in chrome.plain
+    assert 'FAILED' not in chrome.plain
+    assert 'EDIT' not in chrome.plain
+
+
+def test_edit_create_surface_has_no_outer_or_diff_border() -> None:
+    css = EditCard.DEFAULT_CSS
+
+    assert 'EditCard > Horizontal {' in css
+    assert 'EditCard > .scan-inline {' in css
+    assert 'EditCard > .scan-inline > UnifiedDiffView,' in css
+    assert 'EditCard.failed > .scan-inline > UnifiedDiffView {' in css
+    assert css.count('border: none;') >= 3
+
+
+def test_edit_card_always_keeps_internal_header_without_diff() -> None:
+    card = EditCard(display_path='backend/raft.py', added=0, removed=0)
+    widgets = card._inline_widgets()
+
+    assert widgets
+    assert 'file-chrome' in widgets[0].classes
+    assert 'backend/raft.py' in str(widgets[0].renderable)
+    assert 'SUCCESS' not in str(widgets[0].renderable)
 
 
 # ── ShellCard ──────────────────────────────────────────────────────────
@@ -280,6 +307,48 @@ def test_shell_card_shows_full_command_and_output_inline():
     assert 'line 0' in inline
     assert 'hidden' not in inline
     assert 'line 6' in inline
+
+
+@pytest.mark.parametrize(
+    ('state', 'exit_code', 'expected'),
+    [
+        ('running', None, '● RUNNING'),
+        ('done', 0, '✓ SUCCESS · EXIT 0'),
+        ('failed', 17, '✕ FAILED · EXIT 17'),
+        ('background', -2, '↗ DETACHED'),
+    ],
+)
+def test_terminal_chrome_exposes_state_without_border(
+    state: str,
+    exit_code: int | None,
+    expected: str,
+) -> None:
+    from backend.cli.tui.widgets.scan_line.cards import _terminal_chrome
+
+    chrome = _terminal_chrome('Shell', state=state, exit_code=exit_code)
+
+    assert 'SHELL' in chrome.plain
+    assert expected in chrome.plain
+
+
+def test_terminal_chrome_keeps_state_visible_with_long_title() -> None:
+    from backend.cli.tui.widgets.scan_line.cards import _terminal_chrome
+
+    chrome = _terminal_chrome('a-very-long-interactive-terminal-session', state='running')
+
+    assert '…' in chrome.plain
+    assert '● RUNNING' in chrome.plain
+
+
+def test_shell_terminal_surface_has_no_outer_card_border() -> None:
+    css = ShellCard.DEFAULT_CSS
+
+    assert 'ShellCard.running' in css
+    assert 'ShellCard.failed' in css
+    assert 'TerminalCard.done' in css
+    assert 'ShellCard > Horizontal, TerminalCard > Horizontal {' in css
+    assert 'border: none;' in css
+    assert 'margin: 0 0 1 0;' in css
 
 
 # ── CompactionCard ─────────────────────────────────────────────────────
@@ -331,6 +400,34 @@ def test_running_ellipsis_cycles_with_refresh_frame():
     cards_mod._running_ellipsis_frame = 0
 
 
+def test_scanline_animation_refresh_only_visits_direct_active_cards():
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from backend.cli.tui.screen.actions import ScreenActionsMixin
+    from backend.cli.tui.widgets.scan_line import cards as cards_mod
+
+    cards_mod._running_ellipsis_frame = 0
+    active = CompactionCard()
+    active.refresh_animation = Mock()  # type: ignore[method-assign]
+    completed = CompactionCard(summary='done')
+    completed.refresh_animation = Mock()  # type: ignore[method-assign]
+    display = SimpleNamespace(
+        children=[active, completed],
+        _under_backpressure=False,
+    )
+    screen = SimpleNamespace(
+        _renderer=None,
+        _get_display=lambda: display,
+    )
+
+    ScreenActionsMixin._refresh_scanline_cards(screen)
+
+    active.refresh_animation.assert_called_once_with()
+    completed.refresh_animation.assert_not_called()
+    cards_mod._running_ellipsis_frame = 0
+
+
 def test_shell_card_done():
     card = ShellCard(command='cargo test', output='47/47 passed', exit_code=0)
     assert card.state == 'done'
@@ -370,6 +467,18 @@ def test_shell_card_refresh_updates_line():
     card.output = 'added 312 packages'
     card.refresh_summary()
     assert '312' in card._delta_text() or 'added' in card._delta_text()
+
+
+def test_shell_card_only_requests_animation_while_waiting_for_output():
+    card = ShellCard(command='npm install')
+    assert card.wants_periodic_refresh
+
+    card.output = 'added 312 packages'
+    assert not card.wants_periodic_refresh
+
+    card.exit_code = 0
+    card.set_state('done')
+    assert not card.wants_periodic_refresh
 
 
 # ── TerminalCard ───────────────────────────────────────────────────────
@@ -570,6 +679,20 @@ def test_task_state_card_formats_objective_and_statuses():
     assert '1 Render task state' in inline
     assert '2 Verify output' in inline
     assert not card.has_detail
+
+
+def test_task_state_card_shows_every_task_without_overflow_label():
+    tasks = [
+        {'id': str(index), 'description': f'Task {index}', 'status': 'todo'}
+        for index in range(1, 13)
+    ]
+    card = TaskStateCard('view', tasks=tasks)
+    inline = _plain_renderable(card._inline_renderable())
+
+    for index in range(1, 13):
+        assert f'{index} Task {index}' in inline
+    assert 'more task' not in inline
+    assert 'hidden' not in inline
 
 
 # ── detail screen base ─────────────────────────────────────────────────

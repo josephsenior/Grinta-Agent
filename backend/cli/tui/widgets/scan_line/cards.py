@@ -135,13 +135,11 @@ def _terminal_inline_widgets(
     output: str,
     *,
     title: str,
+    state: str,
+    exit_code: int | None = None,
 ) -> list[Static]:
     """Build a full-height terminal surface with no nested scrolling."""
-    chrome = Text()
-    chrome.append('●', style='#E24B4A')
-    chrome.append(' ●', style='#D9A441')
-    chrome.append(' ●', style='#639922')
-    chrome.append(f'  {title.upper()}', style='#70839c')
+    chrome = _terminal_chrome(title, state=state, exit_code=exit_code)
     widgets = [
         Static(chrome, classes='terminal-chrome'),
         Static(_command_text(command), classes='terminal-command'),
@@ -153,6 +151,34 @@ def _terminal_inline_widgets(
 
         widgets[-1].update(Text(rendered_output, style=TX_BODY_DIM))
     return widgets
+
+
+def _terminal_chrome(
+    title: str,
+    *,
+    state: str,
+    exit_code: int | None = None,
+) -> Text:
+    """Render terminal window chrome with a compact, non-border state signal."""
+    chrome = Text()
+    chrome.append('●', style='#E24B4A')
+    chrome.append(' ●', style='#D9A441')
+    chrome.append(' ●', style='#639922')
+    chrome.append(f'  {_truncate(title.upper(), 28)}', style='#70839c')
+
+    if state == 'running':
+        frame = _RUNNING_ELLIPSIS_FRAMES[_running_ellipsis_frame]
+        chrome.append(f'  ● RUNNING {frame}', style=NAVY_RUNNING)
+    elif state == 'done':
+        chrome.append('  ✓ SUCCESS · EXIT 0', style='#639922')
+    elif state == 'failed':
+        code = exit_code if exit_code is not None else '?'
+        chrome.append(f'  ✕ FAILED · EXIT {code}', style='#E24B4A')
+    elif state == 'background':
+        chrome.append('  ↗ DETACHED', style='#6B9FD4')
+    else:
+        chrome.append(f'  ○ {state.upper()}', style='#70839c')
+    return chrome
 
 
 def _payload_preview(
@@ -249,6 +275,16 @@ def _scan_label_with_icon(label: str) -> str:
     return f'{_glyph(icon)} {label}'
 
 
+def _file_change_chrome(
+    path: str,
+) -> Text:
+    """Render a quiet file header; the diff itself explains the operation."""
+    chrome = Text()
+    chrome.append(_glyph('▰'), style='#91abec')
+    chrome.append(f'  {_compact_path(path, 72)}', style='#c8d4e8 bold')
+    return chrome
+
+
 # ── AgentMessageCard ───────────────────────────────────────────────────
 
 
@@ -290,17 +326,48 @@ class EditCard(ScanLineCard):
     """
 
     DEFAULT_CSS = """
-    EditCard.-edited {
-        border-left: solid #91abec;
+    EditCard,
+    EditCard.queued,
+    EditCard.running,
+    EditCard.background,
+    EditCard.done,
+    EditCard.failed {
+        border: none;
+        background: transparent;
+        padding: 0;
     }
-    EditCard.-edited.failed {
-        border-left: solid #E24B4A;
+    EditCard > Horizontal {
+        display: none;
     }
-    EditCard.-undone {
-        border-left: solid #91abec;
+    EditCard > .scan-inline {
+        width: 100%;
+        height: auto;
+        margin: 0 0 1 0;
+        padding: 0;
+        border: none;
+        background: #070b14;
     }
-    EditCard.-undone.failed {
-        border-left: solid #E24B4A;
+    EditCard > .scan-inline > .file-chrome {
+        width: 100%;
+        height: 1;
+        padding: 0 1;
+        background: #111827;
+        color: #70839c;
+    }
+    EditCard > .scan-inline > UnifiedDiffView,
+    EditCard.queued > .scan-inline > UnifiedDiffView,
+    EditCard.running > .scan-inline > UnifiedDiffView,
+    EditCard.background > .scan-inline > UnifiedDiffView,
+    EditCard.done > .scan-inline > UnifiedDiffView,
+    EditCard.failed > .scan-inline > UnifiedDiffView {
+        border: none;
+    }
+    EditCard > .scan-inline > .scan-inline-content,
+    EditCard > .scan-inline > .scan-inline-error {
+        width: 100%;
+        height: auto;
+        margin: 0;
+        padding: 1;
     }
     """
 
@@ -369,29 +436,21 @@ class EditCard(ScanLineCard):
             self.set_state('done')
 
     def _line_text(self) -> str:
-        verb = self._edit_verb()
         path = _compact_path(self._display_path)
-        return self._scan_summary_line(_scan_label_with_icon(verb), path, detail_max=40)
+        return self._scan_summary_line(_glyph('▰'), path, detail_max=72)
 
     def _delta_text(self) -> str:
-        parts: list[str] = []
-        if self._added:
-            parts.append(f'[#639922]+{self._added}[/]')
-        if self._removed:
-            parts.append(f'[#E24B4A]-{self._removed}[/]')
-        delta = ' '.join(parts)
-        if self._syntax_pass is True:
-            status = _status_indicator_markup('done')
-        elif self._syntax_pass is False:
-            status = _status_indicator_markup('failed')
-        else:
-            status = ''
-        if delta and status:
-            return f'{delta}  {status}'
-        return delta or status
+        return ''
 
     def _inline_widgets(self) -> list:
-        widgets: list = []
+        widgets: list = [
+            Static(
+                _file_change_chrome(
+                    self._display_path,
+                ),
+                classes='file-chrome',
+            )
+        ]
         if self._encoded_diff:
             from backend.cli.tui.widgets.unified_diff_view import (
                 UnifiedDiffView,
@@ -411,17 +470,17 @@ class EditCard(ScanLineCard):
                         + len((new_content or '').splitlines())
                         + 1
                     )
-                widgets.append(
-                    UnifiedDiffView(
-                        path=str(payload.get('path') or self._display_path),
-                        old_content=old_content,
-                        new_content=new_content,
-                        patch=patch,
-                        max_lines=max(full_row_budget, 1),
-                        n_context=int(payload.get('n_context') or 2),
-                        inline_expanded=True,
-                    )
+                diff_view = UnifiedDiffView(
+                    path=str(payload.get('path') or self._display_path),
+                    old_content=old_content,
+                    new_content=new_content,
+                    patch=patch,
+                    max_lines=max(full_row_budget, 1),
+                    n_context=int(payload.get('n_context') or 2),
+                    inline_expanded=True,
                 )
+                diff_view.styles.border = ('none', 'transparent')
+                widgets.append(diff_view)
             else:
                 from backend.cli.tui.transcript_typography import TX_BODY_DIM
 
@@ -461,12 +520,31 @@ class ShellCard(ScanLineCard):
     """Shell command rendered as a complete inline terminal surface."""
 
     DEFAULT_CSS = """
+    ShellCard,
+    ShellCard.queued,
+    ShellCard.running,
+    ShellCard.background,
+    ShellCard.done,
+    ShellCard.failed,
+    TerminalCard,
+    TerminalCard.queued,
+    TerminalCard.running,
+    TerminalCard.background,
+    TerminalCard.done,
+    TerminalCard.failed {
+        border: none;
+        background: transparent;
+        padding: 0;
+    }
+    ShellCard > Horizontal, TerminalCard > Horizontal {
+        display: none;
+    }
     ShellCard > .scan-inline, TerminalCard > .scan-inline {
         width: 100%;
         height: auto;
-        margin: 0 0 1 2;
+        margin: 0 0 1 0;
         padding: 0;
-        border: solid #1b2b3e;
+        border: none;
         background: #05080d;
         color: #a9b7c9;
     }
@@ -563,14 +641,24 @@ class ShellCard(ScanLineCard):
         return _command_output_preview(self.command, self.output)
 
     def _inline_widgets(self) -> list[Static]:
-        return _terminal_inline_widgets(self.command, self.output, title='Shell')
+        return _terminal_inline_widgets(
+            self.command,
+            self.output,
+            title='Shell',
+            state=self._state,
+            exit_code=self.exit_code,
+        )
 
     def _refresh_inline_body(self) -> None:
         try:
+            chrome = self.query_one('.terminal-chrome', Static)
             command = self.query_one('.terminal-command', Static)
             output = self.query_one('.terminal-output', Static)
         except Exception:
             return
+        chrome.update(
+            _terminal_chrome('Shell', state=self._state, exit_code=self.exit_code)
+        )
         command.update(_command_text(self.command))
         from backend.cli.tui.transcript_typography import TX_BODY_DIM
 
@@ -594,6 +682,20 @@ class ShellCard(ScanLineCard):
     def refresh_summary(self) -> None:
         if self._state in ('running', 'background'):
             self._refresh_line()
+
+    @property
+    def wants_periodic_refresh(self) -> bool:
+        return self._state == 'running' and not self.output.strip()
+
+    def refresh_animation(self) -> None:
+        super().refresh_animation()
+        try:
+            chrome = self.query_one('.terminal-chrome', Static)
+        except Exception:
+            return
+        chrome.update(
+            _terminal_chrome('Shell', state=self._state, exit_code=self.exit_code)
+        )
 
 
 # ── TerminalCard ───────────────────────────────────────────────────────
@@ -664,14 +766,28 @@ class TerminalCard(ScanLineCard):
     def _inline_widgets(self) -> list[Static]:
         command = self.command or '(interactive session)'
         title = self.session_label or 'Terminal'
-        return _terminal_inline_widgets(command, self.scrollback, title=title)
+        return _terminal_inline_widgets(
+            command,
+            self.scrollback,
+            title=title,
+            state=self._state,
+            exit_code=self.exit_code,
+        )
 
     def _refresh_inline_body(self) -> None:
         try:
+            chrome = self.query_one('.terminal-chrome', Static)
             command = self.query_one('.terminal-command', Static)
             output = self.query_one('.terminal-output', Static)
         except Exception:
             return
+        chrome.update(
+            _terminal_chrome(
+                self.session_label or 'Terminal',
+                state=self._state,
+                exit_code=self.exit_code,
+            )
+        )
         command.update(_command_text(self.command or '(interactive session)'))
         from backend.cli.tui.transcript_typography import TX_BODY_DIM
 
@@ -696,6 +812,24 @@ class TerminalCard(ScanLineCard):
     def refresh_summary(self) -> None:
         if self._state == 'running':
             self._refresh_line()
+
+    @property
+    def wants_periodic_refresh(self) -> bool:
+        return self._state == 'running' and not self.scrollback.strip()
+
+    def refresh_animation(self) -> None:
+        super().refresh_animation()
+        try:
+            chrome = self.query_one('.terminal-chrome', Static)
+        except Exception:
+            return
+        chrome.update(
+            _terminal_chrome(
+                self.session_label or 'Terminal',
+                state=self._state,
+                exit_code=self.exit_code,
+            )
+        )
 
 
 # ── BrowserCard ────────────────────────────────────────────────────────
@@ -777,6 +911,10 @@ class BrowserCard(ScanLineCard):
         if self._state == 'running':
             self._refresh_line()
 
+    @property
+    def wants_periodic_refresh(self) -> bool:
+        return self._state == 'running' and not self.action.strip()
+
 
 # ── DebuggerCard ───────────────────────────────────────────────────────
 
@@ -851,6 +989,10 @@ class DebuggerCard(ScanLineCard):
     def refresh_summary(self) -> None:
         if self._state == 'running':
             self._refresh_line()
+
+    @property
+    def wants_periodic_refresh(self) -> bool:
+        return self._state == 'running' and not self.function.strip()
 
 
 # ── DelegateCard ───────────────────────────────────────────────────────
@@ -1160,6 +1302,10 @@ class CompactionCard(ScanLineCard):
         if self._state == 'running':
             self._refresh_line()
 
+    @property
+    def wants_periodic_refresh(self) -> bool:
+        return self._state == 'running'
+
     def build_detail_screen(self) -> DetailScreen:
         from backend.cli.tui.screens.detail.payload import PayloadDetailScreen
 
@@ -1286,16 +1432,7 @@ class TaskStateCard(ScanLineCard):
             )
         if self._tasks:
             renderables.append(_section_label('Plan'))
-            visible = self._tasks[:8]
-            renderables.extend(self._status_text(task) for task in visible)
-            hidden = len(self._tasks) - len(visible)
-            if hidden:
-                renderables.append(
-                    Text(
-                        f'… {hidden} more task{"s" if hidden != 1 else ""} in the sidebar',
-                        style='#54597b',
-                    )
-                )
+            renderables.extend(self._status_text(task) for task in self._tasks)
         if not renderables:
             renderables.append(Text('No tasks recorded.', style=TX_BODY_DIM))
         return Group(*renderables)

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from rich.console import Console as RichConsole
+from rich.text import Text
 from textual.containers import Horizontal
 from textual.widgets import Button, Static
 
@@ -37,6 +38,13 @@ def test_tui_confirmation_normalizes_enum_risk() -> None:
     assert GrintaScreen._normalize_risk_key(ActionSecurityRisk.LOW) == 'LOW'
     assert GrintaScreen._normalize_risk_key(ActionSecurityRisk.UNKNOWN) == 'UNKNOWN'
     assert GrintaScreen._normalize_risk_key('2') == 'HIGH'
+
+
+@pytest.mark.parametrize('risk_key', ['LOW', 'MEDIUM', 'HIGH'])
+def test_tui_confirmation_risk_markup_is_valid(risk_key: str) -> None:
+    risk_label, risk_style, _risk_css_class = GrintaScreen._RISK_LABELS[risk_key]
+    rendered = Text.from_markup(f'[{risk_style}]({risk_label} risk)[/]')
+    assert rendered.plain == f'({risk_label} risk)'
 
 
 def test_tui_full_autonomy_uses_autonomy_level() -> None:
@@ -87,6 +95,38 @@ async def test_tui_confirmation_widget_renders_visible_content(
         assert len(buttons) == 2
         assert all(button.region.height > 0 for button in buttons)
         assert 'Agent wants to execute' in str(info.renderable)
+
+
+@pytest.mark.asyncio
+async def test_tui_confirmation_widget_escapes_markup_in_command(
+    mock_config,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(GrintaScreen, '_start_background_bootstrap', lambda self: None)
+    console = RichConsole()
+    loop = asyncio.get_running_loop()
+    app = GrintaTUIApp(config=mock_config, console=console, loop=loop)
+
+    async with app.run_test(size=(100, 30)) as pilot:
+        await pilot.pause()
+
+        screen = _get_screen(app)
+        widget = screen.query_one('#confirm-widget', ConfirmWidget)
+        widget.configure(
+            'Run Command',
+            'Low',
+            GrintaScreen._RISK_LABELS['LOW'][1],
+            'confirm-risk-low',
+            'Write-Output "[bold]literal[/]"',
+            [('approve', 'Accept'), ('reject', 'Reject')],
+            recommended=0,
+        )
+        widget.show()
+        await pilot.pause()
+
+        info = widget.query_one('#confirm-info', Static)
+        visible = Text.from_markup(str(info.renderable))
+        assert '[bold]literal[/]' in visible.plain
 
 
 @pytest.mark.parametrize(

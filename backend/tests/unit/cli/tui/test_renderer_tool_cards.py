@@ -167,8 +167,12 @@ async def test_tui_shell_command_reuses_single_card(mock_config):
         assert len(cards) == 1, f'Expected 1 ShellCard, got {len(cards)}'
         assert 'pytest -q' not in str(cards[0]._line_text())
         assert cards[0]._state == 'done'
+        assert not cards[0].styles.border_left[0]
+        assert not cards[0].query_one('.scan-inline').styles.border_top[0]
+        chrome = cards[0].query_one('.terminal-chrome')
         command_body = cards[0].query_one('.terminal-command')
         output_body = cards[0].query_one('.terminal-output')
+        assert '✓ SUCCESS · EXIT 0' in chrome._content.plain  # noqa: SLF001
         assert '$ pytest -q' in command_body._content.plain  # noqa: SLF001
         assert '2 passed' in output_body._content.plain  # noqa: SLF001
 

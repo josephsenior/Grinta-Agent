@@ -266,6 +266,17 @@ class ScanLineCard(Container):
             dw.update(self._delta_text())
         self._refresh_inline_body()
 
+    @property
+    def wants_periodic_refresh(self) -> bool:
+        """Whether the visual animation timer needs to touch this card."""
+        return False
+
+    def refresh_animation(self) -> None:
+        """Refresh animation-only chrome without rebuilding the payload body."""
+        dw = self._delta_widget()
+        if dw is not None:
+            dw.update(self._delta_text())
+
     # ── detail screen factory ───────────────────────────────────────
 
     def build_detail_screen(self) -> DetailScreen:
@@ -332,7 +343,8 @@ class ScanLineCard(Container):
     def refresh_summary(self) -> None:
         """Update the summary and inline preview from live data sources.
 
-        Called every 250 ms by the feed refresh loop.  The default
-        implementation is a no-op; subclasses that track live output
-        (shell tail, terminal buffer, browser state) override this.
+        Event handlers call this when payload data changes. The 250 ms visual
+        timer uses :meth:`refresh_animation` so static payloads are not rebuilt.
+        The default implementation is a no-op; subclasses that track live
+        output (shell tail, terminal buffer, browser state) override this.
         """

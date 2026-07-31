@@ -58,7 +58,7 @@ _TUI_DRAIN_INVOCATION_BUDGET_SECONDS = float(
 )
 _TUI_STREAM_PAINT_INTERVAL_SECONDS = _bounded_float_env(
     'GRINTA_TUI_STREAM_PAINT_INTERVAL',
-    default=0.033,
+    default=0.08,
     minimum=0.008,
 )
 _TUI_SCROLL_PAINT_INTERVAL_SECONDS = _bounded_float_env(
@@ -73,7 +73,7 @@ _TUI_TERMINAL_DISPLAY_LINE_CAP = _bounded_int_env(
 )
 _TUI_VIEWPORT_MAX_MOUNTED = _bounded_int_env(
     'GRINTA_TUI_VIEWPORT_MAX_MOUNTED',
-    default=80,
+    default=50,
     minimum=40,
 )
 _TUI_VIEWPORT_OVERSCAN = _bounded_int_env(

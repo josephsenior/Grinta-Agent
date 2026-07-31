@@ -10,6 +10,7 @@ downstream consumers (audit logger, debug endpoint, undo UI).
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 from typing import TYPE_CHECKING
@@ -46,22 +47,41 @@ _TRIVIAL_CMD_PATTERN = re.compile(
     r'python(?:3)?\s+--version|node\s+--version|npm\s+(?:list|ls|view|info|outdated)|'
     r'pip\s+(?:list|show|freeze)|'
     # PowerShell read-only verbs
-    r'Get-[A-Z][A-Za-z]+|Test-[A-Z][A-Za-z]+|Where-Object|Select-Object|Measure-Object'
+    r'Get-[A-Z][A-Za-z]+|Test-[A-Z][A-Za-z]+|Write-Output|'
+    r'Where-Object|Select-Object|Measure-Object'
     r')\b'
 )
+
+_CMD_SEGMENT_SEPARATOR = re.compile(r'(?:;|&&|\|\||[\r\n])+')
 
 
 def _is_trivial_command(command: str) -> bool:
     """Return True for read-only commands whose pre-execution checkpoint adds no value."""
     if not command:
         return False
-    head = command.strip()
-    # Strip leading env-var assignments such as ``DEBUG=1 ls``.
-    m = re.match(r'^[A-Za-z_][A-Za-z0-9_]*=\S*\s+', head)
-    while m:
-        head = head[m.end() :]
+    segments = [
+        segment.strip()
+        for segment in _CMD_SEGMENT_SEPARATOR.split(command)
+        if segment.strip()
+    ]
+    if not segments:
+        return False
+
+    for segment in segments:
+        # Pipes and redirections can write state (for example ``tee`` or
+        # ``> file``), so keep rollback protection for those commands.
+        if '|' in segment or '>' in segment or '<' in segment:
+            return False
+
+        # Strip leading env-var assignments such as ``DEBUG=1 ls``.
+        head = segment
         m = re.match(r'^[A-Za-z_][A-Za-z0-9_]*=\S*\s+', head)
-    return bool(_TRIVIAL_CMD_PATTERN.match(head))  # type: ignore[unreachable]
+        while m:
+            head = head[m.end() :]
+            m = re.match(r'^[A-Za-z_][A-Za-z0-9_]*=\S*\s+', head)
+        if not _TRIVIAL_CMD_PATTERN.match(head):
+            return False
+    return True
 
 
 class RollbackMiddleware(ToolInvocationMiddleware):
@@ -202,7 +222,8 @@ class RollbackMiddleware(ToolInvocationMiddleware):
 
             # System-generated transaction checkpoints are tier 1 so the CLI
             # list can hide them from the human operator by default.
-            checkpoint_id = manager.create_checkpoint(
+            checkpoint_id = await asyncio.to_thread(
+                manager.create_checkpoint,
                 description=description,
                 checkpoint_type='before_risky',
                 metadata=metadata,

@@ -52,7 +52,7 @@ class ScreenActionsMixin:
         self._get_display().user_scroll_end()
 
     def _refresh_scanline_cards(self) -> None:
-        """250 ms refresh loop — update live summaries for running scan-line cards."""
+        """Refresh animation-only chrome on direct, active transcript cards."""
         renderer = getattr(self, '_renderer', None)
         if renderer is not None and getattr(renderer, '_async_drain_active', False):
             return
@@ -67,10 +67,23 @@ class ScreenActionsMixin:
             advance_running_ellipsis_frame,
         )
 
+        # Transcript cards are direct children. Walking ``display.query`` here
+        # traversed every nested diff row four times a second and became
+        # progressively more expensive as the transcript filled.
+        cards = [
+            child
+            for child in display.children
+            if isinstance(child, ScanLineCard)
+            and child.wants_periodic_refresh
+            and not getattr(child, '_tui_removing', False)
+        ]
+        if not cards:
+            return
+
         advance_running_ellipsis_frame()
-        for card in list(display.query(ScanLineCard)):
+        for card in cards:
             try:
-                card.refresh_summary()
+                card.refresh_animation()
             except Exception:
                 pass
 

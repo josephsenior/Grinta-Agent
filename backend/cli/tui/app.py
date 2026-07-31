@@ -18,6 +18,9 @@ from backend.cli.display.hud import HUDBar
 from backend.cli.display.reasoning_display import ReasoningDisplay
 from backend.cli.repl.slash_registry_commands import slash_hints_from_registry
 from backend.cli.theme import (
+    CLR_RISK_HIGH,
+    CLR_RISK_LOW,
+    CLR_RISK_MEDIUM,
     NAVY_ERROR,
     NAVY_READY,
     NAVY_RUNNING,
@@ -158,9 +161,9 @@ class GrintaScreen(
     }
     _RISK_LABELS: dict[str, tuple[str, str, str]] = {
         'UNKNOWN': ('Unknown', 'dim', 'confirm-risk-unknown'),
-        'LOW': ('Low', 'CLR_RISK_LOW', 'confirm-risk-low'),
-        'MEDIUM': ('Medium', 'CLR_RISK_MEDIUM', 'confirm-risk-medium'),
-        'HIGH': ('High', 'CLR_RISK_HIGH', 'confirm-risk-high'),
+        'LOW': ('Low', CLR_RISK_LOW, 'confirm-risk-low'),
+        'MEDIUM': ('Medium', CLR_RISK_MEDIUM, 'confirm-risk-medium'),
+        'HIGH': ('High', CLR_RISK_HIGH, 'confirm-risk-high'),
     }
 
     def __init__(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import threading
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -10,6 +12,7 @@ import pytest
 from backend.orchestration.middleware.rollback_middleware import (
     _RISKY_ACTION_TYPES,
     RollbackMiddleware,
+    _is_trivial_command,
 )
 from backend.orchestration.tool_pipeline import ToolInvocationContext
 
@@ -91,6 +94,30 @@ class TestRiskyActionTypes:
         assert action_type not in _RISKY_ACTION_TYPES
 
 
+class TestTrivialCommands:
+    @pytest.mark.parametrize(
+        'command',
+        [
+            'Write-Output "hello"; Get-Date; Get-Location',
+            'Get-Date && Write-Output "done"',
+            'pwd; git status',
+        ],
+    )
+    def test_read_only_chains_skip_checkpoint(self, command):
+        assert _is_trivial_command(command) is True
+
+    @pytest.mark.parametrize(
+        'command',
+        [
+            'Write-Output "hello"; Remove-Item important.txt',
+            'echo hello > output.txt',
+            'cat input.txt | tee output.txt',
+        ],
+    )
+    def test_mutating_chains_keep_checkpoint(self, command):
+        assert _is_trivial_command(command) is False
+
+
 # ---------------------------------------------------------------------------
 # execute stage
 # ---------------------------------------------------------------------------
@@ -138,6 +165,31 @@ class TestExecuteStage:
         await mw.execute(ctx)
         # No checkpoint stored, but no crash
         assert 'rollback_checkpoint_id' not in ctx.metadata
+
+    @pytest.mark.asyncio
+    async def test_checkpoint_creation_does_not_block_event_loop(self, tmp_path):
+        mw = RollbackMiddleware(workspace_path=str(tmp_path))
+        started = threading.Event()
+        release = threading.Event()
+        mock_mgr = MagicMock()
+
+        def slow_checkpoint(**_kwargs):
+            started.set()
+            assert release.wait(timeout=2)
+            return 'cp-threaded'
+
+        mock_mgr.create_checkpoint.side_effect = slow_checkpoint
+        mw._manager = mock_mgr
+        ctx = _make_ctx(action_type='FileEditAction')
+
+        task = asyncio.create_task(mw.execute(ctx))
+        assert await asyncio.to_thread(started.wait, 1)
+        await asyncio.sleep(0)
+        assert task.done() is False
+
+        release.set()
+        await asyncio.wait_for(task, timeout=1)
+        assert ctx.metadata['rollback_checkpoint_id'] == 'cp-threaded'
 
 
 # ---------------------------------------------------------------------------

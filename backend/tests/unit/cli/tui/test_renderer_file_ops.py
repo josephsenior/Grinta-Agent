@@ -62,11 +62,14 @@ async def test_tui_file_edit_create_renders_compact_create_card(mock_config):
         assert len(cards) == 1
         line = str(cards[0]._line_text())
         assert 'demo.txt' in line
-        assert '+2' in cards[0]._delta_text()
+        assert cards[0]._delta_text() == ''
         from backend.cli.tui.widgets.unified_diff_view import UnifiedDiffView
 
         inline_diffs = list(cards[0].query(UnifiedDiffView).results())
         assert len(inline_diffs) == 1
+        assert not cards[0].styles.border_left[0]
+        assert not inline_diffs[0].styles.border_top[0]
+        assert cards[0].query_one('.file-chrome').region.height == 1
         assert inline_diffs[0].has_class('-compact')
         assert not inline_diffs[0].has_class('-scrollable')
         assert any(row.text == 'alpha' for row in inline_diffs[0]._rows)
@@ -115,9 +118,8 @@ async def test_tui_file_edit_observation_uses_new_content_not_polluted_preview(
         cards = list(s.query(EditCard).results())
         assert len(cards) == 1
         line = str(cards[0]._line_text())
-        delta = str(cards[0]._delta_text())
         assert 'demo_file.md' in line
-        assert '✓' in delta  # SYNTAX_CHECK_PASSED
+        assert cards[0]._delta_text() == ''
         # 1-line summary must not contain polluted content
         assert 'Stale preview' not in line
         assert 'File created successfully' not in line
@@ -165,7 +167,7 @@ async def test_tui_file_edit_create_uses_new_content_not_observation_body(mock_c
         assert len(cards) == 1
         line = str(cards[0]._line_text())
         assert 'created.txt' in line
-        assert '+2' in cards[0]._delta_text()
+        assert cards[0]._delta_text() == ''
 
 
 @pytest.mark.asyncio
@@ -352,8 +354,7 @@ async def test_tui_file_edit_action_and_observation_render_single_delta_card(
         assert len(cards) == 1
         line = str(cards[0]._line_text())
         assert 'demo.txt' in line
-        delta = cards[0]._delta_text()
-        assert '+1' in delta and '-1' in delta
+        assert cards[0]._delta_text() == ''
 
 
 @pytest.mark.asyncio
@@ -394,7 +395,7 @@ async def test_tui_undo_last_edit_renders_undo_edit_card(mock_config):
         cards = list(s.query(EditCard).results())
         assert len(cards) == 1
         assert cards[0]._is_undo is True
-        assert 'Undo' in str(cards[0]._line_text())
+        assert 'demo.txt' in str(cards[0]._line_text())
         assert cards[0]._encoded_diff is not None
 
 
