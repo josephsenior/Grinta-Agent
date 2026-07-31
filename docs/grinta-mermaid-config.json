@@ -1,0 +1,20 @@
+{
+  "theme": "base",
+  "securityLevel": "loose",
+  "layout": "elk",
+  "maxTextSize": 300000,
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 42,
+    "rankSpacing": 72,
+    "useMaxWidth": false
+  },
+  "themeVariables": {
+    "fontFamily": "Inter, Segoe UI, Arial, sans-serif",
+    "fontSize": "15px",
+    "lineColor": "#64748B",
+    "clusterBkg": "#F8FAFC",
+    "clusterBorder": "#94A3B8"
+  }
+}
