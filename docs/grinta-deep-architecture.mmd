@@ -1,0 +1,449 @@
+%% Grinta architecture argument map
+%% Current implementation is source of truth; journey material supplies rationale only.
+%% Yellow WHY cards are intentionally unconnected to runtime nodes.
+%%{init: {"theme":"base","securityLevel":"loose","layout":"elk","maxTextSize":300000,"flowchart":{"htmlLabels":true,"curve":"linear","nodeSpacing":42,"rankSpacing":72,"useMaxWidth":false},"themeVariables":{"fontFamily":"Inter, Segoe UI, Arial, sans-serif","fontSize":"15px","lineColor":"#64748B","clusterBkg":"#F8FAFC","clusterBorder":"#94A3B8"}}}%%
+
+flowchart TB
+
+  TITLE["<b>GRINTA — LINEAR ARCHITECTURE ARGUMENT</b><br/>Developer intent → grounded context → model decision → governed side effect → durable evidence → final answer<br/><i>Each major mechanism explains its problem, chosen strategy, rejected alternatives, and consequence.</i>"]:::title
+
+  subgraph READING["HOW TO READ THIS MAP"]
+    direction LR
+    R1["<b>THICK ARROW</b><br/>primary lifecycle"]:::phase
+    R2["Thin arrow<br/>local flow"]:::control
+    R3["Dashed arrow<br/>projection / feedback"]:::event
+    R4["Red border<br/>invariant"]:::invariant
+    R5["<b>WHY CARD</b><br/>problem · choice · alternatives · consequence<br/><i>unconnected by design</i>"]:::why
+  end
+
+  INPUT_GATE ==> USER_INPUT
+
+  subgraph STAGE1["1 · RECEIVE INTENT, RESOLVE THE WORKSPACE, AND CHOOSE THE CONTRACT"]
+    direction LR
+    USER_INPUT["Developer input<br/>Textual composer · piped stdin · CLI arguments"]:::external
+    ENTRY["launch.entry → backend.cli.entry<br/>pin import/workspace paths before backend imports"]:::control
+    CONFIG["settings.json + environment overrides<br/>per-workspace ~/.grinta/workspaces/&lt;id&gt;"]:::durability
+    SURFACE{"stdin is a TTY?"}:::decisionnode
+    TUI["Interactive Textual app<br/>streaming renderer · confirmations · HUD"]:::interface
+    PIPE["Non-interactive runner<br/>deterministic stdout + exit semantics"]:::interface
+    MODE{"Interaction contract"}:::decisionnode
+    CHAT["chat<br/>read/discover + prose"]:::mode
+    PLAN["plan<br/>read/discover + durable plan<br/>no mutation"]:::mode
+    AGENTMODE["agent<br/>full governed execution"]:::mode
+    USER_EVENT["MessageAction<br/>source=USER"]:::event
+
+    USER_INPUT --> ENTRY --> CONFIG --> SURFACE
+    SURFACE -->|yes| TUI --> MODE
+    SURFACE -->|no| PIPE --> MODE
+    MODE --> CHAT --> USER_EVENT
+    MODE --> PLAN --> USER_EVENT
+    MODE --> AGENTMODE --> USER_EVENT
+
+    WHY_MODE["<b>WHY EXPLICIT CHAT / PLAN / AGENT MODES?</b><br/><b>Problem:</b> answering, planning, and mutating a machine have different social and safety contracts.<br/><b>Chosen:</b> one identity, memory, and ledger; tool availability and finish behavior vary by mode.<br/><b>Why not specialist agents:</b> handoffs duplicate context, lose rationale, and blur task ownership. Why not one unrestricted mode: read-only intent could cause side effects.<br/><b>Consequence:</b> continuity without role-transfer loss, with small mode-specific prompt/tool branches."]:::why
+    WHY_WORKSPACE["<b>WHY A WORKSPACE-SCOPED DATA ROOT?</b><br/><b>Problem:</b> sessions, task state, indexes, and checkpoints must not collide across repositories or pollute source control.<br/><b>Chosen:</b> derive a stable workspace identity and store operational artifacts under the user data directory.<br/><b>Why not .grinta in every repo:</b> it dirties worktrees, risks accidental commits, and makes project permissions govern agent state.<br/><b>Consequence:</b> clean repositories and continuity per workspace; identity migration and path resolution require care."]:::why
+    WHY_SURFACE["<b>WHY TWO PRESENTATION PATHS?</b><br/><b>Problem:</b> humans need incremental cards and confirmation dialogs; pipes and CI need stable text and process completion.<br/><b>Chosen:</b> both subscribe to the same semantic event stream but own separate rendering/lifecycle adapters.<br/><b>Why not make Textual pretend to be non-interactive:</b> terminal capabilities and blocking behavior differ fundamentally.<br/><b>Consequence:</b> honest automation and rich interaction; some presentation logic is duplicated."]:::why
+  end
+
+  USER_EVENT ==> EVENT_ASSIGN
+
+  subgraph STAGE2["2 · RECORD THE FACT BEFORE ANY SUBSYSTEM REACTS — EVENT-SOURCED EVIDENCE PLANE"]
+    direction LR
+    EVENT_ASSIGN["EventStream.publish<br/>monotonic session ID · timestamp · source<br/>secret masking"]:::event
+    EVENT_SERIAL["Serialize typed payload<br/>embedded ID + checksum"]:::event
+    SQLITE_TX["Authoritative SQLite append<br/>BEGIN IMMEDIATE · INSERT only<br/>WAL journal · synchronous FULL"]:::durability
+    PREDISPATCH["Arm pending Action after durable identity<br/><b>before inline delivery can produce an Observation</b>"]:::invariant
+    DELIVERY{"Delivery policy"}:::decisionnode
+    INLINE["Inline USER / CLI path<br/>same-stack causal ordering"]:::event
+    QUEUE["Bounded worker queue<br/>backpressure metrics"]:::event
+    SUBS["One fact, multiple projections<br/>controller · runtime · memory · UI"]:::event
+
+    EVENT_ASSIGN --> EVENT_SERIAL --> SQLITE_TX --> PREDISPATCH --> DELIVERY
+    DELIVERY --> INLINE --> SUBS
+    DELIVERY --> QUEUE --> SUBS
+
+    SQLITE_RULE["If SQLite append fails, <b>do not</b> fall back to event JSON.<br/>Two writable stores would create split-brain history."]:::invariant
+    SQLITE_TX --> SQLITE_RULE
+
+    WHY_APPEND["<b>WHY APPEND-ONLY EVENTS?</b><br/><b>Problem:</b> a mutable status row shows where the agent is, not which decision caused which side effect or what was known before failure.<br/><b>Chosen:</b> facts receive new IDs and are inserted once; corrections are later facts, never rewrites.<br/><b>Why not CRUD mutation:</b> updates erase intermediate states, complicate concurrent readers, and make crash timing indistinguishable from legitimate absence.<br/><b>Consequence:</b> temporal auditability, causal debugging, replay, and sequential writes; costs are log growth, projection code, schema evolution, and snapshots/indexes."]:::why
+    WHY_ES["<b>WHY EVENT SOURCING, NOT MERELY LOGGING?</b><br/><b>Logging</b> describes work after hidden application state changed. <b>Event sourcing here</b> makes Action and Observation the contract from which controller state, UI, memory, audit, and recovery views are projected.<br/><b>Why not controller→runtime calls plus logs:</b> direct calls create a second invisible truth and couple each consumer to the caller.<br/><b>Consequence:</b> one causal vocabulary across control, execution, persistence, and presentation; ordering and projection consistency become explicit architectural duties."]:::why
+    WHY_SQLITE["<b>WHY SQLITE AS THE AUTHORITATIVE LOCAL LEDGER?</b><br/><b>Workload:</b> one local writer, many readers, append-heavy records, long ordered scans, and crash recovery.<br/><b>Chosen:</b> per-session embedded transactions and indexes with no service process.<br/><b>Why not one JSON file per event:</b> directory/fsync overhead and expensive long scans. Why not Postgres/Redis: operational infrastructure exceeds a single-user tool’s needs.<br/><b>Consequence:</b> atomic local truth and simple deployment; locking/corruption risk is concentrated, so serialized writes, checksums, integrity checks, and explicit degraded health are required."]:::why
+    WHY_WAL["<b>WHY WRITE-AHEAD LOGGING, AND WHICH WAL?</b><br/><b>Crash window:</b> the process may die after intent is accepted but before final data pages are durable.<br/><b>SQLite WAL:</b> changed pages enter a sequential journal before database checkpoint; readers keep a stable snapshot while the writer advances. FULL synchronous favors crash truth over maximum throughput.<br/><b>Legacy application WAL:</b> only with SQLite disabled, write .pending JSON before the canonical event file, then remove it; restart cleans or replays the marker.<br/><b>Why not silent fallback:</b> recovery cannot reason safely about two authorities.<br/><b>Consequence:</b> deterministic crash recovery at the cost of extra writes and checkpoint cleanup."]:::why
+    WHY_PERSIST_FIRST["<b>WHY PERSIST BEFORE DELIVERY?</b><br/><b>Problem:</b> if a subscriber executes a tool and the process dies before its Action is durable, the workspace has an orphaned side effect.<br/><b>Chosen:</b> assign ID, sanitize, and persist first; then arm cause correlation and notify subscribers.<br/><b>Why not fire-and-forget persistence:</b> a small latency win is not worth unexplainable machine state.<br/><b>Consequence:</b> every dispatched action has durable lineage; storage latency enters turn latency."]:::why
+    WHY_INLINE["<b>WHY INLINE DELIVERY FOR THE CONTROL-CRITICAL PATH?</b><br/><b>Problem:</b> an extremely fast runtime can emit an Observation before an asynchronously delivered Action has registered its pending cause.<br/><b>Chosen:</b> USER and single-session CLI delivery stays inline; higher-volume paths may use bounded workers.<br/><b>Why not thread-pool everything:</b> throughput would introduce a causality race exactly where ordering matters most.<br/><b>Consequence:</b> deterministic pending/cause correlation; slow inline subscribers can delay publication."]:::why
+  end
+
+  SUBS ==> STATE_PROJECT
+
+  subgraph STAGE3["3 · PROJECT STATE AND SERIALIZE THE CONTROL PLANE"]
+    direction LR
+    STATE_PROJECT["Controller subscriber<br/>reduce events into AgentState + session state"]:::control
+    STEP_REQ["step() request funnel<br/>call_soon_threadsafe to main loop<br/>integer counter preserves every wakeup"]:::invariant
+    STEP_LOCK["One active inference step<br/>asyncio.Lock + bounded request drain"]:::control
+    SERVICES["Focused orchestration services<br/>lifecycle · pending · retry · recovery<br/>stuck · safety · validation · routing"]:::control
+    PENDING["Pending-action table<br/>Action.id ↔ Observation.cause"]:::invariant
+    PREPARE["ContextPipeline.prepare_step<br/>project current ledger view"]:::context
+
+    STATE_PROJECT --> STEP_REQ --> STEP_LOCK --> SERVICES --> PENDING --> PREPARE
+
+    WHY_PROJECTION["<b>WHY PROJECT STATE FROM EVENTS?</b><br/><b>Problem:</b> the UI, controller, recovery logic, and audit need different views of the same run.<br/><b>Chosen:</b> keep immutable facts central and build purpose-specific current-state projections.<br/><b>Why not one giant mutable State object shared everywhere:</b> consumers would silently overwrite each other and restart could not prove how values were derived.<br/><b>Consequence:</b> replayable, testable reducers and independent read models; projection lag and reducer versioning must be managed."]:::why
+    WHY_SERIAL["<b>WHY ONE STEP OWNER?</b><br/><b>Problem:</b> model calls are state transitions, not independent HTTP requests. Concurrent steps could read the same history, spend twice, and emit conflicting actions.<br/><b>Chosen:</b> all step requests enter the main asyncio loop; a counter prevents lost wakeups and a lock admits one inference step at a time.<br/><b>Why not recursive callbacks or one task per event:</b> they create cross-loop races and duplicate reasoning turns that look like model hallucination.<br/><b>Consequence:</b> causal clarity and deterministic spend; theoretical turn throughput is intentionally sacrificed."]:::why
+    WHY_CAUSE["<b>WHY EXPLICIT ACTION→OBSERVATION CAUSE IDS?</b><br/><b>Problem:</b> parallel or delayed tools make temporal adjacency unreliable: the next observation is not necessarily the result of the previous action.<br/><b>Chosen:</b> Observation.cause carries the durable Action ID; pending state clears by identity, not position.<br/><b>Why not infer pairing from timestamps/order:</b> worker scheduling, retries, and streaming output break that assumption.<br/><b>Consequence:</b> exact latency, retry, barrier, and audit attribution; every runtime path must preserve correlation."]:::why
+    WHY_SERVICES["<b>WHY A THIN ORCHESTRATOR OVER FOCUSED SERVICES?</b><br/><b>Problem:</b> lifecycle, retry, safety, pending work, and recovery interact but change for different reasons.<br/><b>Chosen:</b> SessionOrchestrator coordinates named services through a narrow OrchestrationContext facade.<br/><b>Why not a multi-thousand-line controller:</b> hidden cross-feature mutation makes local reasoning and testing impossible. Why not independent microservices: process/network boundaries add no value inside one local session.<br/><b>Consequence:</b> visible responsibilities and isolated tests; more modules and a facade that must resist becoming a service locator."]:::why
+  end
+
+  PREPARE ==> DISCOVER_TASK
+
+  subgraph STAGE4["4 · GROUND THE TASK IN THE ACTUAL REPOSITORY — SELECTION BEFORE READING"]
+    direction LR
+    DISCOVER_TASK["Extract current task terms<br/>split camelCase · snake_case · paths<br/>remove generic coding stop words"]:::context
+    FILE_ENUM["Enumerate source candidates<br/>git ls-files + untracked, else bounded walk<br/>ignore build/cache/vendor paths"]:::context
+    FIRST_PASS["Deterministic first-turn signals<br/>explicit path mention · dirty file<br/>path/stem overlap · bounded rg content hits<br/>matching Python symbols"]:::context
+    INDEX["Lazy workspace symbol index<br/>SQLite cache · hash + mtime freshness<br/>Tree-sitter; Python AST fallback"]:::context
+    GRAPH["File import graph<br/>src file → imported workspace file"]:::context
+    PERSONAL["Personalization prior per indexed file<br/>0.2 base + task score + entrypoint boost"]:::context
+    PAGERANK["Personalized PageRank<br/>damping 0.85 · fixed 24 iterations<br/>normalize every iteration"]:::context
+    COMBINE["Final rank<br/>graph centrality + task score + entrypoint boost<br/>deterministic path tie-break"]:::context
+    RENDER_MAP["Token-bounded &lt;REPO_MAP&gt;<br/>ranked paths + up to 4 public signatures/file<br/>binary search maximum prefix fitting map_tokens"]:::context
+    PREFLIGHT["First-turn &lt;CODING_PREFLIGHT&gt;<br/>top 6 candidates + reasons + dirty files<br/><b>hints only; verify before editing</b>"]:::context
+
+    DISCOVER_TASK --> FILE_ENUM --> FIRST_PASS
+    FILE_ENUM --> INDEX --> GRAPH --> PERSONAL --> PAGERANK --> COMBINE --> RENDER_MAP
+    FIRST_PASS --> PERSONAL
+    FIRST_PASS --> PREFLIGHT
+
+    INDEX_INVALIDATE["Successful file mutation invalidates that path<br/>repo map cache marked dirty and lazily rebuilt"]:::invariant
+    INDEX -. edit invalidation .-> INDEX_INVALIDATE -. next turn .-> RENDER_MAP
+
+    WHY_RANK["<b>WHY RANK THE REPOSITORY AT ALL?</b><br/><b>Problem:</b> the whole repo rarely fits, but forcing the model to begin with blind glob/read loops wastes turns and may anchor on the wrong subsystem.<br/><b>Chosen:</b> provide a cheap structural prior: likely files and public symbols, never full contents.<br/><b>Why not inject the complete tree/content:</b> token cost grows with repo size and low-signal names crowd out task evidence. Why not provide nothing: every turn pays discovery latency and small models struggle to form a global map.<br/><b>Consequence:</b> faster orientation and architectural awareness; ranking can be wrong, so candidates are explicitly non-authoritative and source reads remain mandatory."]:::why
+    WHY_SIGNALS["<b>WHY THESE FIRST-PASS SIGNALS?</b><br/><b>Explicit path mention</b> is highest-precision user intent. <b>Dirty files</b> represent the workspace’s active delta. <b>Path/stem overlap</b> captures naming conventions cheaply. <b>Bounded content hits</b> find concepts not encoded in filenames. <b>Matching symbols</b> provide a semantic breadcrumb without loading bodies.<br/><b>Why deterministic before embeddings:</b> zero model call, explainable scores, immediate startup, cross-language fallback, and stable tests.<br/><b>Consequence:</b> excellent lexical precision and predictable cost; synonyms and conceptual relationships can be missed."]:::why
+    WHY_PAGE["<b>WHY PERSONALIZED PAGERANK ON IMPORTS?</b><br/><b>Problem:</b> lexical relevance finds files named like the task but misses architectural hubs, adapters, and dependencies that connect the change.<br/><b>Chosen:</b> import edges approximate dependency influence; PageRank propagates importance transitively, while task personalization teleports probability toward the current request.<br/><b>Why damping 0.85:</b> most weight follows architecture, while 15% restart prevents sinks/cycles from owning the ranking. <b>Why 24 iterations:</b> fixed bounded work gives stable practical convergence without a data-dependent latency tail.<br/><b>Why not degree count:</b> it sees only immediate neighbors. Why not pure semantic vectors: heavier, opaque, optional dependencies, and weaker explicit topology.<br/><b>Consequence:</b> task-focused structural centrality; dynamic imports and non-code relationships remain imperfect."]:::why
+    WHY_ENTRY["<b>WHY BOOST ENTRYPOINTS AND ADD TASK SCORE TWICE?</b><br/><b>Entrypoint boost:</b> manifests, CLI/bootstrap files, and common roots explain how the system starts even when few files import them.<br/><b>Task score in personalization:</b> influences graph flow toward the task neighborhood. <b>Task score in the final sum:</b> preserves a direct relevance vote so a central but unrelated hub cannot dominate.<br/><b>Alternative rejected:</b> one opaque learned score that is difficult to debug or tune.<br/><b>Consequence:</b> an intentionally biased engineering heuristic—not a claim of mathematically pure ranking."]:::why
+    WHY_MAP_BUDGET["<b>WHY PATHS + FOUR PUBLIC SIGNATURES UNDER A HARD TOKEN BUDGET?</b><br/><b>Paths</b> reveal module boundaries; <b>signatures</b> reveal available concepts and call surfaces; bodies would consume the budget before the model chooses what to inspect.<br/><b>Four symbols</b> caps per-file dominance. <b>Public-first</b> favors architectural API over implementation noise. <b>Binary search</b> finds the longest ranked prefix that fits without repeatedly trimming arbitrary text.<br/><b>Why not character truncation:</b> tokenizer density varies and a hard cut can split a structural entry.<br/><b>Consequence:</b> compact, syntactically intact orientation; private internals appear only after targeted reads."]:::why
+  end
+
+  RENDER_MAP ==> CONTEXT_BUDGET
+
+  subgraph STAGE5A["5A · FIT HISTORY WITHOUT DESTROYING CAUSALITY — WINDOWING BEFORE COMPACTION"]
+    direction LR
+    CONTEXT_BUDGET["Resolve model capacity<br/>usable input = context window − output reservation<br/>subtract static prompt + tool schemas + context packet"]:::context
+    LEDGER_VIEW["Project full durable history<br/>filter non-model events<br/>budget oversized tool results"]:::context
+    TOKEN_EST["Tokenizer-aware event estimates<br/>model correction factor<br/>LRU cache by event fingerprint + rendering"]:::context
+    PRESSURE{"Projected history exceeds<br/>token or event ceiling?"}:::decisionnode
+    KEEP_ALL["No windowing<br/>preserve full projected history"]:::context
+    PROTECT["Protect summaries / working set<br/>inject durable working set after compaction or restore"]:::context
+    CHUNKS["Group causal chunks<br/>tool Action + matching Observation stay together"]:::context
+    RECENT["Select newest whole chunks backward<br/>enforce minimum recent tool loops<br/>and minimum tail token floor"]:::context
+    CEILING["If the newest required chunk alone is too large,<br/>truncate that copy to the remaining budget<br/>never mutate the ledger event"]:::invariant
+    WINDOWED["Bounded prompt-history projection<br/>protected facts + intact recent causality"]:::context
+
+    CONTEXT_BUDGET --> LEDGER_VIEW --> TOKEN_EST --> PRESSURE
+    PRESSURE -->|no| KEEP_ALL --> WINDOWED
+    PRESSURE -->|yes| PROTECT --> CHUNKS --> RECENT --> CEILING --> WINDOWED
+
+    WHY_WINDOW["<b>WHY WINDOW BEFORE SUMMARIZING?</b><br/><b>Problem:</b> every transformation can lose information, and many over-budget moments can be solved by omitting old operational noise rather than inventing a new narrative.<br/><b>Chosen:</b> first build a reversible model-facing selection over the immutable ledger; compact only when sustained boundary pressure requires a new summary.<br/><b>Why not summarize on every turn:</b> added model latency/cost, semantic drift, and summaries of summaries. Why not raw tail truncation: it may remove the Action while retaining its Observation or erase durable anchors.<br/><b>Consequence:</b> cheap predictable pressure control with full audit history intact; older unselected detail is unavailable to that inference turn unless recalled."]:::why
+    WHY_CAUSAL_WINDOW["<b>WHY CAUSAL CHUNKS, MINIMUM TOOL LOOPS, AND A TAIL FLOOR?</b><br/><b>Action/result pairing:</b> model APIs require coherent tool-call sequences and the result is meaningless without its request. <b>Minimum loops:</b> preserves enough recent think→act→observe examples for the model to know the current trajectory. <b>Tail token floor:</b> prevents many tiny protected events from crowding out the actual latest work.<br/><b>Why not keep the last N events:</b> N ignores token variance and can split pairs. Why not importance scoring here: selection must be deterministic, fast, and safe during emergency overflow.<br/><b>Consequence:</b> syntactically valid and operationally coherent prompts; some older high-value facts must survive through canonical state, summaries, or recall instead."]:::why
+    WHY_TOKEN["<b>WHY MODEL-AWARE TOKEN BUDGETS WITH FIXED-PROMPT RESERVES?</b><br/><b>Problem:</b> the provider limit covers system text, tool schemas, dynamic context, history, and output—not history alone. Characters/token vary by model and by code/JSON density.<br/><b>Chosen:</b> derive usable input from model capability, reserve output, subtract measured fixed sections, apply catalog correction, and cache immutable event counts.<br/><b>Why not len(text)/4 only:</b> acceptable fallback, unsafe as the primary gate. Why not wait for provider rejection: overflow recovery occurs after latency and may lose the turn.<br/><b>Consequence:</b> proactive, model-portable limits; catalogs and estimates can still be conservative or stale."]:::why
+    WHY_COPY["<b>WHY TRUNCATE A DEEP-COPIED VIEW AT SAFE BOUNDARIES?</b><br/><b>Problem:</b> trimming the durable Event object would make replay/audit depend on whichever model happened to need a smaller prompt. Cutting raw structured text can leave broken JSON/XML/tool envelopes that invite hallucinated continuation.<br/><b>Chosen:</b> copy model-facing events, prefer newline then whitespace cuts, add visible markers, and preserve opening/closing section tags.<br/><b>Why not invisible hard byte cuts:</b> they conceal missing evidence and corrupt structure.<br/><b>Consequence:</b> the model knows information is incomplete while the evidence plane remains lossless."]:::why
+  end
+
+  WINDOWED ==> COMPACT_GATE
+
+  subgraph STAGE5B["5B · WHEN PRESSURE PERSISTS, COMPACT THE OLD OPERATIONAL ARC — CURRENT ACTIVE STRATEGY"]
+    direction LR
+    COMPACT_GATE{"Boundary tokens ≥ effective window<br/>− reserved summary − fixed prompt reserve<br/>or explicit /compact?"}:::decisionnode
+    SKIP_COMPACT["Skip compaction<br/>also suppress same-turn double compact and<br/>recompact below last post-boundary size"]:::context
+    PRUNE_SET["Active StructuredSummaryCompactor<br/>max_size 102; target roughly half-size history<br/>fold prior summary + older pruned events"]:::context
+    DIGEST["Reduce source material before summarization<br/>group files · commands · errors · navigation<br/>plus last 5 non-user raw events"]:::context
+    SUMMARY_INPUT["Compaction prompt<br/>durable task state is read-only authority<br/>goal context · latest verification · prior summary<br/>event digest · recent raw detail"]:::context
+    SUMMARY_LLM["Same active LLM, plain prose completion<br/>budget min(5% context, 12k tokens)<br/>retry short/empty output up to configured repair attempts"]:::inference
+    SUMMARY_ORDER["Required priority<br/>unresolved/blocking → next steps → failed approaches<br/>→ accomplished/architecture → decisions/rationale<br/>USER GOAL fallback only if durable task state absent"]:::context
+    BOUNDARY["CondensationAction establishes a new boundary<br/>old raw events remain in ledger<br/>prompt projection becomes summary + recent tail"]:::event
+    CONTINUITY["Canonical/fuzzy continuity comparison<br/><b>telemetry warning today; non-empty summary is accepted</b>"]:::warning
+
+    COMPACT_GATE -->|no| SKIP_COMPACT --> BOUNDARY
+    COMPACT_GATE -->|yes| PRUNE_SET --> DIGEST --> SUMMARY_INPUT --> SUMMARY_LLM --> SUMMARY_ORDER --> CONTINUITY --> BOUNDARY
+
+    LEGACY_STRATS["Present in repository but not selected by current ContextPipeline:<br/>observation masking · recent-events · smart importance<br/>microcompact · composition pipeline"]:::optional
+
+    WHY_COMPACT["<b>WHY A SUMMARY BOUNDARY INSTEAD OF DELETING EVENTS?</b><br/><b>Problem:</b> repeated windowing eventually hides too much of the operational arc for a fresh reasoning turn to understand how the present state emerged.<br/><b>Chosen:</b> synthesize older evidence into a bounded narrative checkpoint, then retain a raw recent tail; the immutable ledger still holds originals.<br/><b>Why not permanently rewrite history:</b> audit and postmortem truth would inherit summary errors. Why not keep unlimited raw context: cost, latency, attention dilution, and provider limits rise even with large windows.<br/><b>Consequence:</b> long-run continuity at bounded prompt cost; semantic loss is unavoidable and must be counterbalanced by deterministic state."]:::why
+    WHY_ACTIVE["<b>WHY THE CURRENT SINGLE PROSE COMPACTOR, NOT THE LEGACY AUTO-SELECTOR?</b><br/><b>Chosen now:</b> one active mechanism with one trigger and one boundary contract; free prose lets the model allocate space to the actual session shape, while a strict section priority preserves resumability.<br/><b>Why not keep switching among masking, recency, semantic importance, and multi-layer pipelines:</b> policy became difficult to predict, test, and explain; a wrong strategy firing is itself context risk.<br/><b>Why not rigid schema output:</b> field compliance can consume attention and omit cross-cutting narrative. Deterministic task/canonical state already owns structured truth.<br/><b>Consequence:</b> simpler operations and richer narrative; prose is less machine-verifiable and the current continuity gate warns rather than vetoes."]:::why
+    WHY_DIGEST["<b>WHY GROUPED DIGEST + FIVE RAW EVENTS?</b><br/><b>Grouped digest:</b> changes the evidence shape from thousands of repetitive lines into counts and unique files/commands/errors, reducing recency bias and prompt size 5–10× in intended workloads. <b>Five raw events:</b> retain exact local detail near the boundary where the next action depends on it.<br/><b>Why not send all pruned events to the summary model:</b> the summarizer can overflow or focus on late verbosity. Why not digest only: exact error/path detail disappears.<br/><b>Consequence:</b> macro arc plus a narrow microscope; details outside both survive only in the ledger/canonical reducers."]:::why
+    WHY_SEPARATE_TRUTH["<b>WHY KEEP DURABLE TASK STATE OUT OF THE SUMMARY OUTPUT?</b><br/><b>Problem:</b> repeatedly copying objective, requirements, plan, and statuses into prose creates stale competing versions and goal drift.<br/><b>Chosen:</b> give durable task state to the compactor as read-only interpretation context, but re-inject the authoritative aggregate separately after compaction.<br/><b>Why not let the summary own task truth:</b> prose is lossy, model-generated, and replaced at every boundary.<br/><b>Consequence:</b> narrative memory can evolve while the task contract remains revisioned and inspectable."]:::why
+  end
+
+  BOUNDARY ==> PACKET_START
+
+  subgraph STAGE5C["5C · RECONSTRUCT THE MINIMUM SUFFICIENT WORKING STATE — THE CONTEXT PACKET"]
+    direction LR
+    PACKET_START["Reduce events into deterministic CanonicalTaskState<br/>load revisioned TaskState + pre-compaction snapshot"]:::context
+    P_USER["1 Recent user request context<br/>only preserved user turns absent from selected history<br/>section limit max(1,400 chars, 11% packet)"]:::context
+    P_CONTRACT["2 Execution contract<br/>objective · requirements · constraints · plan/status · evidence<br/>limit: configured contract cap over max(1,800 chars, 18%)"]:::context
+    P_SNAPSHOT["3 Compact snapshot<br/>only immediately after compaction<br/>restores files/tests/errors/decisions/background work<br/>section limit max(2,400 chars, 22%)"]:::context
+    P_NEXT["4 Operational checkpoint<br/>next action + implementation checkpoint<br/>section limit max(1,200 chars, 11%)"]:::context
+    P_CANON["5 Non-duplicated canonical details<br/>blockers · failed approaches · VCS · decisions<br/>processes · tests · dependencies<br/>renderer budget max(4,200 chars, 41%)"]:::context
+    P_ACTIVE["6 Active tool/background status<br/>including output drained since last turn<br/>section limit max(900 chars, 7%)"]:::context
+    P_SUMMARY["7 Latest narrative summary<br/>excluded if it is itself a packet/working-set marker<br/>section limit max(900 chars, 9%)"]:::context
+    P_TAIL["8 Recent causal tail<br/>up to 10 non-message event details<br/>section limit max(1,200 chars, 14%)"]:::context
+    PACKET["&lt;CONTEXT_PACKET&gt;<br/>ordered sections under character budget<br/>cached by events/state/snapshot fingerprint"]:::context
+
+    PACKET_START --> P_USER --> P_CONTRACT --> P_SNAPSHOT --> P_NEXT --> P_CANON --> P_ACTIVE --> P_SUMMARY --> P_TAIL --> PACKET
+
+    PACKET_BUDGET["Default 6,000 chars<br/>for ≥100k usable-token models: max(8k, min(32k, 4% of usable input))<br/>earlier sections win when total budget is exhausted"]:::invariant
+    PACKET --> PACKET_BUDGET
+
+    WHY_PACKET["<b>WHY A CONTEXT PACKET IN ADDITION TO HISTORY?</b><br/><b>Problem:</b> chronological history answers what happened; the next model turn needs an explicit answer to what is true now and what should happen next. Recovering state by rereading every event consumes attention and encourages stale facts.<br/><b>Chosen:</b> a bounded, deterministic current-state packet beside the causal tail.<br/><b>Why not replace history entirely:</b> state without evidence hides how conclusions were reached and removes local tool-call detail.<br/><b>Consequence:</b> state + trajectory are complementary inputs; duplicated facts must be actively suppressed."]:::why
+    WHY_PACKET_FIELDS["<b>WHY EXACTLY THESE SECTIONS, IN THIS ORDER?</b><br/><b>User request</b> repairs intent lost by windowing. <b>Execution contract</b> defines completion truth. <b>Compact snapshot</b> restores the boundary immediately after loss. <b>Operational checkpoint</b> prevents restart hesitation. <b>Canonical detail</b> preserves blockers, decisions, failures, VCS, and tests. <b>Active status</b> prevents duplicate background commands. <b>Narrative summary</b> carries architectural arc. <b>Recent tail</b> provides local cause/effect.<br/><b>Ordering principle:</b> intent and obligation outrank narrative and recency when the packet cannot fit.<br/><b>Consequence:</b> the packet degrades toward task correctness rather than conversational completeness."]:::why
+    WHY_BUDGET["<b>WHY A SMALL CHARACTER-BUDGETED PACKET WITH PERCENTAGE CAPS?</b><br/><b>Problem:</b> authoritative state can itself grow until it crowds out code, history, and tool schemas.<br/><b>Chosen:</b> 6k baseline with cautious scaling for very large contexts; each category has a cap and assembly stops low-priority expansion.<br/><b>Why characters here, tokens elsewhere:</b> sections are mostly bounded prose/state and character slicing allows structural safe-cut logic; the outer prompt still receives tokenizer-aware accounting.<br/><b>Why not equal shares:</b> categories have unequal failure cost—losing the objective is worse than losing old narrative detail.<br/><b>Consequence:</b> predictable control-plane overhead; a very complex task may require the external task store or targeted recall rather than a larger packet."]:::why
+    WHY_TAGS["<b>WHY XML-LIKE MARKERS AND SAFE CLOSING TAGS?</b><br/><b>Problem:</b> dynamic data, old tool output, and user text can resemble instructions. Unclosed or silently clipped sections blur authority boundaries.<br/><b>Chosen:</b> typed markers such as CONTEXT_PACKET and EXECUTION_CONTRACT; truncation preserves both opening and closing tags and emits an explicit marker.<br/><b>Why not free-form concatenation:</b> models cannot reliably distinguish policy, state, evidence, and quoted source material.<br/><b>Consequence:</b> clearer prompt roles and easier inspection; tags are conventions, not a security sandbox, so runtime policy still enforces effects."]:::why
+  end
+
+  PACKET ==> PROMPT_ROOT
+
+  subgraph STAGE6["6 · COMPILE THE MODEL PROGRAM — STABLE POLICY FIRST, VOLATILE STATE NEAR THE ACTIVE TURN"]
+    direction LR
+    PROMPT_ROOT["Pure-Python prompt builder<br/>static Markdown partials + explicit render functions<br/>placeholder validation + per-section token measurement"]:::engine
+    S_ID["1 Identity + scope + precedence<br/>who acts; latest user objective; security precedence"]:::engine
+    S_MODE["2 Mode protocol<br/>allowed behavior, tool use, and what ends the run"]:::engine
+    S_SHELL["3 Shell identity<br/>PowerShell vs Git Bash vs Unix syntax"]:::engine
+    S_SECURITY["4 Security/risk policy<br/>what requires caution or confirmation"]:::engine
+    S_ROUTE["5 Tool-routing ladder<br/>native file/search first; terminal when appropriate"]:::engine
+    S_TOOLS["6 Tool reference + enabled capabilities<br/>selection semantics beyond JSON schemas"]:::engine
+    S_AUTO["7 Autonomy + task-state policy<br/>continue, verify, update durable work"]:::engine
+    S_TAIL["8 Interaction / ask-user protocol<br/>how to pause without pretending completion"]:::engine
+    S_EXAMPLES["9 Worked examples<br/>agent mode + editor + non-small model only"]:::optional
+    S_CRITICAL["10 Critical final reminders<br/>completion, verification, file-edit discipline"]:::engine
+
+    PROMPT_ROOT --> S_ID --> S_MODE --> S_SHELL --> S_SECURITY --> S_ROUTE --> S_TOOLS --> S_AUTO --> S_TAIL --> S_EXAMPLES --> S_CRITICAL
+
+    DYNAMIC["Dynamic system messages placed before last user turn<br/>workspace/repo instructions · context packet<br/>MCP catalog · app directive · coding preflight · repo map · mode reminder"]:::context
+    HISTORY["Selected causal conversation history<br/>user/assistant/tool roles normalized per provider"]:::context
+    TOOL_SCHEMAS["Mode/capability-filtered tool schemas<br/>native core + optional LSP/web/docs/debug/MCP/checkpoint"]:::engine
+    LLM_REQUEST["Final streaming request<br/>stable prefix + dynamic state + current user turn<br/>tools + output reservation + cache fingerprint"]:::inference
+
+    S_CRITICAL --> DYNAMIC --> HISTORY --> LLM_REQUEST
+    TOOL_SCHEMAS --> LLM_REQUEST
+
+    MCP_ADD["MCP catalog is a separate per-turn system message,<br/><b>not</b> part of the stable primary system prompt"]:::invariant
+    DYNAMIC --> MCP_ADD
+
+    WHY_PROMPT_CODE["<b>WHY TREAT PROMPTS AS PROGRAMS?</b><br/><b>Problem:</b> the prompt branches on OS, mode, capabilities, security, and configured tools. Hiding that logic in a template DSL makes control flow hard to test and review.<br/><b>Chosen:</b> Markdown owns static prose; Python owns conditions, ordering, validation, metrics, and composition.<br/><b>Why not Jinja variants or one giant string:</b> template branches create a second programming language; giant strings make section-level testing and budgeting opaque.<br/><b>Consequence:</b> ordinary debugging and unit tests; prompt changes remain production code and require regression discipline."]:::why
+    WHY_ORDER["<b>WHY THIS SYSTEM-PROMPT ORDER?</b><br/><b>Identity/precedence first</b> establishes authority. <b>Mode</b> defines the social contract before affordances. <b>Shell</b> prevents platform-invalid actions. <b>Security before routing/tools</b> frames capability with constraints. <b>Routing before reference</b> teaches choice, not merely availability. <b>Autonomy</b> governs multi-step persistence. <b>Interaction</b> defines legitimate pause. <b>Critical rules last</b> exploit recency for high-cost failure modes.<br/><b>Consequence:</b> the prompt is an ordered policy stack, not a bag of instructions; reordering can change behavior even with identical text."]:::why
+    WHY_SECTIONS["<b>WHY INCLUDE BOTH TOOL SCHEMAS AND TOOL GUIDANCE?</b><br/><b>Schema</b> says what arguments are syntactically legal. <b>Routing/reference policy</b> says when a tool is appropriate, which safer abstraction precedes shell, and what evidence to gather next.<br/><b>Why not schemas alone:</b> the model may choose a legal but unsafe/inefficient route. Why not prose-only pseudo-tools: provider-native validation and structured decoding are lost.<br/><b>Consequence:</b> machine-checkable calls plus human-readable decision policy; duplicated descriptions consume tokens and must stay aligned."]:::why
+    WHY_EXAMPLES["<b>WHY CAPABILITY-GATED WORKED EXAMPLES?</b><br/><b>Problem:</b> examples teach multi-tool choreography more effectively than abstract rules, but they are expensive and can make chat/plan modes imitate edits they cannot perform.<br/><b>Chosen:</b> include edit-heavy examples only for agent mode, enabled editor, and models not classified small.<br/><b>Why not always include them:</b> small contexts lose useful history; restricted modes receive contradictory demonstrations.<br/><b>Consequence:</b> examples are treated as an optimization with a budget, not sacred prompt content."]:::why
+    WHY_DYNAMIC["<b>WHY STABLE POLICY FIRST AND DYNAMIC DATA NEAR THE USER TURN?</b><br/><b>Problem:</b> repo state, MCP availability, status, and context packet change frequently. Putting them inside the primary system string invalidates provider prefix caches and makes historical dynamic snapshots look like permanent policy.<br/><b>Chosen:</b> fingerprint the stable leading system prefix + tool schemas; rebuild volatile application-owned messages once per request beside the latest user turn.<br/><b>Why not append dynamic state forever:</b> stale maps/status accumulate and compete with current truth.<br/><b>Consequence:</b> cache reuse and clearer authority; message ordering must be normalized for provider compatibility."]:::why
+  end
+
+  LLM_REQUEST ==> RESOLVE_MODEL
+
+  subgraph STAGE7["7 · CROSS THE MODEL BOUNDARY WITHOUT LEAKING PROVIDER SEMANTICS"]
+    direction LR
+    RESOLVE_MODEL["Strict ProviderResolver<br/>explicit prefix/config or exact catalog match<br/>no fuzzy model-name guessing"]:::inference
+    CAPABILITY["Catalog capabilities<br/>context/output limits · tool/parallel support<br/>parameter rules · pricing · token correction"]:::inference
+    CLIENT{"Endpoint family"}:::decisionnode
+    OPENAI["OpenAI / compatible<br/>including configured gateways"]:::inference
+    ANTHROPIC["Native Anthropic"]:::inference
+    GOOGLE["Google GenAI"]:::inference
+    CODEX["Codex / OpenCode families"]:::inference
+    STREAM_WAL["StreamingCheckpoint.begin before remote call<br/>small params summary + attempt + anchor event ID<br/>fsync + atomic replace"]:::durability
+    STREAM["Stream reasoning/text/tool deltas<br/>provider-specific transport"]:::inference
+    NORMALIZE["Normalize response<br/>text · tool calls · finish reason · usage · errors"]:::inference
+    DECODE["Streaming merger + response processor<br/>typed Action(s); first action now<br/>bounded queued follow-ups"]:::engine
+    STREAM_COMMIT["Commit/remove streaming WAL only after<br/>a complete response was decoded"]:::durability
+
+    RESOLVE_MODEL --> CAPABILITY --> CLIENT
+    CLIENT --> OPENAI --> STREAM_WAL
+    CLIENT --> ANTHROPIC --> STREAM_WAL
+    CLIENT --> GOOGLE --> STREAM_WAL
+    CLIENT --> CODEX --> STREAM_WAL
+    STREAM_WAL --> STREAM --> NORMALIZE --> DECODE --> STREAM_COMMIT
+
+    AMBIGUOUS["Restart with recent uncommitted streaming WAL:<br/><b>block automatic retry as ambiguous</b><br/>stale/corrupt policy may discard while preserving crash evidence"]:::invariant
+    STREAM_WAL -. crash before commit .-> AMBIGUOUS
+
+    WHY_PROVIDER["<b>WHY OWN A PROVIDER-NORMALIZATION BOUNDARY?</b><br/><b>Problem:</b> providers differ in streaming chunks, tool-call IDs, stop reasons, errors, parameters, caching, and endpoint conventions.<br/><b>Chosen:</b> native client families translate at one boundary into Grinta messages, usage, tool calls, and exceptions.<br/><b>Why not scatter if-provider branches through the agent:</b> orchestration behavior would change with transport details and every new model would touch core logic. Why not trust one universal wrapper blindly: lowest-common-denominator abstractions often hide meaningful semantics.<br/><b>Consequence:</b> portable engine and explicit compatibility; the adapter/catalog surface requires continuous maintenance."]:::why
+    WHY_STRICT["<b>WHY STRICT PROVIDER RESOLUTION?</b><br/><b>Problem:</b> model names are not globally unique and compatible gateways may expose arbitrary IDs. Guessing from substrings can send credentials or unsupported parameters to the wrong endpoint.<br/><b>Chosen:</b> explicit provider prefix/config, otherwise exact catalog lookup; ambiguity fails visibly.<br/><b>Why not fuzzy convenience:</b> a friendly misroute is more dangerous than a clear configuration error.<br/><b>Consequence:</b> deterministic security and support behavior; onboarding may require one explicit setting."]:::why
+    WHY_CAPABILITY["<b>WHY DATA-DRIVEN CAPABILITIES INSTEAD OF MODEL-NAME CONDITIONS?</b><br/><b>Problem:</b> context size, parallel calls, parameter support, and pricing are properties that change independently of provider brand.<br/><b>Chosen:</b> catalog facts drive budgets and request shaping; provider-family code handles protocol semantics.<br/><b>Why not checks like name contains claude:</b> aliases, versions, and compatible hosts make folklore brittle.<br/><b>Consequence:</b> most compatibility updates become auditable data changes; stale catalogs remain an operational risk and conservative fallbacks are required."]:::why
+    WHY_STREAM_WAL["<b>WHY A SECOND WRITE-AHEAD CHECKPOINT FOR LLM STREAMING?</b><br/><b>Problem:</b> after a crash mid-stream, the remote provider may have consumed the request and emitted partial content, but the local engine cannot know whether repeating it will duplicate cost or actions.<br/><b>Chosen:</b> write a small intent marker before the call and delete only after complete decode; recent uncommitted markers block guessing.<br/><b>Why not persist the full prompt:</b> secrets, size, and duplication of the event ledger. Why not retry automatically: the outcome is ambiguous, not proven failed.<br/><b>Consequence:</b> honest recovery and crash evidence; some sessions require explicit operator resolution."]:::why
+  end
+
+  STREAM_COMMIT ==> ACTION_ROUTE
+
+  subgraph STAGE8["8 · TURN A PROBABILISTIC PROPOSAL INTO A GOVERNED TRANSACTION"]
+    direction LR
+    ACTION_ROUTE{"Decoded action type"}:::decisionnode
+    FINAL_BRANCH["MessageAction.final_response<br/>go to completion stage"]:::control
+    TOOL_BRANCH["Runnable tool Action<br/>publish through ledger with durable ID"]:::event
+    SCHED["ActionScheduler<br/>read-only mix may parallel<br/>opaque MCP sequential<br/>same-category writes parallel only on distinct resource keys"]:::control
+    PIPELINE["Ordered execute middleware<br/>1 SafetyValidator → 2 Blackboard → 3 CircuitBreaker<br/>4 ProgressPolicy → 5 CostQuota → 6 ContextWindow<br/>7 Rollback → 8 DestructiveCommand → 9 PreExecDiff<br/>10 AutoCheck → 11 PostEditDiagnostics → 12 SymbolIndexInvalidation<br/>13 FileState → 14 Logging → 15 Telemetry → 16 ToolResultValidator"]:::control
+    BLOCKED{"Any middleware blocks?"}:::decisionnode
+    BLOCK_OBS["Typed failure / confirmation observation<br/>no tool side effect"]:::event
+    CHECKPOINT["Before non-trivial FileEdit/CmdRun or HIGH risk<br/>tier-1 private shadow checkpoint"]:::durability
+    DISPATCH["Dispatch approved Action to local RuntimeExecutor"]:::execution
+
+    ACTION_ROUTE --> FINAL_BRANCH
+    ACTION_ROUTE --> TOOL_BRANCH --> SCHED --> PIPELINE --> BLOCKED
+    BLOCKED -->|yes| BLOCK_OBS
+    BLOCKED -->|no| CHECKPOINT --> DISPATCH
+
+    WHY_MIDDLEWARE["<b>WHY DETERMINISTIC MIDDLEWARE AROUND A PROBABILISTIC MODEL?</b><br/><b>Problem:</b> prompting improves action selection but cannot guarantee cost, permission, safety, rollback, logging, or postcondition behavior.<br/><b>Chosen:</b> every tool proposal crosses an ordered execute/observe contract that can block before effects and reconcile after reality is known.<br/><b>Why not embed all policy in each tool:</b> rules drift and new tools bypass them. Why not prompt-only safety: a stochastic component cannot be the final authority over its own side effects.<br/><b>Consequence:</b> bounded blast radius and composable governance; middleware order is a compatibility contract and adds per-call overhead."]:::why
+    WHY_ORDER_MW["<b>WHY DOES MIDDLEWARE ORDER MATTER?</b><br/><b>Safety/progress/cost/context first</b> reject actions that should never proceed. <b>Rollback before destructive execution</b> ensures recovery exists before mutation. <b>Pre-diff/autocheck/diagnostics</b> establish and verify edit consequences. <b>Index/file state</b> reconcile derived repository views. <b>Logging/telemetry/validation</b> record and judge the resulting observation.<br/><b>Alternative rejected:</b> unordered plugin hooks where a safety check can run after execution or a checkpoint after mutation.<br/><b>Consequence:</b> adding or moving middleware requires reasoning about temporal preconditions, not only feature ownership."]:::why
+    WHY_PARALLEL["<b>WHY RESOURCE-AWARE BOUNDED PARALLELISM?</b><br/><b>Problem:</b> independent reads and distinct-file edits can reduce latency, but concurrent conflicting mutations destroy deterministic state and observation order.<br/><b>Chosen:</b> classify actions; allow safe read mixes and same-category distinct resource keys; serialize opaque MCP, conflicts, and mixed side-effect categories; cap each batch and wait for all cause IDs.<br/><b>Why not read-only parallelism only:</b> leaves safe distinct-resource throughput unused. Why not parallelize everything:</b> rollback, confirmation, prompts, and tests would observe races.<br/><b>Consequence:</b> speed where independence is provable; conservative serialization when identity or effects are opaque."]:::why
+    WHY_CHECKPOINT["<b>WHY CHECKPOINT BEFORE RISKY ACTIONS, NOT AFTER EVERY EVENT?</b><br/><b>Problem:</b> rollback must capture the last known-good workspace before mutation; read-only commands add no recovery value and would flood retention.<br/><b>Chosen:</b> middleware snapshots non-trivial file edits, commands, and HIGH-risk future action types; trivial read-only commands are recognized and skipped.<br/><b>Why not after execution:</b> too late. Why not every step:</b> storage/time cost and a noisy checkpoint list. Why not only manual checkpoints:</b> humans cannot predict every bad autonomous action.<br/><b>Consequence:</b> transaction-like safety around effects; classification errors can over-snapshot or leave a gap, so HIGH-risk metadata provides a generic fallback."]:::why
+  end
+
+  DISPATCH ==> RUNTIME_ROUTE
+
+  subgraph STAGE9["9 · EXECUTE AGAINST THE REAL WORKSPACE, WITH A REVERSIBLE PRE-IMAGE"]
+    direction LR
+    RUNTIME_ROUTE{"Runtime tool family"}:::decisionnode
+    FILE_API["Native file API<br/>read · create · exact replace · atomic multiedit · undo"]:::execution
+    CODE_INTEL["Code intelligence<br/>grep/glob · symbol index · Tree-sitter<br/>optional LSP/DAP"]:::execution
+    TERMINAL["Command execution<br/>bounded non-interactive subprocess<br/>or typed long-lived PTY session"]:::execution
+    MCP_RUN["MCP execution<br/>collision-safe alias → server/tool call<br/>bounded result + structured error"]:::execution
+    OTHER["Optional browser/web/docs/memory/checkpoint tools"]:::optional
+    EFFECT["Workspace / process / external integration effect"]:::external
+
+    RUNTIME_ROUTE --> FILE_API --> EFFECT
+    RUNTIME_ROUTE --> CODE_INTEL --> EFFECT
+    RUNTIME_ROUTE --> TERMINAL --> EFFECT
+    RUNTIME_ROUTE --> MCP_RUN --> EFFECT
+    RUNTIME_ROUTE --> OTHER --> EFFECT
+
+    SHADOW["Private bare ShadowRepo under workspace app data<br/>independent of user .git · pygit2 in-process"]:::durability
+    STATCACHE["Snapshot optimization<br/>stat every eligible file; reuse blob OID when<br/>(mtime_ns,size) unchanged; hash changed files"]:::durability
+    COMMIT_TREE["Commit content-addressed tree<br/>manifest maps checkpoint ID → shadow SHA<br/>tier 1 system vs tier 2 user-visible"]:::durability
+    RESTORE["Restore chosen tree with atomic file writes<br/>never touch .git/.grinta<br/>move extra files to quarantine instead of delete"]:::durability
+    CHECKPOINT --> SHADOW --> STATCACHE --> COMMIT_TREE --> RESTORE
+
+    PROFILE{"Execution profile"}:::decisionnode
+    STANDARD["standard<br/>normal confirmations/policy"]:::security
+    HARDENED["hardened_local<br/>stricter filesystem/network/package/background rules"]:::security
+    SANDBOXED["sandboxed_local<br/>hardened + OS isolation for supported<br/><b>non-interactive subprocesses only</b>"]:::security
+    EFFECT --> PROFILE
+    PROFILE --> STANDARD
+    PROFILE --> HARDENED
+    PROFILE --> SANDBOXED
+
+    SANDBOX_TRUTH["Policy is not isolation.<br/>Interactive PTYs remain host processes; OS subprocess isolation is not a VM/container or complete host boundary."]:::invariant
+    SANDBOXED --> SANDBOX_TRUTH
+
+    WHY_SHADOW["<b>WHY A PRIVATE CONTENT-ADDRESSED GIT STORE FOR WORKSPACE CHECKPOINTS?</b><br/><b>Problem:</b> checkpoints must handle modified/untracked/binary files, work without a clean user repo, deduplicate unchanged content, and restore any prior tree.<br/><b>Chosen:</b> pygit2 writes commits to a separate bare object store; a stat cache avoids rereading unchanged files; no subprocess or user branch is touched.<br/><b>Why not full directory copies:</b> O(repo size) data per checkpoint. Why not user Git commits/stash:</b> pollutes history, depends on repository state, and misses non-repo workspaces. Why not inverse patches:</b> fragile for deletes, binaries, renames, and command side effects.<br/><b>Consequence:</b> incremental cross-platform snapshots and branch independence; libgit2 storage/GC and whole-tree enumeration still cost resources."]:::why
+    WHY_QUARANTINE["<b>WHY QUARANTINE EXTRA FILES DURING RESTORE?</b><br/><b>Problem:</b> restoring an exact snapshot normally deletes files created later, but those files may contain valuable user work or crash evidence.<br/><b>Chosen:</b> move extras into a timestamped checkpoint-local quarantine, then atomically replace snapshot files.<br/><b>Why not delete for perfect rollback:</b> rollback should reduce harm, not introduce irreversible loss. Why not leave extras in place:</b> the restored workspace would not match the checkpoint and tests could see mixed states.<br/><b>Consequence:</b> recoverable exactness; rollback consumes additional disk until quarantine is reviewed."]:::why
+    WHY_LOCAL_RUNTIME["<b>WHY AN IN-PROCESS LOCAL RUNTIME INSTEAD OF MANDATORY DOCKER/RPC?</b><br/><b>Problem:</b> the default single-user agent needs low-latency access to the actual shell, editors, language servers, credentials, and OS paths.<br/><b>Chosen:</b> RuntimeExecutor lives in the process but communicates through typed Action/Observation events as if it were a boundary.<br/><b>Why not mandatory containers:</b> startup, mounts, path translation, daemon availability, nested virtualization, and environment mismatch harm local fidelity. Why retain typed boundaries: a future isolated driver remains possible and faults are attributable.<br/><b>Consequence:</b> native performance and easy debugging; runtime faults share the host process and policy cannot be advertised as isolation."]:::why
+    WHY_FILE_API["<b>WHY A SMALL NATIVE FILE API WITH EXACT REPLACEMENT?</b><br/><b>Problem:</b> free-form patch/XML/JSON edits are easy for a model to almost format correctly and hard to make atomic across files.<br/><b>Chosen:</b> explicit paths; exact old→new anchors; create/replace/multiedit transactions implemented in code; reads/discovery remain separate.<br/><b>Why not shell redirection or a universal editor DSL:</b> escaping, encoding, partial writes, and ambiguous match behavior leak into model reasoning.<br/><b>Consequence:</b> deterministic failures and safer refactors; the model may need an extra read to obtain an exact anchor."]:::why
+    WHY_INTEL["<b>WHY TREE-SITTER PLUS LSP?</b><br/><b>Tree-sitter</b> gives fast, local, cross-language structure for indexing even when a project cannot build. <b>LSP</b> gives compiler-aware definitions, references, diagnostics, and types when a language server is available.<br/><b>Why not LSP only:</b> server startup/configuration can fail and broad indexing would be expensive. Why not parsing only:</b> syntax cannot resolve dynamic/project-specific semantics.<br/><b>Consequence:</b> graceful structural baseline with optional semantic precision; two caches/invalidation paths must remain coherent."]:::why
+  end
+
+  EFFECT ==> OBS_BUILD
+
+  subgraph STAGE10["10 · TURN REALITY BACK INTO EVIDENCE, THEN DECIDE WHETHER TO LOOP"]
+    direction LR
+    OBS_BUILD["Runtime emits typed Observation<br/>success/error/content/metadata<br/><b>cause = originating Action.id</b>"]:::event
+    OBS_PERSIST["Publish through EventStream<br/>same durable append-before-delivery contract"]:::event
+    OBS_MW["Observe middleware reconciles reality<br/>audit checkpoint link · diagnostics · file/index state<br/>logging · telemetry · result validation"]:::control
+    CLEAR_PENDING["Clear exact pending cause<br/>release confirmation/execution bookkeeping"]:::control
+    BARRIER["Drain barrier waits for every scheduled cause<br/>before the next model prompt is assembled"]:::invariant
+    UPDATE["Project new controller/context/UI state<br/>append evidence to task/audit views"]:::control
+    HEALTH{"Outcome and liveness checks"}:::decisionnode
+    RETRY["Retry queue<br/>bounded attempts + backoff<br/>only classified recoverable failures"]:::reliability
+    CIRCUIT["Circuit breaker / iteration guards<br/>cost, repeated failure, null-action limits"]:::reliability
+    STUCK["Hard stuck signals only<br/>exact repeated action/observation/error<br/>soft similarity remains telemetry"]:::reliability
+    TURN_DECISION{"Continue working or<br/>allow a final model turn?"}:::decisionnode
+    NEXT_TURN["Next turn starts from the expanded ledger<br/>fresh grounding/context/prompt projection"]:::phase
+
+    OBS_BUILD --> OBS_PERSIST --> OBS_MW --> CLEAR_PENDING --> BARRIER --> UPDATE --> HEALTH
+    HEALTH --> RETRY --> TURN_DECISION
+    HEALTH --> CIRCUIT --> TURN_DECISION
+    HEALTH --> STUCK --> TURN_DECISION
+    TURN_DECISION -->|continue| NEXT_TURN
+    NEXT_TURN -. re-enter serialized control plane .-> STATE_PROJECT
+
+    WHY_OBSERVE["<b>WHY ARE OBSERVATIONS FIRST-CLASS EVENTS?</b><br/><b>Problem:</b> an Action is only an intention; exit code, changed files, diagnostics, user denial, timeout, and external results determine reality.<br/><b>Chosen:</b> tools return typed, cause-linked Observations that are persisted and projected like Actions.<br/><b>Why not return raw values directly to the caller:</b> UI, retry, audit, context, and recovery would see different or incomplete outcomes.<br/><b>Consequence:</b> one evidence contract and exact latency/result attribution; observation schemas must represent partial and failed reality honestly."]:::why
+    WHY_BARRIER["<b>WHY WAIT FOR THE WHOLE SCHEDULED BATCH?</b><br/><b>Problem:</b> prompting after the first of several parallel results makes the model reason from an intermediate world and potentially mutate a resource whose sibling action is still running.<br/><b>Chosen:</b> the next inference begins only after every cause-keyed pending action in the batch resolves or is classified.<br/><b>Why not stream each result into a new model turn:</b> more calls, nondeterministic context order, and race-amplified decisions.<br/><b>Consequence:</b> coherent batch snapshots and reproducible prompts; the slowest action sets batch latency."]:::why
+    WHY_RETRY["<b>WHY CLASSIFIED BOUNDED RETRY INSTEAD OF CATCH-ALL RETRY?</b><br/><b>Problem:</b> transient transport/storage/tool failures may recover, but deterministic syntax, permission, and logic failures repeat cost and side effects.<br/><b>Chosen:</b> retry only known recoverable categories, with attempt limits/backoff; circuit and recovery services own escalation.<br/><b>Why not infinite self-healing:</b> liveness becomes an expensive loop. Why not fail immediately:</b> temporary faults would waste long session state.<br/><b>Consequence:</b> resilience with an explicit exhaustion boundary; taxonomy quality determines false retry/false failure rates."]:::why
+    WHY_STUCK["<b>WHY DO ONLY HARD STUCK SIGNALS CONTROL THE LOOP?</b><br/><b>Problem:</b> legitimate TDD, exploration, and refactoring often look repetitive semantically; heuristic interruption can stop the agent exactly when iteration is useful.<br/><b>Chosen:</b> exact repeated action/observation/error sequences and monologue/null-action limits may stop or redirect; semantic similarity and cost-growth guesses remain telemetry.<br/><b>Why not an LLM judge every step:</b> added cost and another probabilistic veto over liveness.<br/><b>Consequence:</b> fewer false-positive stops; subtle waste may be detected later."]:::why
+  end
+
+  TURN_DECISION ==> FINAL_EVENT
+  FINAL_BRANCH ==> FINAL_EVENT
+
+  subgraph STAGE11["11 · END THE RUN AT AN UNAMBIGUOUS USER-VISIBLE BOUNDARY"]
+    direction LR
+    FINAL_EVENT["MessageAction<br/>final_response = true"]:::event
+    FINAL_PERSIST["Persist final message in ledger"]:::durability
+    FINISHED["EventRouter transitions AgentState → FINISHED<br/><b>immediately after final response publication</b>"]:::control
+    HOUSEKEEP["Background housekeeping<br/>reflection · optional completion validator · audit"]:::optional
+    VALIDATE{"Optional validator passes?"}:::decisionnode
+    NOTE["On failure emit COMPLETION_VALIDATOR_NOTE<br/>quality warning only<br/><b>does not reopen/block FINISHED</b>"]:::warning
+    OUTPUT["Developer receives final response<br/>TUI card or non-interactive stdout<br/>session state/checkpoints saved and resources closed"]:::phase
+
+    FINAL_EVENT --> FINAL_PERSIST --> FINISHED --> OUTPUT
+    FINISHED --> HOUSEKEEP --> VALIDATE
+    VALIDATE -->|no| NOTE
+    VALIDATE -->|yes| OUTPUT
+
+    EVIDENCE["Reviewable completion evidence<br/>task contract/status · test observations · diffs<br/>files/checkpoints · full causal ledger"]:::durability
+    OUTPUT --> EVIDENCE
+
+    WHY_FINISH["<b>WHY IS THE FINAL MODEL MESSAGE THE LIFECYCLE BOUNDARY?</b><br/><b>Problem:</b> the user needs one observable event that means the agent has stopped acting. A hidden validator veto previously risked leaving the controller RUNNING with no next action.<br/><b>Chosen:</b> explicit final prose is persisted, then FINISHED is published immediately.<br/><b>Why not infer completion from silence or an empty tool queue:</b> both can occur during failure or waiting. Why not a separate mandatory finish tool:</b> plain response semantics already exist in chat/plan and providers; another tool creates a failure mode after work is done.<br/><b>Consequence:</b> clear liveness and UI behavior; the model may still finish prematurely."]:::why
+    WHY_ADVISORY["<b>WHY IS COMPLETION VALIDATION ADVISORY TODAY?</b><br/><b>Problem:</b> tests/diffs/task evidence are valuable, but no single validator reliably knows user intent, environment constraints, or whether a warning deserves another autonomous mutation.<br/><b>Chosen:</b> validators collect an independent quality signal after the final boundary and emit a durable warning.<br/><b>Why not a hard veto without a recovery transition:</b> it creates a non-terminal state with no actor responsible for the next step. A future hard gate would need an explicit reopen/replan protocol and bounded authority.<br/><b>Consequence:</b> liveness and evidence are separated; correctness is reviewable, not guaranteed by the state enum."]:::why
+    WHY_EVIDENCE["<b>WHY SEPARATE EVIDENCE COLLECTION, QUALITY SIGNALING, AND LIFECYCLE AUTHORITY?</b><br/><b>Evidence</b> records what happened. <b>Validation</b> interprets whether evidence looks sufficient. <b>Lifecycle</b> decides whether more actions may occur.<br/><b>Why not collapse them:</b> a missing test result should not silently erase history, and a warning should not mutate the workspace without an accountable control transition.<br/><b>Consequence:</b> interview-defensible boundaries and safer future evolution; users must understand that FINISHED means execution ended, not mathematical proof of correctness."]:::why
+  end
+
+  OUTPUT ==> DONE
+
+  subgraph OBSERVABILITY["CROSS-CUTTING · THE MODEL VIEW MAY SHRINK; THE OPERATOR TRACE DOES NOT"]
+    direction LR
+    DONE["Run closed"]:::phase
+    HUD["Live HUD<br/>mode · model · state · context/tokens · cost<br/>runtime · MCP/skills · persistence health"]:::interface
+    CARDS["Event-derived cards<br/>actions · observations · diffs · confirmations<br/>errors · task state · compaction"]:::interface
+    LOGS["Session-scoped structured logs<br/>prompt section metrics · latency · tool/persistence counters"]:::reliability
+    AUDIT["Append-only trajectory / audit export<br/>postmortem does not depend on final prose"]:::durability
+
+    SUBS -. render every durable fact .-> HUD
+    SUBS -. semantic event cards .-> CARDS
+    PIPELINE -. execution telemetry .-> LOGS
+    SQLITE_TX -. complete trace .-> AUDIT
+
+    WHY_OBS["<b>WHY LOCAL EVENT-DERIVED OBSERVABILITY?</b><br/><b>Problem:</b> agent failures are often contextual—wrong file, lost goal, repeated tool loop—not ordinary exceptions. The operator needs to reconstruct what the model saw and what the machine did.<br/><b>Chosen:</b> metrics, cards, audit, and logs are projections of the same local event/evidence plane; prompt compaction never deletes the operator trace.<br/><b>Why not cloud-only telemetry:</b> source, commands, paths, and outputs may be private; network availability should not determine debuggability. Why not raw logs only:</b> humans need semantic grouping and live progress.<br/><b>Consequence:</b> privacy-aligned postmortems and trust; local retention, redaction, and disk usage remain product responsibilities."]:::why
+  end
+
+  %% Visual language
+  classDef title fill:#0B132B,color:#FFFFFF,stroke:#0B132B,stroke-width:3px,font-size:21px;
+  classDef phase fill:#082F49,color:#FFFFFF,stroke:#0369A1,stroke-width:3px;
+  classDef external fill:#F1F5F9,color:#0F172A,stroke:#64748B,stroke-width:1.5px;
+  classDef interface fill:#E0F2FE,color:#0C4A6E,stroke:#0284C7,stroke-width:1.5px;
+  classDef foundation fill:#EDE9FE,color:#3B0764,stroke:#7C3AED,stroke-width:1.5px;
+  classDef control fill:#DCFCE7,color:#14532D,stroke:#16A34A,stroke-width:1.6px;
+  classDef event fill:#DBEAFE,color:#1E3A8A,stroke:#2563EB,stroke-width:2px;
+  classDef durability fill:#E2E8F0,color:#1E293B,stroke:#475569,stroke-width:1.8px;
+  classDef context fill:#CCFBF1,color:#134E4A,stroke:#0D9488,stroke-width:1.5px;
+  classDef engine fill:#F3E8FF,color:#581C87,stroke:#9333EA,stroke-width:1.5px;
+  classDef inference fill:#EDE9FE,color:#312E81,stroke:#6366F1,stroke-width:1.5px;
+  classDef execution fill:#FFEDD5,color:#7C2D12,stroke:#EA580C,stroke-width:1.5px;
+  classDef security fill:#FEE2E2,color:#7F1D1D,stroke:#DC2626,stroke-width:1.5px;
+  classDef reliability fill:#ECFCCB,color:#365314,stroke:#65A30D,stroke-width:1.5px;
+  classDef mode fill:#F0FDF4,color:#14532D,stroke:#4ADE80,stroke-width:1.2px;
+  classDef optional fill:#F8FAFC,color:#475569,stroke:#94A3B8,stroke-width:1.3px,stroke-dasharray:5 4;
+  classDef decisionnode fill:#FFFFFF,color:#0F172A,stroke:#64748B,stroke-width:1.5px;
+  classDef invariant fill:#FFFFFF,color:#7F1D1D,stroke:#B91C1C,stroke-width:2.3px,stroke-dasharray:3 2;
+  classDef warning fill:#FFF1F2,color:#881337,stroke:#E11D48,stroke-width:2px;
+  classDef why fill:#FFFBEB,color:#713F12,stroke:#D97706,stroke-width:2px,stroke-dasharray:7 4;
+
+  TITLE ==> INPUT_GATE
+
+  subgraph FOUNDATIONS["0 · PRODUCT CONSTRAINTS AND TECHNOLOGY FOUNDATION"]
+    direction LR
+    INPUT_GATE["Product constraint:<br/><b>operate on a real developer workspace from a terminal</b>"]:::phase
+    STACK_PY["Python 3.12–3.13<br/>asyncio control plane · native provider SDKs"]:::foundation
+    STACK_UI["Textual + Rich<br/>event-driven terminal UI"]:::foundation
+    STACK_DATA["SQLite + JSON<br/>local transactional and inspectable state"]:::foundation
+    STACK_CODE["Tree-sitter + LSP<br/>static structure + live semantics"]:::foundation
+    STACK_GIT["pygit2 / libgit2<br/>private content-addressed rollback"]:::foundation
+    STACK_EXT["Native tools + MCP<br/>stable core · replaceable edge"]:::foundation
+
+    WHY_LOCAL["<b>WHY LOCAL-FIRST?</b><br/><b>Problem:</b> coding depends on the exact checkout, uncommitted files, toolchain, credentials, processes, and OS behavior.<br/><b>Chosen:</b> keep control, execution, history, checkpoints, and UI on the developer machine; only configured LLM/MCP calls leave it.<br/><b>Why not hosted-first:</b> repo mirroring creates state drift, privacy exposure, latency, tenancy infrastructure, and a second environment that may not reproduce the bug.<br/><b>Consequence:</b> high fidelity and user-owned evidence; execution shares the user trust domain, so policy, confirmation, rollback, and honest sandbox labeling are mandatory."]:::why
+    WHY_PYTHON["<b>WHY PYTHON WITH NATIVE-BACKED HOT PATHS?</b><br/><b>Problem:</b> model SDKs and AI integrations evolve faster than the product can afford binding lag.<br/><b>Chosen:</b> Python for orchestration and contributor velocity; C/Rust-backed parsing, tokenization, serialization, Git, and package resolution where throughput matters.<br/><b>Why not a Rust rewrite:</b> stronger static guarantees are attractive, but provider lag, FFI work, and contributor cost dominate now.<br/><b>Consequence:</b> fast adaptation in exchange for disciplined boundaries, profiling, and explicit concurrency control."]:::why
+    WHY_TUI_TECH["<b>WHY TEXTUAL/RICH AS THE PRESENTATION STACK?</b><br/><b>Problem:</b> long agent runs need incremental components, keyboard control, live metrics, diffs, and confirmations without leaving the terminal.<br/><b>Chosen:</b> Textual supplies a stateful async widget/application model; Rich supplies mature terminal rendering primitives.<br/><b>Why not hand-written ANSI:</b> focus, resize, layout, and platform behavior become product code. Why not a browser frontend:</b> Node/server/IPC packaging exceeds the local workflow need.<br/><b>Consequence:</b> a real operational UI from Python; terminal capability variance and Textual-specific lifecycle complexity remain."]:::why
+    WHY_PACKAGE_TECH["<b>WHY JSON SETTINGS, UV ENVIRONMENTS, AND HATCHLING BUILDS?</b><br/><b>JSON:</b> strict ubiquitous interchange for CLI, schemas, automation, and model-readable configuration. <b>uv:</b> fast reproducible bootstrap/resolution without making its environment wrapper the product runtime. <b>Hatchling:</b> small standards-based wheel/sdist backend.<br/><b>Why not one all-owning packaging framework or custom config DSL:</b> environment management, build publication, and user configuration have different responsibilities.<br/><b>Consequence:</b> replaceable boring layers and fast onboarding; JSON sacrifices comments and uv remains an external developer tool."]:::why
+  end
