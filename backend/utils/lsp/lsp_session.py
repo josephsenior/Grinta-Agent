@@ -173,8 +173,16 @@ class LspSession:
         if proc is None or proc.stdout is None:
             return
         try:
+            # Popen creates a BufferedReader by default.  Keep a read() fallback
+            # for file-like test doubles and unusual Popen configurations.
+            read_available = getattr(proc.stdout, 'read1', proc.stdout.read)
             while proc.poll() is None:
-                chunk = proc.stdout.read(4096)
+                # BufferedReader.read(size) tries to fill the whole requested
+                # buffer.  Language servers are long-lived, so a response shorter
+                # than 4096 bytes neither fills the buffer nor reaches EOF and the
+                # reader can block forever with a complete JSON-RPC frame waiting
+                # in the pipe.  read1() returns after one underlying pipe read.
+                chunk = read_available(4096)
                 if not chunk:
                     break
                 with self._lock:
