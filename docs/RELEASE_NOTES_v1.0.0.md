@@ -1,8 +1,6 @@
 # Grinta 1.0 — First Stable Release
 
-> **Draft only. Do not publish until every GA gate and the required green window pass.**
-
-Grinta 1.0 is the first stable release of a local-first, provider-agnostic coding agent designed to complete long, failure-prone software tasks.
+Grinta 1.0 is the first stable release of the local-first coding agent that survives failures and finishes long tasks. Version 1.0.0 is published on PyPI and as a GitHub release.
 
 ## Highlights
 
@@ -28,4 +26,4 @@ Python 3.12 and 3.13 are supported. Consult the support matrix and security chec
 
 ## Release integrity
 
-The release must be built from the signed `v1.0.0` tag, smoke-tested as exact wheel and sdist artifacts on Linux and Windows, and published through PyPI Trusted Publishing. Checksums and attestations accompany the release artifacts.
+Install the published package from PyPI and verify that `grinta --version` reports `1.0.0`. Maintainers should use the current [release checklist](RELEASE_CHECKLIST.md) for later releases.

@@ -1,6 +1,5 @@
 # Python
-.venv/
-.venv-smoke/
+.venv*/
 __pycache__/
 *.pyc
 *.pyo
@@ -62,10 +61,10 @@ pylint_*.txt
 # Local pip download cache (must not be tracked)
 pip/cache/
 
-# Grinta runtime logs (always under install tree ``logs/``, not workspace cwd)
-logs/*
-!logs/README.md
-!logs/.gitkeep
+# Generated local runtime state and diagnostics
+/.grinta/
+/logs/
+/traces/
 
 # Debug/error logs
 *.out

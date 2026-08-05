@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -10,6 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from backend.core.logging.session_event_logger import (
+    SessionEventLogger,
     bind_session_event_logger,
     close_session_event_logger,
     emit_session_event,
@@ -57,6 +59,54 @@ def test_emit_writes_jsonl(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     assert record['payload']['text'] == 'hello'
     assert record['session_id'] == 'sess-1'
     assert record['workspace'] == 'ws-seg'
+
+
+def test_serialization_runs_on_background_writer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr('backend.core.logging.session_event_logger.LOG_TO_FILE', True)
+    thread_names: list[str] = []
+    original = SessionEventLogger._serialize_record
+
+    def track_thread(record: dict[str, object]) -> str:
+        thread_names.append(threading.current_thread().name)
+        return original(record)
+
+    monkeypatch.setattr(
+        SessionEventLogger, '_serialize_record', staticmethod(track_thread)
+    )
+    bind_session_event_logger('background', str(tmp_path))
+    emit_session_event('USER_TURN', {'text': 'hello'})
+    _read_session_lines(tmp_path)
+
+    assert thread_names
+    assert set(thread_names) == {'grinta-session-logger-writer'}
+
+
+def test_session_log_rotates_and_audit_loader_reads_oldest_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import backend.core.logging.session_event_logger as logger_module
+    from backend.core.logging.session_log_audit import load_session_events
+
+    monkeypatch.setattr(logger_module, 'LOG_TO_FILE', True)
+    monkeypatch.setattr(logger_module, 'GRINTA_SESSION_LOG_MAX_BYTES', 500)
+    monkeypatch.setattr(logger_module, 'GRINTA_SESSION_LOG_BACKUP_COUNT', 3)
+    bind_session_event_logger('rotating', str(tmp_path))
+    for index in range(12):
+        emit_session_event('RUNTIME', {'index': index, 'message': 'x' * 120})
+    close_session_event_logger()
+
+    log_path = tmp_path / 'session.jsonl'
+    assert (tmp_path / 'session.jsonl.1').is_file()
+    events = load_session_events(log_path)
+    indices = [
+        event['payload']['index']
+        for event in events
+        if 'index' in event.get('payload', {})
+    ]
+    assert indices == sorted(indices)
+    assert indices[-1] == 11
 
 
 def test_wire_events_respect_grinta_log_wire(

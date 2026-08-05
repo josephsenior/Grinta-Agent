@@ -13,8 +13,10 @@ Two runs became part of that answer. They should not be merged into one result.
 
 ## Run A: The Public 106-Minute Trace
 
-The first public artifact is under [`traces/ouroboros/`](../../traces/ouroboros/).
-It records a 1 hour 46 minute session against an intentionally oversized task:
+The first public artifact was stored under `traces/ouroboros/`. It was removed
+from the current tree during repository cleanup and remains recoverable from
+commit `4ad1b0d62`. It records a 1 hour 46 minute session against an
+intentionally oversized task:
 
 - a self-hosting functional compiler in Python
 - Hindley–Milner inference, linear types, and effects
@@ -23,8 +25,9 @@ It records a 1 hour 46 minute session against an intentionally oversized task:
 - Raft and distributed-GC components
 - a bootstrap equality requirement
 
-The run used a MiMo v2.5 variant with a 200,000-token context limit. The public
-folder contains a readable session, an audit summary, and a compressed raw log.
+The run used a MiMo v2.5 variant with a 200,000-token context limit. The
+historical public folder contained a readable session, an audit summary, and a
+compressed raw log.
 The files were added in commit `4ad1b0d62`.
 
 What this run demonstrates is sustained execution and an inspectable sequence of

@@ -14,7 +14,7 @@ uv run python -m backend.cli.entry          # setup wizard on first launch if un
 PYTHONPATH=. uv run pytest backend/tests/unit -q
 ```
 
-Current install path for end users: clone the repository, run `pipx install -e .`, then run `grinta`. See [QUICK_START.md](QUICK_START.md).
+End users should install the stable PyPI package with `pipx install grinta`, then run `grinta`. See [QUICK_START.md](QUICK_START.md).
 Contributors should use `uv run` from a source checkout so dependencies stay isolated.
 
 ## Where to start by task

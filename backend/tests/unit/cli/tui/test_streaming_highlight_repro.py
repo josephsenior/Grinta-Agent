@@ -75,7 +75,7 @@ async def test_streaming_preprocess_cache_key_matches_normalized_apply() -> None
         widget = renderer._live_response_widget
         assert isinstance(widget, LiveResponse)
         content = widget.query_one('#live-content', Static)
-        assert _has_syntax(content.renderable)
+        assert _has_syntax(content.content)
 
 
 @pytest.mark.asyncio
@@ -113,4 +113,4 @@ async def test_streaming_chunk_drain_path_highlights_open_fence() -> None:
         widget = renderer._live_response_widget
         assert isinstance(widget, LiveResponse)
         content = widget.query_one('#live-content', Static)
-        assert _has_syntax(content.renderable)
+        assert _has_syntax(content.content)

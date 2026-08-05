@@ -152,8 +152,9 @@ pass today.
 ## The Release Name Lagged Behind the Internal Plan
 
 Chapter 46 used “8.1 → 9.0” for an internal sequence of improvement phases. It
-was not the package version. As of 17 July 2026, `pyproject.toml` still reports
-`1.0.0rc1`, and the GA checklist remains the release boundary.
+was not the package version. On 17 July 2026, `pyproject.toml` still reported
+`1.0.0rc1`, and the GA checklist remained the release boundary. Stable
+`v1.0.0` was published later.
 
 This distinction matters because internal maturity language can accidentally
 read like public release history. Refactor phases describe how I organized the

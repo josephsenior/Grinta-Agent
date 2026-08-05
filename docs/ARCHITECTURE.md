@@ -5,7 +5,7 @@ For historical context and design rationale (not current spec), see `docs/journe
 
 ## High-Level Shape
 
-Grinta is a local-first terminal coding agent with four visible layers:
+Grinta is the local-first coding agent that survives failures and finishes long tasks. Its architecture has four visible layers:
 
 1. Interface: console-script launcher, Textual TUI for TTYs, non-interactive runner for piped input.
 2. Orchestration: session loop, safeguards, retries, finish validation.

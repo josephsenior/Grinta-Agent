@@ -4,7 +4,7 @@
   <img src="docs/assets/logo.svg" alt="Grinta logo" width="800">
 </p>
 
-### A local-first autonomous coding agent built to finish long, failure-prone software tasks.
+### The local-first coding agent that survives failures and finishes long tasks.
 
 [![Tests](https://github.com/josephsenior/Grinta-Coding-Agent/actions/workflows/py-tests.yml/badge.svg)](https://github.com/josephsenior/Grinta-Coding-Agent/actions/workflows/py-tests.yml)
 [![Lint](https://github.com/josephsenior/Grinta-Coding-Agent/actions/workflows/lint.yml/badge.svg)](https://github.com/josephsenior/Grinta-Coding-Agent/actions/workflows/lint.yml)
@@ -39,16 +39,7 @@ Grinta plans, edits, runs commands, debugs failures, validates the result, and c
 
 ## Install
 
-Install the stable version from PyPI or source:
-
-```bash
-git clone https://github.com/josephsenior/Grinta-Coding-Agent.git Grinta
-cd Grinta
-pipx install -e .
-grinta
-```
-
-Or install directly from PyPI:
+Install the stable version from PyPI:
 
 ```bash
 pipx install grinta
@@ -56,6 +47,8 @@ grinta
 ```
 
 Optional integrations are available as `grinta[rag]`, `grinta[browser]`, or `grinta[all]`. See the [Quick Start](docs/QUICK_START.md) for Windows, WSL2, Linux, macOS, and provider setup.
+
+Contributors developing Grinta itself should follow the source setup in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Showcase
 

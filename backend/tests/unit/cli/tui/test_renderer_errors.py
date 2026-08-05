@@ -564,7 +564,7 @@ async def test_tui_add_error_and_warning_omit_hardcoded_wrap(mock_config):
     def _widget_plain(item: object) -> str:
         if isinstance(item, (ErrorBlock, TranscriptNotice)):
             renderable = getattr(item, '_renderable', None) or getattr(
-                item, 'renderable', item
+                item, 'content', item
             )
             return str(getattr(renderable, 'plain', renderable))
         return str(getattr(item, 'plain', item))

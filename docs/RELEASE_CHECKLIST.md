@@ -84,7 +84,7 @@ CI’s `gates-on-linux-extended`, `gates-on-windows-extended`, and `gates-on-mac
 - [ ] **Reliability gate + integration/stress:** `make reliability-gate-integration` (adds integration and stress suites).
 - [ ] **Stress suite (spot-check):** `make test-stress` or `PYTHONPATH=. uv run pytest backend/tests/stress -m stress -q`.
 - [ ] **Integration suite (spot-check):** `make test-integration` or `PYTHONPATH=. uv run pytest backend/tests/integration -m integration -q`.
-- [ ] **Fresh-machine onboarding evidence:** keep reports in [onboarding_reports/](onboarding_reports/) current (3× pipx, 3× source). Track in [GA_GATE_STATUS.md](onboarding_reports/GA_GATE_STATUS.md). CI smoke does not cover interactive first run — **do not tag `v1.0.0` until GA gate is green.**
+- [ ] **Fresh-machine onboarding evidence:** keep reports in [onboarding_reports/](onboarding_reports/) current (3× pipx, 3× source). Track in [GA_GATE_STATUS.md](onboarding_reports/GA_GATE_STATUS.md). CI smoke does not cover interactive first run; require the evidence target for the release being prepared.
 - [ ] **WSL2 certification (when claiming WSL support):** clone on Linux home, `<project>` may be on `/mnt/c`, `scripts/smoke/smoke_wsl_layout.sh` + interactive report per [QUICK_START.md — WSL](QUICK_START.md#wsl-ubuntu).
 - [ ] **Evaluation (when behavior-sensitive):** run [run-eval workflow](../.github/workflows/run-eval.yml) manually if the release touches autonomy, prompts, safety, or orchestration.
 
@@ -140,9 +140,9 @@ gaps in release notes (see [Support Matrix](SUPPORT_MATRIX.md)).
 
 ---
 
-## GA promotion criteria (RC → 1.0.0)
+## Stable-release promotion criteria (RC → GA)
 
-Use this when deciding whether to move from a public RC to an official GA tag:
+Use this when deciding whether to move from a public release candidate to its official stable tag:
 
 - [ ] **Required CI stays green for a sustained window:** Linux, Windows, and macOS required jobs plus lint are green on `main` for at least 7 consecutive days.
 - [ ] **CLI onboarding confidence:** fresh-machine reports in [onboarding_reports/](onboarding_reports/); CI: [smoke-install workflow](../.github/workflows/smoke-install.yml).

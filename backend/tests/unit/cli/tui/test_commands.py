@@ -252,7 +252,7 @@ async def test_tui_sessions_preview_shows_extended_metadata(
         await pilot.pause()
 
         preview = dialog.query_one('#sessions-preview')
-        rendered = str(preview.renderable)
+        rendered = str(preview.content)
         assert 'Repository' in rendered
         assert 'Branch' in rendered
         assert 'Tokens' in rendered
@@ -273,7 +273,7 @@ async def test_tui_inline_command_hint_updates(mock_config):
         await pilot.pause()
 
         hint = s.query_one('#hud-line-1-help', Label)
-        assert 'Help' in str(hint.renderable)
+        assert 'Help' in str(hint.content)
 
 
 @pytest.mark.asyncio

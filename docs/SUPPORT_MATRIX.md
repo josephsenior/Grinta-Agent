@@ -57,10 +57,11 @@ active shell contract (`security.windows_shell` on Windows: `bash` vs `powershel
 
 | Method | Status | Notes |
 | --- | --- | --- |
-| Editable source install (`pipx install -e .`) | Supported | Current recommended installation path. |
-| Source (`uv run python -m backend.cli.entry`) | Supported | Recommended for contributors. |
+| PyPI (`pipx install grinta`) | Supported | Recommended installation path for users. |
+| Editable source install (`pipx install -e .`) | Supported | For contributors developing Grinta itself. |
+| Source (`uv run python -m backend.cli.entry`) | Supported | For contributors running directly from a checkout. |
 | Docker | Community / experimental | Container images may be available, but this repo does not provide an officially supported `docker compose` stack. |
-| PyPI / Homebrew / Scoop | Planned | Enable only after matching public release artifacts are published and validated. |
+| Homebrew / Scoop | Not currently documented | Use the published PyPI package unless a package-manager artifact has been independently validated. |
 
 ## Product Surface
 

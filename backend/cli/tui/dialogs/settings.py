@@ -26,6 +26,7 @@ class GrintaSettingsDialog(ModalDialog[dict[str, Any] | None]):
         padding: 1 2;
         height: auto;
         max-height: 92%;
+        overflow-y: auto;
     }
     GrintaSettingsDialog #dialog-title {
         margin-bottom: 0;

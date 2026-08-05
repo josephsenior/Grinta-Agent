@@ -172,9 +172,9 @@ async def test_tui_shell_command_reuses_single_card(mock_config):
         chrome = cards[0].query_one('.terminal-chrome')
         command_body = cards[0].query_one('.terminal-command')
         output_body = cards[0].query_one('.terminal-output')
-        assert '✓ SUCCESS · EXIT 0' in chrome._content.plain  # noqa: SLF001
-        assert '$ pytest -q' in command_body._content.plain  # noqa: SLF001
-        assert '2 passed' in output_body._content.plain  # noqa: SLF001
+        assert '✓ SUCCESS · EXIT 0' in chrome.content.plain
+        assert '$ pytest -q' in command_body.content.plain
+        assert '2 passed' in output_body.content.plain
 
 
 @pytest.mark.asyncio
@@ -298,8 +298,8 @@ async def test_tui_terminal_close_updates_existing_session_card(mock_config):
         assert 'Closed terminal session.' in cards[0].scrollback
         command_body = cards[0].query_one('.terminal-command')
         output_body = cards[0].query_one('.terminal-output')
-        assert '$ npm run dev' in command_body._content.plain  # noqa: SLF001
-        assert 'Closed terminal session.' in output_body._content.plain  # noqa: SLF001
+        assert '$ npm run dev' in command_body.content.plain
+        assert 'Closed terminal session.' in output_body.content.plain
 
 
 @pytest.mark.asyncio
@@ -374,7 +374,7 @@ async def test_tui_shell_command_reuses_card_with_multiline_command(mock_config)
         assert '\n' not in line
         assert 'import sys' not in line
         command_body = cards[0].query_one('.terminal-command')
-        assert 'import sys' in command_body._content.plain  # noqa: SLF001
+        assert 'import sys' in command_body.content.plain
 
 
 @pytest.mark.asyncio

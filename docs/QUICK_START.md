@@ -1,113 +1,83 @@
 # Quick Start
 
-Grinta is currently distributed from source. A public GitHub release and PyPI package have not been published yet.
+Grinta 1.0.0 is stable and published on PyPI. Grinta is the local-first coding agent that survives failures and finishes long tasks.
 
-The Grinta checkout and the project you want the agent to work on are different folders:
+## Install and launch
 
-- `Grinta` is this repository and contains the runtime and settings.
-- `<project>` is the repository or folder you want Grinta to modify.
+From the project you want Grinta to work on, run:
 
-Quote paths that contain spaces. Native Windows and WSL use separate installations and settings.
-
-## Fastest supported install
-
-### Windows PowerShell
-
-```powershell
-git clone https://github.com/josephsenior/Grinta-Coding-Agent.git Grinta
-cd Grinta
-.\START_HERE.ps1
-```
-
-The bootstrap installs the supported Python toolchain, synchronizes dependencies, runs the setup wizard and health checks, and installs the `grinta` command from the checkout.
-
-Then open the project you want Grinta to work on:
-
-```powershell
-cd "<project>"
+```bash
+pipx install grinta
 grinta
 ```
 
-### Linux, macOS, or WSL
+The first launch guides you through provider and model setup. To configure Grinta before launching the TUI, run `grinta init`.
+
+The Grinta package and your target project are separate: `pipx` installs the application in an isolated environment, while `grinta` operates on the directory where you launch it. Quote paths that contain spaces.
+
+To open a different target explicitly:
 
 ```bash
-git clone https://github.com/josephsenior/Grinta-Coding-Agent.git ~/Grinta
-cd ~/Grinta
-bash start_here.sh
-pipx install -e .
+grinta -p "<project>"
 ```
 
-Then:
+## Windows, Linux, and macOS
+
+Use the same two-command install in PowerShell or a POSIX shell:
 
 ```bash
-cd "<project>"
+pipx install grinta
 grinta
 ```
 
-If you prefer not to install a global command, run from any project with:
+If the `grinta` command is not found after installation, run `pipx ensurepath`, restart the terminal, and try again.
 
-```bash
-cd "<project>"
-uv run --directory ~/Grinta grinta -p "$(pwd)"
-```
+## WSL (Ubuntu)
 
-## WSL notes
+Install and run Grinta inside Ubuntu, not PowerShell. Native Windows and WSL use separate installations and settings.
 
-Install and run Grinta inside Ubuntu, not PowerShell. Keep the Grinta checkout on the Linux filesystem for best performance:
+Keep the target project on the Linux filesystem for best performance. A project may remain under `/mnt/c`, although filesystem operations will be slower. A Windows path such as `C:\foo\bar` becomes `/mnt/c/foo/bar` in WSL.
 
-```bash
-git clone https://github.com/josephsenior/Grinta-Coding-Agent.git ~/Grinta
-```
-
-Your target project may remain under `/mnt/c`, although filesystem operations will be slower. A Windows path such as `C:\foo\bar` becomes `/mnt/c/foo/bar` in WSL.
-
-If required, install the basic WSL prerequisites first:
+If required, install the WSL prerequisites first:
 
 ```bash
 sudo apt update
-sudo apt install -y git pipx tmux
+sudo apt install -y pipx
 pipx ensurepath
-```
-
-## Run directly from the checkout
-
-After bootstrap, you can avoid a global installation:
-
-```bash
-cd "<project>"
-uv run --directory /path/to/Grinta grinta -p "$(pwd)"
-```
-
-Or provide the target explicitly:
-
-```bash
-uv run --directory /path/to/Grinta grinta -p "<project>"
-```
-
-On Windows PowerShell:
-
-```powershell
-uv run --directory C:\path\to\Grinta grinta -p "C:\path\to\project"
+pipx install grinta
+grinta
 ```
 
 ## Optional features
 
-Install optional dependencies from the same checkout:
+Install an optional dependency set instead of the base package:
 
 ```bash
-pipx install -e ".[rag]"       # vector-memory support
-pipx install -e ".[browser]"   # browser tools
-pipx install -e ".[all]"       # all optional integrations
+pipx install "grinta[rag]"       # vector-memory support
+pipx install "grinta[browser]"   # browser tools
+pipx install "grinta[all]"       # all optional integrations
 ```
+
+## Develop from source
+
+Editable installs are for contributors working on Grinta itself:
+
+```bash
+git clone https://github.com/josephsenior/Grinta-Coding-Agent.git Grinta
+cd Grinta
+pipx install -e .
+```
+
+The full development environment and test workflow are documented in [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Useful commands
 
 | Command | Purpose |
-|---|---|
+| --- | --- |
 | `grinta init` | Create or update configuration |
 | `grinta doctor` | Check installation, settings, and WSL layout |
 | `grinta -p "<project>"` | Open a target without changing directory |
 | `grinta --help` | List CLI options |
-| `grinta --version` | Show the current source version |
+| `grinta --version` | Show the installed version |
 
 For installation or startup problems, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

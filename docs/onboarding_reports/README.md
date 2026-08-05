@@ -1,6 +1,6 @@
 # Onboarding reports (maintainers)
 
-GA needs **3× pipx** and **3× source** fresh-machine runs on real VMs. Status: [GA_GATE_STATUS.md](GA_GATE_STATUS.md).
+The published `v1.0.0` release supersedes the original GA gate. For future stable releases, collect **3× pipx** and **3× source** fresh-machine runs on real VMs. Status: [GA_GATE_STATUS.md](GA_GATE_STATUS.md).
 
 Template: [REPORT_TEMPLATE.md](REPORT_TEMPLATE.md). File as `YYYY-MM-DD_<path>_<os>_<n>.md`.
 
