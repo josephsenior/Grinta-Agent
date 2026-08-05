@@ -4,7 +4,7 @@ Apply these values in the GitHub repository settings when authenticated reposito
 
 ## Description
 
-> Local-first autonomous coding agent with provider-agnostic inference, LSP, debugging, durable sessions, and a terminal UI.
+> The local-first coding agent that survives failures and finishes long tasks.
 
 ## Topics
 

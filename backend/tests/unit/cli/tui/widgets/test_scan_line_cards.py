@@ -259,8 +259,8 @@ def test_edit_card_always_keeps_internal_header_without_diff() -> None:
 
     assert widgets
     assert 'file-chrome' in widgets[0].classes
-    assert 'backend/raft.py' in str(widgets[0].renderable)
-    assert 'SUCCESS' not in str(widgets[0].renderable)
+    assert 'backend/raft.py' in str(widgets[0].content)
+    assert 'SUCCESS' not in str(widgets[0].content)
 
 
 # ── ShellCard ──────────────────────────────────────────────────────────
@@ -334,7 +334,9 @@ def test_terminal_chrome_exposes_state_without_border(
 def test_terminal_chrome_keeps_state_visible_with_long_title() -> None:
     from backend.cli.tui.widgets.scan_line.cards import _terminal_chrome
 
-    chrome = _terminal_chrome('a-very-long-interactive-terminal-session', state='running')
+    chrome = _terminal_chrome(
+        'a-very-long-interactive-terminal-session', state='running'
+    )
 
     assert '…' in chrome.plain
     assert '● RUNNING' in chrome.plain

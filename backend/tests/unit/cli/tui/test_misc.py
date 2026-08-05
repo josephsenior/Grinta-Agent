@@ -44,15 +44,15 @@ async def test_tui_composer_placeholder_changes_by_mode(mock_config):
 
         s._apply_mode('chat')
         await pilot.pause()
-        assert 'Ask about the codebase or architecture...' in str(hint.renderable)
+        assert 'Ask about the codebase or architecture...' in str(hint.content)
 
         s._apply_mode('plan')
         await pilot.pause()
-        assert 'Describe what Grinta should inspect and plan...' in str(hint.renderable)
+        assert 'Describe what Grinta should inspect and plan...' in str(hint.content)
 
         s._apply_mode('agent')
         await pilot.pause()
-        assert 'Describe a task for Grinta to execute...' in str(hint.renderable)
+        assert 'Describe a task for Grinta to execute...' in str(hint.content)
 
 
 @pytest.mark.asyncio
@@ -198,7 +198,7 @@ async def test_tui_turn_duration_shown_in_hud_not_transcript(mock_config):
             type(item).__name__ == 'TurnCompletion' for item in renderer._history
         )
         s._render_hud_bar()
-        line1 = str(s.query_one('#hud-line-1', Label).renderable)
+        line1 = str(s.query_one('#hud-line-1', Label).content)
         assert s._last_turn_duration in line1
         assert 'Ready' in line1
 

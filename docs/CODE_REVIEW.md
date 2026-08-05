@@ -8,7 +8,8 @@ specification. For the current product surface and support stance, use
 
 ## Executive Summary
 
-**Grinta** is an impressive, production-grade autonomous coding agent. After a
+**Grinta** is the local-first coding agent that survives failures and finishes
+long tasks. After a
 large local analysis pass, here is the assessment captured in this snapshot:
 
 **Overall Rating: 8.5/10** - Excellent architecture, minor areas for improvement.

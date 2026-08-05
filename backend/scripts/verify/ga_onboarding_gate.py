@@ -119,26 +119,26 @@ def _format_status_table(
     ci_smoke: dict[tuple[str, str], int],
 ) -> str:
     lines = [
-        '# GA onboarding gate',
+        '# Onboarding evidence status',
         '',
     ]
     if _gate_ready(interactive):
-        lines.append('**Ready for GA onboarding sign-off review.**')
+        lines.append('**Interactive evidence target met.**')
     else:
-        lines.append('**Not ready for GA sign-off.**')
+        lines.append('**Interactive evidence target not met.**')
     lines.extend(
         [
             '',
             'Need **3× interactive pipx** + **3× interactive source** on fresh VMs '
             '(no prior `~/.grinta`). File reports here using '
-            '[REPORT_TEMPLATE.md](REPORT_TEMPLATE.md). CI smoke ≠ interactive GA.',
+            '[REPORT_TEMPLATE.md](REPORT_TEMPLATE.md). CI smoke is not interactive evidence.',
             '',
             '| Path | Interactive filed | CI smoke filed | Notes |',
             '| --- | --- | --- | --- |',
         ]
     )
     notes = {
-        ('pipx', 'linux'): 'CI wheel smoke only until interactive reports land',
+        ('pipx', 'linux'): 'CI wheel smoke does not replace interactive reports',
         (
             'pipx',
             'windows',
@@ -146,7 +146,7 @@ def _format_status_table(
         (
             'pipx',
             'wsl2',
-        ): 'Run `scripts/smoke/smoke_wsl_layout.sh` inside Ubuntu; manual GA',
+        ): 'Run `scripts/smoke/smoke_wsl_layout.sh` inside Ubuntu',
         ('source', 'linux'): 'CI only until interactive reports land',
         ('source', 'windows'): 'Contributor smoke + interactive reports',
         (
@@ -167,7 +167,7 @@ def _format_status_table(
             f'_Last updated by `ga_onboarding_gate.py` on '
             f'{datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")}._',
             '',
-            'See [RELEASE_CHECKLIST.md](../RELEASE_CHECKLIST.md) before `v1.0.0`.',
+            'See [RELEASE_CHECKLIST.md](../RELEASE_CHECKLIST.md) when preparing a future release.',
             '',
         ]
     )
@@ -178,7 +178,7 @@ def _print_summary(
     interactive: dict[tuple[str, str], int],
     ci_smoke: dict[tuple[str, str], int],
 ) -> None:
-    print('GA onboarding gate summary')
+    print('Onboarding evidence summary')
     print(f'Required interactive per path/platform: {_REQUIRED_INTERACTIVE}')
     for path, os_name in _PATH_OS_ROWS:
         i_count = interactive.get((path, os_name), 0)
@@ -187,7 +187,7 @@ def _print_summary(
         print(
             f'  {path:6} {os_name:7} interactive={i_count} ci-smoke={c_count} [{status}]'
         )
-    print('Gate ready:', 'yes' if _gate_ready(interactive) else 'no')
+    print('Evidence target met:', 'yes' if _gate_ready(interactive) else 'no')
 
 
 def main(argv: list[str] | None = None) -> int:

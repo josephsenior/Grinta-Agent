@@ -52,13 +52,13 @@ def test_format_status_table_gate_ready_and_not_ready() -> None:
         ('source', 'windows'): 3,
     }
     table_ready = _format_status_table(interactive_ready, {})
-    assert 'Ready for GA onboarding' in table_ready
+    assert 'Interactive evidence target met' in table_ready
 
     interactive_not_ready = {
         ('pipx', 'linux'): 1,
     }
     table_not_ready = _format_status_table(interactive_not_ready, {})
-    assert 'Not ready for GA sign-off' in table_not_ready
+    assert 'Interactive evidence target not met' in table_not_ready
 
 
 def test_print_summary(capsys) -> None:
@@ -66,7 +66,7 @@ def test_print_summary(capsys) -> None:
     ci_smoke = {('pipx', 'linux'): 1}
     _print_summary(interactive, ci_smoke)
     captured = capsys.readouterr().out
-    assert 'GA onboarding gate summary' in captured
+    assert 'Onboarding evidence summary' in captured
     assert 'pipx   linux' in captured
 
 

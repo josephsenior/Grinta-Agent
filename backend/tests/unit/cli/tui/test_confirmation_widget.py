@@ -94,7 +94,7 @@ async def test_tui_confirmation_widget_renders_visible_content(
         assert info.region.height > 0
         assert len(buttons) == 2
         assert all(button.region.height > 0 for button in buttons)
-        assert 'Agent wants to execute' in str(info.renderable)
+        assert 'Agent wants to execute' in str(info.content)
 
 
 @pytest.mark.asyncio
@@ -125,7 +125,7 @@ async def test_tui_confirmation_widget_escapes_markup_in_command(
         await pilot.pause()
 
         info = widget.query_one('#confirm-info', Static)
-        visible = Text.from_markup(str(info.renderable))
+        visible = Text.from_markup(str(info.content))
         assert '[bold]literal[/]' in visible.plain
 
 

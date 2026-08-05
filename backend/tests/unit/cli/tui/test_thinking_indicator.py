@@ -31,7 +31,7 @@ async def test_thinking_indicator_finalized_inline_code_uses_lightweight_highlig
         )
 
         content = widget.query_one('#thinking-content', Static)
-        renderable = content.renderable
+        renderable = content.content
         assert isinstance(renderable, Text)
         assert renderable.plain.startswith('Thinking: Inspect')
         assert 'backend/main.py' in renderable.plain
@@ -47,7 +47,7 @@ async def test_thinking_indicator_finalized_fenced_code_uses_syntax() -> None:
         widget.set_thoughts('Plan:\n```python\nprint("hi")\n```', streaming=False)
 
         content = widget.query_one('#thinking-content', Static)
-        renderable = content.renderable
+        renderable = content.content
         assert isinstance(renderable, Group)
         assert isinstance(renderable.renderables[0], Text)
         assert renderable.renderables[0].plain.startswith('Thinking: Plan:')
@@ -71,7 +71,7 @@ async def test_thinking_indicator_plain_prose_stays_flat() -> None:
 
         content = widget.query_one('#thinking-content', Static)
         assert content.styles.opacity == 0.68
-        renderable = content.renderable
+        renderable = content.content
         assert isinstance(renderable, Text)
         assert renderable.plain == 'Thinking: Plotting the next move.'
 
@@ -89,7 +89,7 @@ async def test_thinking_indicator_highlights_reasoning_structure_and_paths() -> 
         )
 
         content = widget.query_one('#thinking-content', Static)
-        renderable = content.renderable
+        renderable = content.content
         assert isinstance(renderable, Text)
         assert renderable.plain.startswith('Thinking: Plan: Inspect')
         assert '**' not in renderable.plain

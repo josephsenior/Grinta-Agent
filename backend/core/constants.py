@@ -472,6 +472,14 @@ OTEL_LOG_CORRELATION = _parse_bool_env(
     default=os.getenv('OTEL_ENABLED', 'false'),
 )
 LOG_TO_FILE = _parse_bool_env('LOG_TO_FILE', default='true')
+GRINTA_SESSION_LOG_MAX_BYTES = max(
+    1024 * 1024,
+    int(os.getenv('GRINTA_SESSION_LOG_MAX_BYTES', str(64 * 1024 * 1024))),
+)
+GRINTA_SESSION_LOG_BACKUP_COUNT = max(
+    1,
+    int(os.getenv('GRINTA_SESSION_LOG_BACKUP_COUNT', '4')),
+)
 LOG_ALL_EVENTS = _parse_bool_env('LOG_ALL_EVENTS')
 APP_DEBUG_REASONING_ASTEP = _parse_bool_env(
     'APP_DEBUG_REASONING_ASTEP', default='false'
@@ -667,6 +675,14 @@ ENV_VAR_REGISTRY: dict[str, tuple[str, str]] = {
     'LOG_TO_FILE': (
         'true',
         'Append structured logs under <grinta-repo>/logs/workspaces/…; set LOG_TO_FILE=false to disable — when off the CLI keeps the app logger at ERROR on the console',
+    ),
+    'GRINTA_SESSION_LOG_MAX_BYTES': (
+        str(64 * 1024 * 1024),
+        'Rotate session.jsonl after this many bytes (minimum 1 MiB)',
+    ),
+    'GRINTA_SESSION_LOG_BACKUP_COUNT': (
+        '4',
+        'Number of rotated session.jsonl files retained per session',
     ),
     'GRINTA_REPO_ROOT': (
         '',

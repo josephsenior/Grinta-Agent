@@ -395,6 +395,4 @@ async def test_tui_internal_thinking_payloads_render_as_activity_cards(mock_conf
         ]
         assert len(checkpoint_lines) == 1
         assert checkpoint_lines[0].model.icon == '├'
-        assert 'Saved' in str(
-            checkpoint_lines[0].query_one('#orient-content').renderable
-        )
+        assert 'Saved' in str(checkpoint_lines[0].query_one('#orient-content').content)

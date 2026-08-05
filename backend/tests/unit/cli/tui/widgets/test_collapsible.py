@@ -59,8 +59,8 @@ async def test_collapsible_manage_button_is_rendered(mock_config) -> None:
         skills_section = screen.query_one('#sidebar-skills', CollapsibleSection)
         mcp_manage = mcp_section.query_one('#action-btn', SidebarManageButton)
         skills_manage = skills_section.query_one('#action-btn', SidebarManageButton)
-        assert str(mcp_manage.renderable) == 'Edit'
-        assert str(skills_manage.renderable) == 'Edit'
+        assert str(mcp_manage.content) == 'Edit'
+        assert str(skills_manage.content) == 'Edit'
         assert '-mcp' in mcp_manage.classes
         assert '-skill' in skills_manage.classes
 

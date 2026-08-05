@@ -16,7 +16,6 @@ and “met the original specification” are treated as separate claims.
 
 | Claim | Evidence | Boundary |
 | --- | --- | --- |
-| A public autonomous run lasted about 106 minutes | [`traces/ouroboros/README.md`](../../traces/ouroboros/README.md), [`session.audit.txt`](../../traces/ouroboros/session.audit.txt); introduced in commit `4ad1b0d62` | The generated system contains deliberate simplifications. The raw archive is kept outside Git and should be attached to a release/evidence record before it is cited as a downloadable artifact. |
 | A separate July 9 run reached `FINISHED` after 273.5 minutes | [`docs/evidence/2026-07-09-autonomous-run-report.md`](../evidence/2026-07-09-autonomous-run-report.md) | This is a sanitized report. It records 16,393 events and 373 tool outcomes, but does not publish the complete raw trace. |
 | Durable task state became a subsystem rather than a compaction side effect | `backend/task_state/`, tests under `backend/tests/unit/task_state/`; commits `83a5ab697`, `b26bbddfc`, `9155ea9b9` | The implementation continued changing after the initial subsystem landed. |
 | Acceptance criteria became explicit data before task state was separated | `backend/execution/acceptance_criteria.py`; commits `03eff6eb2`, `61db0bd80`, `64f89d83e`, `aa521e25b` | This was an intermediate layer, not the final continuity model. |
@@ -26,7 +25,7 @@ and “met the original specification” are treated as separate claims.
 | PowerShell became the native-Windows onboarding default | `settings.template.json`, `backend/cli/onboarding/settings_defaults.py`; commit `1af161bb6` | Git Bash remains supported and WSL is a separate environment. |
 | First-run and cross-platform onboarding became a gated reliability concern | `backend/cli/onboarding/`, onboarding reports, and setup scripts; commits `566591f70`, `baaf5f1ea`, `1bb3adf4d`, `0d6149417` | Passing an onboarding gate does not certify every third-party shell or environment. |
 | `sandboxed_local` exists as process-scoped isolation | `backend/execution/sandboxing.py`, `backend/execution/sandbox_helpers/`, tests, and [SUPPORT_MATRIX.md](../SUPPORT_MATRIX.md) | Interactive PTY sessions are not covered; platform tools such as `bwrap` may be required. It is not VM isolation. |
-| The package remains a release candidate despite internal 8.1 → 9.0 phase labels | `pyproject.toml` (`1.0.0rc1`), [RELEASE_NOTES_v1.0.0-rc1.md](../RELEASE_NOTES_v1.0.0-rc1.md) | Internal refactor-plan numbers are not semantic versions. |
+| In July 2026, the package remained a release candidate despite internal 8.1 → 9.0 phase labels | Commit history (`pyproject.toml` at `1.0.0rc1`), [archived RC proposal](../RELEASE_NOTES_v1.0.0-rc1.md) | This is a historical claim; stable `v1.0.0` is now published. Internal refactor-plan numbers are not semantic versions. |
 | CI coverage and cross-platform gates expanded in July | workflow files, [CI.md](../CI.md), commits `60ee4bb36`, `35bcfdee2`, `58837abe3`, `785760631` | A threshold and a passing run are different facts. Consult the current CI run for live status. |
 
 ## Git Evidence and Archaeology
@@ -36,6 +35,10 @@ optimization experiments, and earlier UI layers were removed or substantially
 reshaped. Their chapters cite historical line counts as snapshots. Those counts
 should be backed by a tagged tree plus a repeatable counting command before they
 are reused in a resume, benchmark, or product comparison.
+
+The 106-minute Ouroboros trace was also removed from the current tree during
+repository cleanup. It is recoverable from commit `4ad1b0d62`, but it must not be
+cited as a current downloadable artifact unless it is published separately.
 
 Recommended receipt format:
 

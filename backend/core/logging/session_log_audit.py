@@ -360,19 +360,32 @@ def _write_metadata_breakdowns_to_lines(
 
 def load_session_events(log_path: Path) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
-    if not log_path.is_file():
+    rotated_paths = sorted(
+        (
+            path
+            for path in log_path.parent.glob(f'{log_path.name}.*')
+            if path.name.removeprefix(f'{log_path.name}.').isdigit()
+        ),
+        key=lambda path: int(path.name.rsplit('.', 1)[-1]),
+        reverse=True,
+    )
+    paths = [*rotated_paths, log_path]
+    if not any(path.is_file() for path in paths):
         return events
-    with log_path.open(encoding='utf-8', errors='replace') as handle:
-        for line in handle:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(obj, dict):
-                events.append(obj)
+    for path in paths:
+        if not path.is_file():
+            continue
+        with path.open(encoding='utf-8', errors='replace') as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(obj, dict):
+                    events.append(obj)
     return events
 
 

@@ -32,7 +32,7 @@ def mock_config():
 
 def _plain_text(widget: ThinkingIndicator) -> str:
     body = widget.query_one('#thinking-content', Static)
-    rendered = body.renderable
+    rendered = body.content
     if hasattr(rendered, 'plain'):
         return str(rendered.plain)
     console = RichConsole()

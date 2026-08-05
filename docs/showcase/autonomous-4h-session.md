@@ -21,4 +21,4 @@ The generated repository's implemented tests passed. This is not a claim of full
 
 ## Inspect
 
-[Sanitized execution report](../evidence/2026-07-09-autonomous-run-report.md) · [Committed audit summary](../../traces/ouroboros/session.audit.txt) · [Evidence policy](../journey/EVIDENCE.md)
+[Sanitized execution report](../evidence/2026-07-09-autonomous-run-report.md) · [Evidence policy](../journey/EVIDENCE.md)

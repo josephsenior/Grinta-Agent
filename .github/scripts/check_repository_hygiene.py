@@ -15,7 +15,15 @@ BANNED_EXACT = {
     'docs/assets/grinta-demo-preview.webp',
     'traces/ouroboros/session.zip',
 }
-BANNED_PREFIXES = ('backend/.grinta/',)
+BANNED_PREFIXES = (
+    '.grinta/',
+    '.venv',
+    'backend/.grinta/',
+    'logs/',
+    'node_modules/',
+    'pip/cache/',
+    'traces/',
+)
 
 
 def tracked_files() -> list[str]:

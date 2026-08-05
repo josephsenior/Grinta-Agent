@@ -12,7 +12,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TextIO
 
-from backend.core.constants import GRINTA_LOG_WIRE, LOG_LEVEL, LOG_TO_FILE
+from backend.core.constants import (
+    GRINTA_LOG_WIRE,
+    GRINTA_SESSION_LOG_BACKUP_COUNT,
+    GRINTA_SESSION_LOG_MAX_BYTES,
+    LOG_LEVEL,
+    LOG_TO_FILE,
+)
 from backend.core.logging.session_context import (
     capture_context_snapshot,
     clear_runtime_context,
@@ -77,6 +83,35 @@ class SessionEventLogger:
         self._queue: Any = None
         self._thread: threading.Thread | None = None
         self._sentinel = object()
+
+    @staticmethod
+    def _serialize_record(record: dict[str, Any]) -> str:
+        """Serialize on the writer thread, never on the caller/UI thread."""
+        return json.dumps(record, default=_json_default, ensure_ascii=False)
+
+    @staticmethod
+    def _rotated_path(path: str, index: int) -> str:
+        return f'{path}.{index}'
+
+    @classmethod
+    def _rotate_files(cls, path: str) -> None:
+        """Rotate a closed session log while retaining a bounded history."""
+        oldest = cls._rotated_path(path, GRINTA_SESSION_LOG_BACKUP_COUNT)
+        try:
+            os.remove(oldest)
+        except FileNotFoundError:
+            pass
+        for index in range(GRINTA_SESSION_LOG_BACKUP_COUNT - 1, 0, -1):
+            source = cls._rotated_path(path, index)
+            target = cls._rotated_path(path, index + 1)
+            try:
+                os.replace(source, target)
+            except FileNotFoundError:
+                pass
+        try:
+            os.replace(path, cls._rotated_path(path, 1))
+        except FileNotFoundError:
+            pass
 
     @property
     def is_bound(self) -> bool:
@@ -146,19 +181,33 @@ class SessionEventLogger:
                 _WORKSPACE_SEGMENT = None
 
     def flush(self) -> None:
-        pass
+        """Wait until all records queued before this call reach the filesystem."""
+        q = self._queue
+        thread = self._thread
+        if q is None or thread is None or not thread.is_alive():
+            return
+        flushed = threading.Event()
+        q.put(flushed)
+        flushed.wait(timeout=5.0)
 
     def _writer_loop(self, path: str, q: Any) -> None:
         import queue as q_mod
 
         try:
-            with open(path, 'a', encoding='utf-8') as f:
-                fd = f.fileno()
+            f = open(path, 'a', encoding='utf-8')
+            try:
+                current_bytes = os.path.getsize(path)
                 while True:
                     item = q.get()
                     if item is self._sentinel:
                         q.task_done()
                         break
+
+                    if isinstance(item, threading.Event):
+                        f.flush()
+                        item.set()
+                        q.task_done()
+                        continue
 
                     batch = [item]
                     q.task_done()
@@ -169,17 +218,35 @@ class SessionEventLogger:
                             if next_item is self._sentinel:
                                 q.put(next_item)
                                 break
+                            if isinstance(next_item, threading.Event):
+                                q.put(next_item)
+                                break
                             batch.append(next_item)
                             q.task_done()
                         except q_mod.Empty:
                             break
 
-                    f.write('\n'.join(batch) + '\n')
+                    for record in batch:
+                        line = self._serialize_record(record)
+                        encoded_bytes = len(line.encode('utf-8')) + 1
+                        if current_bytes and (
+                            current_bytes + encoded_bytes > GRINTA_SESSION_LOG_MAX_BYTES
+                        ):
+                            f.flush()
+                            f.close()
+                            self._rotate_files(path)
+                            f = open(path, 'a', encoding='utf-8')
+                            current_bytes = 0
+                        f.write(line + '\n')
+                        current_bytes += encoded_bytes
                     f.flush()
-                    try:
-                        os.fsync(fd)
-                    except Exception:
-                        pass
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except Exception:
+                    pass
+            finally:
+                f.close()
         except Exception:
             pass
 
@@ -229,10 +296,9 @@ class SessionEventLogger:
             'ctx': envelope_ctx,
             'payload': payload,
         }
-        line = json.dumps(record, default=_json_default, ensure_ascii=False)
         with _LOCK:
             if self._queue is not None:
-                self._queue.put(line)
+                self._queue.put(record)
 
         if event == 'SESSION_CONTEXT':
             return
@@ -271,10 +337,9 @@ class SessionEventLogger:
             'ctx': envelope_ctx,
             'payload': payload,
         }
-        line = json.dumps(record, default=_json_default, ensure_ascii=False)
         with _LOCK:
             if self._queue is not None:
-                self._queue.put(line)
+                self._queue.put(record)
 
 
 _SESSION_LOGGER = SessionEventLogger()
