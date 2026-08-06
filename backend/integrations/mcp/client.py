@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -14,6 +15,7 @@ from fastmcp.client.transports import (
     StreamableHttpTransport,
 )
 from mcp import McpError
+from mcp.types import Implementation
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from backend.core.config.mcp_config import MCPServerConfig
@@ -61,6 +63,15 @@ def _mcp_reconnect_session_timeout_sec() -> float:
         return v if v > 0 else 90.0
     except (TypeError, ValueError):
         return 90.0
+
+
+def _grinta_client_info() -> Implementation:
+    """Return Grinta's identity for the MCP initialization handshake."""
+    try:
+        release = version('grinta')
+    except PackageNotFoundError:
+        release = '1.0.0'
+    return Implementation(name='grinta', version=release)
 
 
 class MCPClient(BaseModel):
@@ -217,7 +228,11 @@ class MCPClient(BaseModel):
             keep_alive=False,
             log_file=log_file,
         )
-        self.client = Client(transport, timeout=_mcp_reconnect_session_timeout_sec())
+        self.client = Client(
+            transport,
+            timeout=_mcp_reconnect_session_timeout_sec(),
+            client_info=_grinta_client_info(),
+        )
 
     async def _resync_session_after_disconnect(self) -> None:
         """Re-enter session and refresh tool list (used after transport drop)."""
@@ -294,7 +309,11 @@ class MCPClient(BaseModel):
         try:
             headers = self._build_http_headers(server.api_key, conversation_id)
             transport = self._create_http_transport(server, server_url, headers)
-            self.client = Client(transport, timeout=connect_timeout)
+            self.client = Client(
+                transport,
+                timeout=connect_timeout,
+                client_info=_grinta_client_info(),
+            )
             self._server_config = server
             await self._open_session()
             await self._populate_tools()
@@ -381,7 +400,11 @@ class MCPClient(BaseModel):
                 keep_alive=False,
                 log_file=log_file,
             )
-            self.client = Client(transport, timeout=connect_timeout)
+            self.client = Client(
+                transport,
+                timeout=connect_timeout,
+                client_info=_grinta_client_info(),
+            )
             self._server_config = server
             await self._open_session()
             await self._populate_tools()
