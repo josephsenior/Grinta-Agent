@@ -3,50 +3,15 @@
 import os
 
 import pathspec
+from shadowgit import DEFAULT_IGNORE_PATTERNS, build_pathspec
 
 
 def get_ignore_spec(root: str) -> pathspec.PathSpec:
     """Build a pathspec from default ignores and project .gitignore."""
-    # Always block these highly disruptive or purely generated dirs
-    # just in case .gitignore is missing or broken.
-    lines = [
-        '.git/',
-        '.venv/',
-        'venv/',
-        'env/',
-        '.mypy_cache/',
-        '.pytest_cache/',
-        '.ruff_cache/',
-        '__pycache__/',
-        'node_modules/',
-        'logs/',
-        '.tmp_cli_manual/',
-        'build/',
-        'dist/',
-        '*.pyc',
-        '*.pyo',
-        '*.pyd',
-        '.DS_Store',
-    ]
-
-    gitignore_path = os.path.join(root, '.gitignore')
-    if os.path.exists(gitignore_path):
-        try:
-            with open(gitignore_path, 'r', encoding='utf-8', errors='ignore') as f:
-                lines.extend(f.readlines())
-        except OSError:
-            pass
-
-    # Also grab local git exclude
-    git_exclude = os.path.join(root, '.git', 'info', 'exclude')
-    if os.path.exists(git_exclude):
-        try:
-            with open(git_exclude, 'r', encoding='utf-8', errors='ignore') as f:
-                lines.extend(f.readlines())
-        except OSError:
-            pass
-
-    return pathspec.PathSpec.from_lines('gitwildmatch', lines)
+    return build_pathspec(
+        root,
+        default_patterns=(*DEFAULT_IGNORE_PATTERNS, '.tmp_cli_manual/'),
+    )
 
 
 def prune_ignored_dirs(

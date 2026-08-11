@@ -16,9 +16,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from shadowgit import ShadowRepo, build_ignore_matcher
+
 from backend.core.logging.logger import app_logger as logger
-from backend.core.workspace_resolution import workspace_agent_state_dir
-from backend.execution.rollback.shadow_repo import ShadowRepo
+from backend.core.workspace_resolution import (
+    workspace_agent_state_dir,
+    workspace_grinta_root,
+)
 
 
 @dataclass
@@ -131,7 +135,16 @@ class RollbackManager:
         # Initialise the shadow repo (pygit2, no subprocess).
         # pygit2 is a hard dependency -- if it is missing or the shadow repo
         # cannot be initialised the exception propagates to the caller.
-        self._shadow_repo = ShadowRepo(workspace_root=self.workspace_path)
+        grinta_ignore = build_ignore_matcher(self.workspace_path)
+
+        self._shadow_repo = ShadowRepo(
+            workspace_root=self.workspace_path,
+            shadow_dir=workspace_grinta_root(self.workspace_path)
+            / 'rollback'
+            / 'shadow_repo',
+            ignore=grinta_ignore,
+            reserved_roots={'.grinta'},
+        )
 
         # vcs_available kept for API compatibility with existing call-sites.
         self.vcs_available: bool = True
