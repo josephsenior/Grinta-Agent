@@ -39,7 +39,7 @@ classifiers = [
 ]
 dependencies = [
   "aiohttp>=3.14.3",
-  "anthropic>=0.120.2,<1",
+  "anthropic>=0.121.0,<1",
   "anyio>=4.14.2,<5",
   "bashlex>=0.18,<0.19",
   "binaryornot>=0.6.0,<0.7",
@@ -58,7 +58,7 @@ dependencies = [
   "psutil>=7.2.2,<8",
   "ptyprocess>=0.7,<1; sys_platform!='win32'",
   "pyfiglet>=1.0.4",
-  "pygit2>=1.19.3,<2",
+  "pygit2>=1.20.0,<2",
   # Use the standalone repository until ShadowGit is published on PyPI.
   "shadowgit @ git+https://github.com/josephsenior/ShadowGit.git@114704ea6a79a58862c1f90f51bee6d8f6305c3a",
   "pylatexenc>=2.11,<3",
