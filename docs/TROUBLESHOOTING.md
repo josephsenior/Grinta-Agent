@@ -6,7 +6,7 @@ Install paths: [QUICK_START.md](QUICK_START.md).
 
 | Problem | Fix |
 | --- | --- |
-| `grinta` not found | Run `pipx install grinta`, then `pipx ensurepath`; restart the terminal and see [QUICK_START.md](QUICK_START.md) |
+| `grinta` not found | Install from the GitHub VCS URL in [QUICK_START.md](QUICK_START.md), run `pipx ensurepath`, then restart the terminal |
 | `grinta` not found in WSL | Install inside Ubuntu, not Windows |
 | `uv` not found | `.\START_HERE.ps1` or `bash start_here.sh` |
 | Python 3.12+ | `uv python install 3.12` or re-run the start script |

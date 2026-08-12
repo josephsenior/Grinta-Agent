@@ -2,7 +2,11 @@
 
 This document describes what runs in GitHub Actions and how it relates to local `pytest` ([`pytest.ini`](../pytest.ini)).
 
-**Linux PR gates** shard the full **unit** corpus (`backend/tests/unit`) across six coverage jobs, enforce **75%** in `gates-on-linux-coverage-report`, then run integration, e2e, and stress in `gates-on-linux-extended`. **Windows** and **macOS** run the full unit corpus, then the same integration/e2e/stress extended tier after unit gates pass.
+**Linux PR gates** shard the full **unit** corpus (`backend/tests/unit`) across
+six jobs and run integration, e2e, and stress in
+`gates-on-linux-extended`. Their coverage artifacts are combined and enforce
+**74%** in `gates-on-linux-coverage-report`. **Windows** and **macOS** run the
+full unit corpus, then the same extended tier after unit gates pass.
 
 For release tagging and GA promotion, see [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 
@@ -10,14 +14,14 @@ For release tagging and GA promotion, see [RELEASE_CHECKLIST.md](RELEASE_CHECKLI
 
 | Workflow | Job | What runs |
 |----------|-----|-----------|
-| **Run Python Tests** | `gates-on-linux-coverage-{a,b,c,d,g,e}` + `report` | Full unit corpus on Linux with sharded coverage; combined report enforces **75%** (`--fail-under=75`). Execution shards (D/G) skip `compileall`; syntax is gated on other shards. |
-| **Run Python Tests** | `gates-on-linux-extended` | Integration, e2e, and stress suites on Linux (runs after the coverage report job passes). |
+| **Run Python Tests** | `gates-on-linux-coverage-{a,b,c,d,g,e}` + `report` | Full unit corpus on Linux with sharded coverage; the report also combines the extended-suite artifact and enforces **74%** (`--fail-under=74`). Execution shards (D/G) skip `compileall`; syntax is gated on other shards. |
+| **Run Python Tests** | `gates-on-linux-extended` | Integration, e2e, and stress suites on Linux; its coverage artifact is required by the final coverage-report job. |
 | **Run Python Tests** | `gates-on-windows` (3.12 + 3.13) | Full unit corpus cross-platform smoke. |
 | **Run Python Tests** | `gates-on-windows-extended` | Integration, e2e, and stress suites on Windows (runs after unit gates pass; Python 3.12). |
 | **Run Python Tests** | `gates-on-macos` | Full unit corpus on macOS. |
 | **Run Python Tests** | `gates-on-macos-extended` | Integration, e2e, and stress suites on macOS (runs after unit gate passes). |
 | **Run Python Tests** | `gates-on-linux-py313` | Full unit corpus on Python 3.13 (runs after Linux extended). |
-| **Lint** | pre-commit, mypy, version check | See [`.github/workflows/lint.yml`](../.github/workflows/lint.yml). |
+| **Lint** | `lint-python`, version/workflow consistency, mypy, repository hygiene | See [`.github/workflows/lint.yml`](../.github/workflows/lint.yml). |
 | **CodeQL** | `analyze` | Static security analysis for Python on PRs and main. |
 | **Security Scan (Bandit)** | Bandit | Python SAST; fails on medium/high findings. See [`.github/workflows/bandit.yml`](../.github/workflows/bandit.yml). |
 | **Dependency Review** | `dependency-review` | Blocks high-severity dependency risk on pull requests. |
@@ -33,9 +37,13 @@ For release tagging and GA promotion, see [RELEASE_CHECKLIST.md](RELEASE_CHECKLI
 
 ### Coverage
 
-The **75%** gate applies to the **unit** corpus only, measured across sharded Linux jobs and combined in `gates-on-linux-coverage-report`. Integration, e2e, and stress suites run in `gates-on-linux-extended`, `gates-on-windows-extended`, and `gates-on-macos-extended` but do **not** contribute to the coverage percentage.
+The **74%** gate combines the six Linux unit-shard artifacts with the Linux
+integration/e2e/stress artifact in `gates-on-linux-coverage-report`. Windows
+and macOS extended suites do not contribute to this percentage.
 
-Codecov upload runs from the coverage report job with `fail_ci_if_error: false` (upload failure does not block the merge). The enforced threshold is the local `coverage report --fail-under=75` step in CI, matching [`pyproject.toml`](../pyproject.toml).
+Codecov upload runs from the coverage report job with `fail_ci_if_error: false`
+(upload failure does not block the merge). The enforced threshold is
+`coverage report --fail-under=74`, matching [`pyproject.toml`](../pyproject.toml).
 
 ## Heavy / integration / benchmark tier
 
@@ -53,7 +61,7 @@ Markers are defined in `pytest.ini`. That job is marker-filtered over the full t
 
 | CI job | Local command |
 | --- | --- |
-| Linux unit + coverage | `PYTHONPATH=. uv run pytest --cov=backend --cov-fail-under=75 backend/tests/unit` |
+| Linux unit + coverage approximation | `PYTHONPATH=. uv run pytest --cov=backend --cov-fail-under=74 backend/tests/unit` |
 | Windows unit smoke | `PYTHONPATH=. uv run pytest backend/tests/unit` |
 | Integration / e2e / stress | `PYTHONPATH=. uv run pytest backend/tests/integration backend/tests/e2e backend/tests/stress` |
 | Lint | `pre-commit run --all-files` and `uv run mypy --config-file mypy.ini` |

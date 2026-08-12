@@ -1,7 +1,7 @@
 # Contributor Map
 
 Task-oriented entry points for navigating Grinta. Use this before diving into
-184K+ lines of production code. For lifecycle and package layout, see
+the production tree. For lifecycle and package layout, see
 [DEVELOPER.md](DEVELOPER.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Bootstrap (first 30 minutes)
@@ -14,8 +14,9 @@ uv run python -m backend.cli.entry          # setup wizard on first launch if un
 PYTHONPATH=. uv run pytest backend/tests/unit -q
 ```
 
-End users should install the stable PyPI package with `pipx install grinta`, then run `grinta`. See [QUICK_START.md](QUICK_START.md).
-Contributors should use `uv run` from a source checkout so dependencies stay isolated.
+End users can install the current GitHub source with `pipx`; see
+[QUICK_START.md](QUICK_START.md). Contributors should use `uv run` from a
+source checkout so dependencies stay isolated.
 
 ## Where to start by task
 
@@ -24,13 +25,13 @@ Contributors should use `uv run` from a source checkout so dependencies stay iso
 | CLI commands, startup, slash commands | `launch/entry.py` → `backend/cli/entry.py` → `backend/cli/main.py`; shared slash handlers under `backend/cli/repl/slash_command_*`, TUI in `backend/cli/tui/`, noninteractive runner in `backend/cli/repl/noninteractive.py`, settings under `backend/cli/settings/` | `backend/tests/unit/cli/` |
 | TUI screens and rendering | `backend/cli/tui/app.py`, mixins under `backend/cli/tui/` | `backend/tests/unit/cli/tui/` |
 | Agent step loop (core control plane) | `backend/orchestration/session_orchestrator.py` + mixins in `backend/orchestration/mixins/` | `backend/tests/unit/orchestration/services/` |
-| Middleware (safety, cost, rollback) | `backend/orchestration/session_orchestrator.py` (pipeline list), files under `backend/orchestration/middleware/` | `backend/tests/unit/orchestration/test_*middleware*` |
+| Middleware (safety, cost, rollback) | `backend/orchestration/mixins/lifecycle.py` (pipeline assembly), files under `backend/orchestration/middleware/` | `backend/tests/unit/orchestration/test_*middleware*` |
 | Tool execution (bash, edit, grep, browser) | `backend/execution/server/action_execution_server.py`, `backend/engine/tools/` | `backend/tests/unit/execution/`, `backend/tests/unit/engine/` |
 | LLM provider routing and API calls | `backend/inference/llm/`, `backend/inference/provider_resolver.py` | `backend/tests/unit/inference/` |
 | Model catalogs | `backend/inference/catalogs/*.json` | `backend/tests/unit/inference/test_catalog_integrity.py`, `backend/tests/integration/test_inference_model_listing_integration.py` |
-| Context window and compaction | `backend/context/context_pipeline.py`, `backend/context/prompt/prompt_window.py` | `backend/tests/unit/context/` |
-| Event stream and durability | `backend/ledger/stream/event_stream.py`, `backend/ledger/durable_writer.py` | `backend/tests/unit/ledger/` |
-| MCP external tools | `backend/integrations/mcp/`, bootstrap in `backend/execution/mcp/` | `backend/tests/unit/integrations/mcp/` |
+| Context window and compaction | `backend/context/context_pipeline/`, `backend/context/prompt/prompt_window.py` | `backend/tests/unit/context/` |
+| Event stream and durability | `backend/ledger/stream/event_stream.py`, `backend/ledger/stream/durable_writer.py` | `backend/tests/unit/ledger/` |
+| MCP external tools | `backend/integrations/mcp/`, configuration in `backend/execution/mcp/` | `backend/tests/unit/integrations/mcp/` |
 | User settings and config | `backend/core/config/`, `settings.template.json` | `backend/tests/unit/core/` |
 | Safety and command risk | `backend/security/command_analyzer.py`, `backend/orchestration/safety_validator.py` | `backend/tests/unit/security/` |
 
@@ -55,19 +56,10 @@ backend/cli/entry.py (startup)
 
 ## Large modules (read before you refactor)
 
-These files carry most of the complexity. Prefer extending existing services or
-mixins over growing them further. Split work belongs in focused follow-up PRs.
-
-| Module | ~LOC | Role |
-| --- | ---: | --- |
-| `backend/cli/tui/widgets/activity_card/card.py` | 990 | Activity card rendering |
-| `backend/cli/tui/renderer/mixins/display.py` | 880 | TUI history + card display |
-| `backend/cli/tui/screen/lifecycle.py` | 830 | TUI screen lifecycle |
-| `backend/engine/tools/_file_edits.py` | 1,560 | File edit tools |
-| `backend/context/context_pipeline.py` | 1,350 | Compaction orchestration |
-| `backend/inference/llm.py` | 1,220 | LLM call surface |
-| `backend/ledger/stream/event_stream.py` | Durable event stream |
-| `backend/context/prompt_window.py` | 1,130 | Prompt assembly / windowing |
+Use the generated [refactor baseline](REFACTOR_BASELINE.md) for current line
+counts. Prefer extending an existing service or mixin when that is the natural
+boundary; move public symbols only after checking
+`docs/internals/import-manifest.json`.
 
 Orchestration service tests live in `backend/tests/unit/orchestration/services/` (mirrors `backend/orchestration/services/`). The split `_app_renderer_event_processor.py` monolith now lives under `backend/cli/tui/renderer/handlers/`.
 

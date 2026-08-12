@@ -1,5 +1,11 @@
 # Documentation
 
+The pages below are the maintained source of truth for the current `main`
+branch. Dated evidence, release notes, showcase reports, onboarding reports,
+and `CODE_REVIEW.md` are point-in-time records and may describe an older tree.
+The Mermaid source (`grinta-deep-architecture.mmd`) is canonical for the deep
+architecture diagram; rendered SVG/PNG artifacts are refreshed separately.
+
 **Users:** [QUICK_START.md](QUICK_START.md) → [SETTINGS.md](SETTINGS.md) → [USER_GUIDE.md](USER_GUIDE.md)
 
 **Windows / WSL:** [QUICK_START.md](QUICK_START.md)

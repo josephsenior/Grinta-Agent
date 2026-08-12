@@ -1,27 +1,34 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-10T20:20:50.008173+00:00",
-  "repository_root": "C:/Users/GIGABYTE/Desktop/Grinta",
+  "generated_at": "2026-08-11T15:24:59.415350+00:00",
+  "repository_root": "C:/Users/ymejdi/Desktop/Grinta-Coding-Agent",
   "options": {
     "include_tests": false
   },
   "summary": {
-    "module_count": 1014,
-    "import_count": 8681,
-    "type_checking_only_import_count": 506,
+    "module_count": 1024,
+    "import_count": 8787,
+    "type_checking_only_import_count": 507,
     "parse_failure_count": 0,
     "import_classification": {
-      "stdlib": 3285,
-      "third_party": 550,
-      "internal": 4846
+      "stdlib": 3318,
+      "third_party": 571,
+      "internal": 4898
     }
   },
   "biggest_files": [
     {
+      "module_path": "backend.cli.tui.widgets.scan_line.cards",
+      "file_path": "backend/cli/tui/widgets/scan_line/cards.py",
+      "byte_size": 51426,
+      "loc": 1555,
+      "importer_count": 0
+    },
+    {
       "module_path": "backend.context.memory.conversation_memory",
       "file_path": "backend/context/memory/conversation_memory.py",
-      "byte_size": 48382,
-      "loc": 1239,
+      "byte_size": 49953,
+      "loc": 1270,
       "importer_count": 2
     },
     {
@@ -32,6 +39,13 @@
       "importer_count": 0
     },
     {
+      "module_path": "backend.context.prompt.prompt_window",
+      "file_path": "backend/context/prompt/prompt_window.py",
+      "byte_size": 45944,
+      "loc": 1393,
+      "importer_count": 3
+    },
+    {
       "module_path": "backend.execution.aes.helpers",
       "file_path": "backend/execution/aes/helpers.py",
       "byte_size": 44655,
@@ -39,24 +53,24 @@
       "importer_count": 49
     },
     {
-      "module_path": "backend.context.prompt.prompt_window",
-      "file_path": "backend/context/prompt/prompt_window.py",
-      "byte_size": 44133,
-      "loc": 1335,
-      "importer_count": 3
-    },
-    {
       "module_path": "backend.context.compactor.pre_condensation_snapshot",
       "file_path": "backend/context/compactor/pre_condensation_snapshot.py",
-      "byte_size": 42284,
-      "loc": 1219,
+      "byte_size": 43549,
+      "loc": 1250,
       "importer_count": 21
     },
     {
       "module_path": "backend.engine.planner",
       "file_path": "backend/engine/planner.py",
-      "byte_size": 41772,
-      "loc": 1059,
+      "byte_size": 43247,
+      "loc": 1097,
+      "importer_count": 0
+    },
+    {
+      "module_path": "backend.engine.executor_mixins._executor_streaming_mixin",
+      "file_path": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
+      "byte_size": 42624,
+      "loc": 1144,
       "importer_count": 0
     },
     {
@@ -65,6 +79,13 @@
       "byte_size": 41690,
       "loc": 1165,
       "importer_count": 0
+    },
+    {
+      "module_path": "backend.context.compactor.strategies.structured_summary_compactor",
+      "file_path": "backend/context/compactor/strategies/structured_summary_compactor.py",
+      "byte_size": 41125,
+      "loc": 887,
+      "importer_count": 1
     },
     {
       "module_path": "backend.execution.aes.file_operations",
@@ -76,36 +97,29 @@
     {
       "module_path": "backend.utils.lsp.lsp_client",
       "file_path": "backend/utils/lsp/lsp_client.py",
-      "byte_size": 40938,
-      "loc": 1171,
+      "byte_size": 40966,
+      "loc": 1173,
       "importer_count": 1
-    },
-    {
-      "module_path": "backend.engine.executor_mixins._executor_streaming_mixin",
-      "file_path": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-      "byte_size": 40582,
-      "loc": 1106,
-      "importer_count": 0
-    },
-    {
-      "module_path": "backend.inference.catalog.catalog_loader",
-      "file_path": "backend/inference/catalog/catalog_loader.py",
-      "byte_size": 40230,
-      "loc": 1176,
-      "importer_count": 17
     },
     {
       "module_path": "backend.execution.server.base",
       "file_path": "backend/execution/server/base.py",
-      "byte_size": 40002,
-      "loc": 1086,
+      "byte_size": 40680,
+      "loc": 1098,
       "importer_count": 3
+    },
+    {
+      "module_path": "backend.inference.catalog.catalog_loader",
+      "file_path": "backend/inference/catalog/catalog_loader.py",
+      "byte_size": 40262,
+      "loc": 1177,
+      "importer_count": 17
     },
     {
       "module_path": "backend.execution.io_mixins._aes_io_terminal_mixin",
       "file_path": "backend/execution/io_mixins/_aes_io_terminal_mixin.py",
-      "byte_size": 38902,
-      "loc": 1029,
+      "byte_size": 39065,
+      "loc": 1039,
       "importer_count": 1
     },
     {
@@ -123,25 +137,32 @@
       "importer_count": 1
     },
     {
+      "module_path": "backend.core.constants",
+      "file_path": "backend/core/constants.py",
+      "byte_size": 36252,
+      "loc": 746,
+      "importer_count": 74
+    },
+    {
       "module_path": "backend.utils.runtime_detect",
       "file_path": "backend/utils/runtime_detect.py",
-      "byte_size": 36753,
+      "byte_size": 35732,
       "loc": 1028,
       "importer_count": 0
     },
     {
-      "module_path": "backend.core.constants",
-      "file_path": "backend/core/constants.py",
-      "byte_size": 35739,
-      "loc": 730,
-      "importer_count": 74
-    },
-    {
       "module_path": "backend.context.vector_store._local_vector_store",
       "file_path": "backend/context/vector_store/_local_vector_store.py",
-      "byte_size": 34299,
+      "byte_size": 35270,
       "loc": 971,
       "importer_count": 0
+    },
+    {
+      "module_path": "backend.inference.clients.codex_app_server",
+      "file_path": "backend/inference/clients/codex_app_server.py",
+      "byte_size": 34993,
+      "loc": 906,
+      "importer_count": 1
     },
     {
       "module_path": "backend.orchestration.state.state",
@@ -151,13 +172,6 @@
       "importer_count": 7
     },
     {
-      "module_path": "backend.engine.prompts.prompt_builder",
-      "file_path": "backend/engine/prompts/prompt_builder.py",
-      "byte_size": 34138,
-      "loc": 923,
-      "importer_count": 5
-    },
-    {
       "module_path": "backend.orchestration.services.action_execution_service",
       "file_path": "backend/orchestration/services/action_execution_service.py",
       "byte_size": 34113,
@@ -165,32 +179,18 @@
       "importer_count": 0
     },
     {
-      "module_path": "backend.engine.tools.structure_editor",
-      "file_path": "backend/engine/tools/structure_editor.py",
-      "byte_size": 33753,
-      "loc": 986,
-      "importer_count": 1
-    },
-    {
-      "module_path": "backend.scripts.refactor.run_backend_organization",
-      "file_path": "backend/scripts/refactor/run_backend_organization.py",
-      "byte_size": 33356,
-      "loc": 903,
-      "importer_count": 0
+      "module_path": "backend.engine.prompts.prompt_builder",
+      "file_path": "backend/engine/prompts/prompt_builder.py",
+      "byte_size": 34111,
+      "loc": 923,
+      "importer_count": 5
     },
     {
       "module_path": "backend.engine.tools._tool_handlers",
       "file_path": "backend/engine/tools/_tool_handlers.py",
-      "byte_size": 32959,
-      "loc": 861,
+      "byte_size": 33862,
+      "loc": 880,
       "importer_count": 2
-    },
-    {
-      "module_path": "backend.cli.tui.renderer.mixins.display",
-      "file_path": "backend/cli/tui/renderer/mixins/display.py",
-      "byte_size": 32247,
-      "loc": 858,
-      "importer_count": 0
     }
   ],
   "most_imported": [
@@ -198,18 +198,18 @@
       "module_path": "backend.core.logging.logger",
       "file_path": "backend/core/logging/logger.py",
       "byte_size": 23842,
-      "importer_count": 183
+      "importer_count": 182
     },
     {
       "module_path": "backend.core.constants",
       "file_path": "backend/core/constants.py",
-      "byte_size": 35739,
+      "byte_size": 36252,
       "importer_count": 74
     },
     {
       "module_path": "backend.core.enums",
       "file_path": "backend/core/enums.py",
-      "byte_size": 8325,
+      "byte_size": 8411,
       "importer_count": 63
     },
     {
@@ -239,20 +239,26 @@
     {
       "module_path": "backend.core.workspace_resolution",
       "file_path": "backend/core/workspace_resolution.py",
-      "byte_size": 12029,
-      "importer_count": 29
+      "byte_size": 12058,
+      "importer_count": 30
     },
     {
       "module_path": "backend.core.tools.tool_names",
       "file_path": "backend/core/tools/tool_names.py",
-      "byte_size": 3242,
-      "importer_count": 26
+      "byte_size": 3306,
+      "importer_count": 27
     },
     {
       "module_path": "backend.cli.display.transcript",
       "file_path": "backend/cli/display/transcript.py",
       "byte_size": 14316,
       "importer_count": 25
+    },
+    {
+      "module_path": "backend.cli.tui.transcript_typography",
+      "file_path": "backend/cli/tui/transcript_typography.py",
+      "byte_size": 2281,
+      "importer_count": 21
     },
     {
       "module_path": "backend.cli.display.layout_tokens",
@@ -263,13 +269,13 @@
     {
       "module_path": "backend.core.interaction_modes",
       "file_path": "backend/core/interaction_modes.py",
-      "byte_size": 4545,
+      "byte_size": 4853,
       "importer_count": 21
     },
     {
       "module_path": "backend.context.compactor.pre_condensation_snapshot",
       "file_path": "backend/context/compactor/pre_condensation_snapshot.py",
-      "byte_size": 42284,
+      "byte_size": 43549,
       "importer_count": 21
     },
     {
@@ -281,37 +287,43 @@
     {
       "module_path": "backend.core.config.app_config",
       "file_path": "backend/core/config/app_config.py",
-      "byte_size": 13310,
+      "byte_size": 13374,
+      "importer_count": 17
+    },
+    {
+      "module_path": "backend.inference.clients.base",
+      "file_path": "backend/inference/clients/base.py",
+      "byte_size": 23802,
       "importer_count": 17
     },
     {
       "module_path": "backend.inference.catalog.catalog_loader",
       "file_path": "backend/inference/catalog/catalog_loader.py",
-      "byte_size": 40230,
+      "byte_size": 40262,
       "importer_count": 17
     },
     {
       "module_path": "backend.cli.tui.constants",
       "file_path": "backend/cli/tui/constants.py",
-      "byte_size": 3657,
-      "importer_count": 16
-    },
-    {
-      "module_path": "backend.inference.clients.base",
-      "file_path": "backend/inference/clients/base.py",
-      "byte_size": 23396,
+      "byte_size": 3656,
       "importer_count": 16
     },
     {
       "module_path": "backend.engine.contracts",
       "file_path": "backend/engine/contracts.py",
       "byte_size": 5569,
-      "importer_count": 14
+      "importer_count": 15
     },
     {
       "module_path": "backend.cli.tui.helpers",
       "file_path": "backend/cli/tui/helpers.py",
       "byte_size": 10531,
+      "importer_count": 14
+    },
+    {
+      "module_path": "backend.core.logging.session_event_logger",
+      "file_path": "backend/core/logging/session_event_logger.py",
+      "byte_size": 16233,
       "importer_count": 14
     },
     {
@@ -321,27 +333,15 @@
       "importer_count": 13
     },
     {
-      "module_path": "backend.core.logging.session_event_logger",
-      "file_path": "backend/core/logging/session_event_logger.py",
-      "byte_size": 13850,
-      "importer_count": 13
-    },
-    {
       "module_path": "backend.cli.repl.slash_command_actions",
       "file_path": "backend/cli/repl/slash_command_actions.py",
-      "byte_size": 14505,
+      "byte_size": 14704,
       "importer_count": 13
     },
     {
       "module_path": "backend.execution.browser._browser_interaction",
       "file_path": "backend/execution/browser/_browser_interaction.py",
       "byte_size": 17302,
-      "importer_count": 13
-    },
-    {
-      "module_path": "backend.context.compactor.compactor",
-      "file_path": "backend/context/compactor/compactor.py",
-      "byte_size": 25429,
       "importer_count": 13
     }
   ],
@@ -375,7 +375,7 @@
     "backend.__init__": {
       "module_path": "backend.__init__",
       "file_path": "backend/__init__.py",
-      "byte_size": 3204,
+      "byte_size": 3304,
       "loc": 103,
       "class_count": 0,
       "def_count": 3,
@@ -539,7 +539,7 @@
     "backend.app.main": {
       "module_path": "backend.app.main",
       "file_path": "backend/app/main.py",
-      "byte_size": 24308,
+      "byte_size": 24321,
       "loc": 707,
       "class_count": 2,
       "def_count": 24,
@@ -1042,8 +1042,8 @@
     "backend.cli.display.hud": {
       "module_path": "backend.cli.display.hud",
       "file_path": "backend/cli/display/hud.py",
-      "byte_size": 27145,
-      "loc": 680,
+      "byte_size": 27788,
+      "loc": 695,
       "class_count": 2,
       "def_count": 0,
       "importer_count": 11,
@@ -1268,7 +1268,7 @@
         },
         {
           "importer": "backend/cli/event_rendering/messages_mixin.py",
-          "lineno": 24,
+          "lineno": 25,
           "names": [
             "CALLOUT_PANEL_PADDING",
             "frame_live_body",
@@ -1460,8 +1460,8 @@
     "backend.cli.display.status_chrome": {
       "module_path": "backend.cli.display.status_chrome",
       "file_path": "backend/cli/display/status_chrome.py",
-      "byte_size": 21492,
-      "loc": 643,
+      "byte_size": 21659,
+      "loc": 646,
       "class_count": 1,
       "def_count": 27,
       "importer_count": 1,
@@ -1473,7 +1473,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/event_rendering/messages_mixin.py",
-          "lineno": 30,
+          "lineno": 31,
           "names": [
             "rich_fake_prompt_group",
             "status_fields_from_hud"
@@ -1582,7 +1582,7 @@
         },
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 428,
+          "lineno": 433,
           "names": [
             "redact_streamed_tool_call_markers"
           ],
@@ -1590,7 +1590,7 @@
         },
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 471,
+          "lineno": 490,
           "names": [
             "redact_streamed_tool_call_markers"
           ],
@@ -1598,7 +1598,7 @@
         },
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 499,
+          "lineno": 518,
           "names": [
             "redact_streamed_tool_call_markers"
           ],
@@ -1606,7 +1606,7 @@
         },
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 1102,
+          "lineno": 1140,
           "names": [
             "redact_streamed_tool_call_markers"
           ],
@@ -1614,7 +1614,7 @@
         },
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 766,
+          "lineno": 785,
           "names": [
             "extract_tool_calls_from_text_markers"
           ],
@@ -1887,11 +1887,11 @@
     "backend.cli.doctor.checks": {
       "module_path": "backend.cli.doctor.checks",
       "file_path": "backend/cli/doctor/checks.py",
-      "byte_size": 17376,
-      "loc": 558,
+      "byte_size": 19423,
+      "loc": 620,
       "class_count": 1,
-      "def_count": 22,
-      "importer_count": 8,
+      "def_count": 24,
+      "importer_count": 10,
       "intra_package_imports": [
         "backend.cli.theme",
         "backend.core.app_paths",
@@ -1927,7 +1927,7 @@
           "importer": "backend/cli/doctor/doctor_cli.py",
           "lineno": 21,
           "names": [
-            "check_llm_config"
+            "check_encoding"
           ],
           "is_type_checking": false
         },
@@ -1935,13 +1935,29 @@
           "importer": "backend/cli/doctor/doctor_cli.py",
           "lineno": 24,
           "names": [
+            "check_llm_config"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/doctor/doctor_cli.py",
+          "lineno": 27,
+          "names": [
+            "check_package_manager_path"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/doctor/doctor_cli.py",
+          "lineno": 30,
+          "names": [
             "check_settings_schema"
           ],
           "is_type_checking": false
         },
         {
           "importer": "backend/cli/onboarding/init_wizard.py",
-          "lineno": 541,
+          "lineno": 560,
           "names": [
             "check_binary"
           ],
@@ -1949,7 +1965,7 @@
         },
         {
           "importer": "backend/cli/onboarding/init_wizard.py",
-          "lineno": 626,
+          "lineno": 645,
           "names": [
             "print_wsl_layout_hints"
           ],
@@ -1966,7 +1982,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/lifecycle.py",
-          "lineno": 430,
+          "lineno": 438,
           "names": [
             "check_wsl_layout"
           ],
@@ -1977,8 +1993,8 @@
     "backend.cli.doctor.doctor_cli": {
       "module_path": "backend.cli.doctor.doctor_cli",
       "file_path": "backend/cli/doctor/doctor_cli.py",
-      "byte_size": 3502,
-      "loc": 129,
+      "byte_size": 3746,
+      "loc": 137,
       "class_count": 0,
       "def_count": 5,
       "importer_count": 0,
@@ -1991,8 +2007,8 @@
     "backend.cli.entry": {
       "module_path": "backend.cli.entry",
       "file_path": "backend/cli/entry.py",
-      "byte_size": 13677,
-      "loc": 417,
+      "byte_size": 13692,
+      "loc": 420,
       "class_count": 0,
       "def_count": 13,
       "importer_count": 1,
@@ -2063,7 +2079,7 @@
         },
         {
           "importer": "backend/cli/event_rendering/messages_mixin.py",
-          "lineno": 55,
+          "lineno": 56,
           "names": [
             "CLIEventRenderer"
           ],
@@ -2633,7 +2649,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/event_rendering/messages_mixin.py",
-          "lineno": 34,
+          "lineno": 35,
           "names": [
             "build_error_panel"
           ],
@@ -2641,7 +2657,7 @@
         },
         {
           "importer": "backend/cli/event_rendering/messages_mixin.py",
-          "lineno": 37,
+          "lineno": 38,
           "names": [
             "use_recoverable_notice_style"
           ],
@@ -2705,8 +2721,8 @@
     "backend.cli.event_rendering.messages_mixin": {
       "module_path": "backend.cli.event_rendering.messages_mixin",
       "file_path": "backend/cli/event_rendering/messages_mixin.py",
-      "byte_size": 10115,
-      "loc": 283,
+      "byte_size": 10213,
+      "loc": 288,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -3113,8 +3129,8 @@
     "backend.cli.event_rendering.streaming_mixin": {
       "module_path": "backend.cli.event_rendering.streaming_mixin",
       "file_path": "backend/cli/event_rendering/streaming_mixin.py",
-      "byte_size": 11322,
-      "loc": 290,
+      "byte_size": 11678,
+      "loc": 295,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -3211,7 +3227,7 @@
         },
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 396,
+          "lineno": 401,
           "names": [
             "sanitize_streaming_thinking_text"
           ],
@@ -3219,7 +3235,7 @@
         },
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 431,
+          "lineno": 436,
           "names": [
             "sanitize_streaming_thinking_text"
           ],
@@ -3227,7 +3243,7 @@
         },
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 474,
+          "lineno": 493,
           "names": [
             "sanitize_streaming_thinking_text"
           ],
@@ -3584,7 +3600,7 @@
     "backend.cli.onboarding.connection_check": {
       "module_path": "backend.cli.onboarding.connection_check",
       "file_path": "backend/cli/onboarding/connection_check.py",
-      "byte_size": 3987,
+      "byte_size": 3996,
       "loc": 125,
       "class_count": 0,
       "def_count": 3,
@@ -3616,8 +3632,8 @@
     "backend.cli.onboarding.flow": {
       "module_path": "backend.cli.onboarding.flow",
       "file_path": "backend/cli/onboarding/flow.py",
-      "byte_size": 10211,
-      "loc": 304,
+      "byte_size": 10440,
+      "loc": 309,
       "class_count": 0,
       "def_count": 12,
       "importer_count": 2,
@@ -3676,8 +3692,8 @@
     "backend.cli.onboarding.init_wizard": {
       "module_path": "backend.cli.onboarding.init_wizard",
       "file_path": "backend/cli/onboarding/init_wizard.py",
-      "byte_size": 20222,
-      "loc": 633,
+      "byte_size": 20951,
+      "loc": 652,
       "class_count": 0,
       "def_count": 33,
       "importer_count": 1,
@@ -3692,6 +3708,7 @@
         "backend.core.app_paths",
         "backend.core.config.dotenv_keys",
         "backend.inference.catalog.provider_catalog",
+        "backend.inference.clients.codex_app_server",
         "backend.inference.provider_resolver"
       ],
       "imported_by": [
@@ -3721,8 +3738,8 @@
     "backend.cli.onboarding.provider_presets": {
       "module_path": "backend.cli.onboarding.provider_presets",
       "file_path": "backend/cli/onboarding/provider_presets.py",
-      "byte_size": 2461,
-      "loc": 69,
+      "byte_size": 2692,
+      "loc": 75,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 0,
@@ -3784,8 +3801,8 @@
     "backend.cli.repl.noninteractive": {
       "module_path": "backend.cli.repl.noninteractive",
       "file_path": "backend/cli/repl/noninteractive.py",
-      "byte_size": 9282,
-      "loc": 296,
+      "byte_size": 9363,
+      "loc": 299,
       "class_count": 1,
       "def_count": 4,
       "importer_count": 0,
@@ -3834,8 +3851,8 @@
     "backend.cli.repl.slash_command_actions": {
       "module_path": "backend.cli.repl.slash_command_actions",
       "file_path": "backend/cli/repl/slash_command_actions.py",
-      "byte_size": 14505,
-      "loc": 450,
+      "byte_size": 14704,
+      "loc": 456,
       "class_count": 1,
       "def_count": 23,
       "importer_count": 13,
@@ -4098,7 +4115,7 @@
     "backend.cli.repl.slash_command_status": {
       "module_path": "backend.cli.repl.slash_command_status",
       "file_path": "backend/cli/repl/slash_command_status.py",
-      "byte_size": 15325,
+      "byte_size": 14878,
       "loc": 447,
       "class_count": 0,
       "def_count": 22,
@@ -4435,7 +4452,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/input.py",
-          "lineno": 686,
+          "lineno": 696,
           "names": [
             "resolve_session_id"
           ],
@@ -4503,7 +4520,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/screen/lifecycle.py",
-          "lineno": 365,
+          "lineno": 371,
           "names": [
             "sync_controller_persisted_settings"
           ],
@@ -4530,8 +4547,8 @@
     "backend.cli.settings.constants": {
       "module_path": "backend.cli.settings.constants",
       "file_path": "backend/cli/settings/constants.py",
-      "byte_size": 1778,
-      "loc": 52,
+      "byte_size": 1917,
+      "loc": 56,
       "class_count": 0,
       "def_count": 0,
       "importer_count": 1,
@@ -4565,7 +4582,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/screen/settings.py",
-          "lineno": 400,
+          "lineno": 441,
           "names": [
             "set_mcp_master_enabled"
           ],
@@ -4605,7 +4622,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/settings.py",
-          "lineno": 183,
+          "lineno": 224,
           "names": [
             "apply_interaction_mode_to_controller"
           ],
@@ -4613,7 +4630,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/settings.py",
-          "lineno": 190,
+          "lineno": 231,
           "names": [
             "sync_active_run_mode_extra_data"
           ],
@@ -4621,7 +4638,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/settings.py",
-          "lineno": 420,
+          "lineno": 461,
           "names": [
             "apply_agent_tool_flags_to_controller"
           ],
@@ -4629,7 +4646,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/settings.py",
-          "lineno": 458,
+          "lineno": 499,
           "names": [
             "apply_agent_tool_flags_to_controller"
           ],
@@ -4637,7 +4654,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/settings.py",
-          "lineno": 96,
+          "lineno": 137,
           "names": [
             "apply_autonomy_to_controller"
           ],
@@ -5625,7 +5642,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/card.py",
-          "lineno": 13,
+          "lineno": 14,
           "names": [
             "ascii_glyphs_enabled"
           ],
@@ -5652,8 +5669,8 @@
     "backend.cli.tui.app": {
       "module_path": "backend.cli.tui.app",
       "file_path": "backend/cli/tui/app.py",
-      "byte_size": 15469,
-      "loc": 421,
+      "byte_size": 15817,
+      "loc": 429,
       "class_count": 2,
       "def_count": 0,
       "importer_count": 5,
@@ -5705,7 +5722,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/actions.py",
-          "lineno": 109,
+          "lineno": 122,
           "names": [
             "GrintaScreen"
           ],
@@ -5713,7 +5730,7 @@
         },
         {
           "importer": "backend/cli/tui/screen/lifecycle_bootstrap.py",
-          "lineno": 226,
+          "lineno": 228,
           "names": [
             "TUIRenderer"
           ],
@@ -5732,7 +5749,7 @@
     "backend.cli.tui.constants": {
       "module_path": "backend.cli.tui.constants",
       "file_path": "backend/cli/tui/constants.py",
-      "byte_size": 3657,
+      "byte_size": 3656,
       "loc": 126,
       "class_count": 0,
       "def_count": 2,
@@ -5760,7 +5777,7 @@
         },
         {
           "importer": "backend/cli/tui/renderer/drain.py",
-          "lineno": 522,
+          "lineno": 614,
           "names": [
             "_TUI_RESUME_HYDRATE_EVENTS"
           ],
@@ -5795,7 +5812,7 @@
         },
         {
           "importer": "backend/cli/tui/renderer/mixins/live.py",
-          "lineno": 17,
+          "lineno": 16,
           "names": [
             "_TUI_SCROLL_PAINT_INTERVAL_SECONDS"
           ],
@@ -5880,8 +5897,8 @@
     "backend.cli.tui.dialogs.__init__": {
       "module_path": "backend.cli.tui.dialogs.__init__",
       "file_path": "backend/cli/tui/dialogs/__init__.py",
-      "byte_size": 970,
-      "loc": 27,
+      "byte_size": 1074,
+      "loc": 29,
       "class_count": 0,
       "def_count": 0,
       "importer_count": 0,
@@ -5890,6 +5907,7 @@
         "backend.cli.tui.dialogs.add_skill",
         "backend.cli.tui.dialogs.confirm",
         "backend.cli.tui.dialogs.help",
+        "backend.cli.tui.dialogs.hud_controls",
         "backend.cli.tui.dialogs.manage_mcp",
         "backend.cli.tui.dialogs.manage_skills",
         "backend.cli.tui.dialogs.sessions",
@@ -5944,8 +5962,8 @@
     "backend.cli.tui.dialogs.confirm": {
       "module_path": "backend.cli.tui.dialogs.confirm",
       "file_path": "backend/cli/tui/dialogs/confirm.py",
-      "byte_size": 7599,
-      "loc": 251,
+      "byte_size": 7696,
+      "loc": 253,
       "class_count": 2,
       "def_count": 0,
       "importer_count": 3,
@@ -5991,6 +6009,19 @@
         "backend.cli.theme",
         "backend.cli.tui.app",
         "backend.cli.tui.widgets.command_list",
+        "backend.cli.tui.widgets.dialogs"
+      ],
+      "imported_by": []
+    },
+    "backend.cli.tui.dialogs.hud_controls": {
+      "module_path": "backend.cli.tui.dialogs.hud_controls",
+      "file_path": "backend/cli/tui/dialogs/hud_controls.py",
+      "byte_size": 3139,
+      "loc": 90,
+      "class_count": 1,
+      "def_count": 0,
+      "importer_count": 0,
+      "intra_package_imports": [
         "backend.cli.tui.widgets.dialogs"
       ],
       "imported_by": []
@@ -6052,8 +6083,8 @@
     "backend.cli.tui.dialogs.settings": {
       "module_path": "backend.cli.tui.dialogs.settings",
       "file_path": "backend/cli/tui/dialogs/settings.py",
-      "byte_size": 20265,
-      "loc": 533,
+      "byte_size": 21471,
+      "loc": 563,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -6141,7 +6172,7 @@
         },
         {
           "importer": "backend/cli/tui/renderer/mixins/terminal.py",
-          "lineno": 78,
+          "lineno": 80,
           "names": [
             "_sanitize_terminal_display_text"
           ],
@@ -6231,7 +6262,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-          "lineno": 21,
+          "lineno": 20,
           "names": [
             "image_attachment_status_text"
           ],
@@ -6356,7 +6387,7 @@
         },
         {
           "importer": "backend/cli/tui/renderer/prep.py",
-          "lineno": 313,
+          "lineno": 394,
           "names": [
             "_try_git_diff_subprocess"
           ],
@@ -6367,10 +6398,10 @@
     "backend.cli.tui.renderer.drain": {
       "module_path": "backend.cli.tui.renderer.drain",
       "file_path": "backend/cli/tui/renderer/drain.py",
-      "byte_size": 23638,
-      "loc": 726,
+      "byte_size": 27796,
+      "loc": 821,
       "class_count": 0,
-      "def_count": 25,
+      "def_count": 29,
       "importer_count": 2,
       "intra_package_imports": [
         "backend.cli.theme",
@@ -6447,8 +6478,8 @@
     "backend.cli.tui.renderer.handlers.acceptance_criteria": {
       "module_path": "backend.cli.tui.renderer.handlers.acceptance_criteria",
       "file_path": "backend/cli/tui/renderer/handlers/acceptance_criteria.py",
-      "byte_size": 2880,
-      "loc": 80,
+      "byte_size": 3233,
+      "loc": 85,
       "class_count": 0,
       "def_count": 4,
       "importer_count": 1,
@@ -6473,8 +6504,8 @@
     "backend.cli.tui.renderer.handlers.browser": {
       "module_path": "backend.cli.tui.renderer.handlers.browser",
       "file_path": "backend/cli/tui/renderer/handlers/browser.py",
-      "byte_size": 1927,
-      "loc": 59,
+      "byte_size": 2344,
+      "loc": 70,
       "class_count": 0,
       "def_count": 3,
       "importer_count": 1,
@@ -6557,8 +6588,8 @@
     "backend.cli.tui.renderer.handlers.delegate": {
       "module_path": "backend.cli.tui.renderer.handlers.delegate",
       "file_path": "backend/cli/tui/renderer/handlers/delegate.py",
-      "byte_size": 3405,
-      "loc": 110,
+      "byte_size": 3794,
+      "loc": 122,
       "class_count": 0,
       "def_count": 5,
       "importer_count": 1,
@@ -6658,7 +6689,7 @@
     "backend.cli.tui.renderer.handlers.file": {
       "module_path": "backend.cli.tui.renderer.handlers.file",
       "file_path": "backend/cli/tui/renderer/handlers/file.py",
-      "byte_size": 12691,
+      "byte_size": 12697,
       "loc": 384,
       "class_count": 0,
       "def_count": 12,
@@ -6689,8 +6720,8 @@
     "backend.cli.tui.renderer.handlers.mcp": {
       "module_path": "backend.cli.tui.renderer.handlers.mcp",
       "file_path": "backend/cli/tui/renderer/handlers/mcp.py",
-      "byte_size": 2653,
-      "loc": 86,
+      "byte_size": 3007,
+      "loc": 92,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 1,
@@ -6760,8 +6791,8 @@
     "backend.cli.tui.renderer.handlers.shell": {
       "module_path": "backend.cli.tui.renderer.handlers.shell",
       "file_path": "backend/cli/tui/renderer/handlers/shell.py",
-      "byte_size": 1703,
-      "loc": 53,
+      "byte_size": 1792,
+      "loc": 55,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 1,
@@ -6785,8 +6816,8 @@
     "backend.cli.tui.renderer.handlers.status": {
       "module_path": "backend.cli.tui.renderer.handlers.status",
       "file_path": "backend/cli/tui/renderer/handlers/status.py",
-      "byte_size": 12225,
-      "loc": 373,
+      "byte_size": 12397,
+      "loc": 379,
       "class_count": 0,
       "def_count": 19,
       "importer_count": 2,
@@ -6824,6 +6855,31 @@
         }
       ]
     },
+    "backend.cli.tui.renderer.handlers.task_state": {
+      "module_path": "backend.cli.tui.renderer.handlers.task_state",
+      "file_path": "backend/cli/tui/renderer/handlers/task_state.py",
+      "byte_size": 1761,
+      "loc": 53,
+      "class_count": 0,
+      "def_count": 2,
+      "importer_count": 1,
+      "intra_package_imports": [
+        "backend.cli.tui.widgets.scan_line",
+        "backend.ledger.action",
+        "backend.ledger.observation"
+      ],
+      "imported_by": [
+        {
+          "importer": "backend/cli/tui/renderer/processor.py",
+          "lineno": 96,
+          "names": [
+            "_handle_task_state_action",
+            "_handle_task_state_observation"
+          ],
+          "is_type_checking": false
+        }
+      ]
+    },
     "backend.cli.tui.renderer.handlers.task_tracking": {
       "module_path": "backend.cli.tui.renderer.handlers.task_tracking",
       "file_path": "backend/cli/tui/renderer/handlers/task_tracking.py",
@@ -6839,7 +6895,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/renderer/processor.py",
-          "lineno": 96,
+          "lineno": 100,
           "names": [
             "_handle_task_tracking_action",
             "_handle_task_tracking_observation"
@@ -6851,8 +6907,8 @@
     "backend.cli.tui.renderer.handlers.terminal": {
       "module_path": "backend.cli.tui.renderer.handlers.terminal",
       "file_path": "backend/cli/tui/renderer/handlers/terminal.py",
-      "byte_size": 3430,
-      "loc": 112,
+      "byte_size": 4550,
+      "loc": 142,
       "class_count": 0,
       "def_count": 8,
       "importer_count": 1,
@@ -6865,7 +6921,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/renderer/processor.py",
-          "lineno": 100,
+          "lineno": 104,
           "names": [
             "_handle_terminal_close_action",
             "_handle_terminal_input_action",
@@ -6895,7 +6951,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/renderer/processor.py",
-          "lineno": 109,
+          "lineno": 113,
           "names": [
             "_handle_agent_think_action",
             "_handle_agent_think_observation",
@@ -7039,8 +7095,8 @@
     "backend.cli.tui.renderer.mixins.action_handlers": {
       "module_path": "backend.cli.tui.renderer.mixins.action_handlers",
       "file_path": "backend/cli/tui/renderer/mixins/action_handlers.py",
-      "byte_size": 16821,
-      "loc": 430,
+      "byte_size": 17128,
+      "loc": 435,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 1,
@@ -7080,8 +7136,8 @@
     "backend.cli.tui.renderer.mixins.display": {
       "module_path": "backend.cli.tui.renderer.mixins.display",
       "file_path": "backend/cli/tui/renderer/mixins/display.py",
-      "byte_size": 32247,
-      "loc": 858,
+      "byte_size": 32577,
+      "loc": 864,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -7119,7 +7175,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/renderer/processor.py",
-          "lineno": 193,
+          "lineno": 199,
           "names": [
             "RendererEventProcessorMixin"
           ],
@@ -7130,13 +7186,12 @@
     "backend.cli.tui.renderer.mixins.live": {
       "module_path": "backend.cli.tui.renderer.mixins.live",
       "file_path": "backend/cli/tui/renderer/mixins/live.py",
-      "byte_size": 11619,
-      "loc": 312,
+      "byte_size": 11686,
+      "loc": 316,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
       "intra_package_imports": [
-        "backend.cli.theme",
         "backend.cli.tui.constants",
         "backend.cli.tui.renderer.prep",
         "backend.cli.tui.transcript_typography",
@@ -7148,8 +7203,8 @@
     "backend.cli.tui.renderer.mixins.terminal": {
       "module_path": "backend.cli.tui.renderer.mixins.terminal",
       "file_path": "backend/cli/tui/renderer/mixins/terminal.py",
-      "byte_size": 9815,
-      "loc": 269,
+      "byte_size": 13861,
+      "loc": 362,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -7180,11 +7235,11 @@
     "backend.cli.tui.renderer.prep": {
       "module_path": "backend.cli.tui.renderer.prep",
       "file_path": "backend/cli/tui/renderer/prep.py",
-      "byte_size": 12815,
-      "loc": 396,
+      "byte_size": 16247,
+      "loc": 477,
       "class_count": 3,
-      "def_count": 23,
-      "importer_count": 8,
+      "def_count": 25,
+      "importer_count": 10,
       "intra_package_imports": [
         "backend.cli.theme",
         "backend.cli.theme.syntax_theme",
@@ -7218,7 +7273,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-          "lineno": 52,
+          "lineno": 51,
           "names": [
             "prep_markdown"
           ],
@@ -7226,23 +7281,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-          "lineno": 198,
-          "names": [
-            "prep_streaming_renderable"
-          ],
-          "is_type_checking": false
-        },
-        {
-          "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-          "lineno": 289,
-          "names": [
-            "prep_streaming_renderable"
-          ],
-          "is_type_checking": false
-        },
-        {
-          "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-          "lineno": 103,
+          "lineno": 137,
           "names": [
             "prep_markdown"
           ],
@@ -7250,7 +7289,39 @@
         },
         {
           "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-          "lineno": 113,
+          "lineno": 225,
+          "names": [
+            "prep_streaming_renderable"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
+          "lineno": 318,
+          "names": [
+            "prep_reasoning_renderable"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
+          "lineno": 102,
+          "names": [
+            "prep_markdown"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
+          "lineno": 112,
+          "names": [
+            "prep_markdown"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 193,
           "names": [
             "prep_markdown"
           ],
@@ -7261,8 +7332,8 @@
     "backend.cli.tui.renderer.processor": {
       "module_path": "backend.cli.tui.renderer.processor",
       "file_path": "backend/cli/tui/renderer/processor.py",
-      "byte_size": 16105,
-      "loc": 479,
+      "byte_size": 16927,
+      "loc": 497,
       "class_count": 0,
       "def_count": 10,
       "importer_count": 0,
@@ -7280,6 +7351,7 @@
         "backend.cli.tui.renderer.handlers.memory",
         "backend.cli.tui.renderer.handlers.shell",
         "backend.cli.tui.renderer.handlers.status",
+        "backend.cli.tui.renderer.handlers.task_state",
         "backend.cli.tui.renderer.handlers.task_tracking",
         "backend.cli.tui.renderer.handlers.terminal",
         "backend.cli.tui.renderer.handlers.thinking",
@@ -7325,8 +7397,8 @@
     "backend.cli.tui.screen.actions": {
       "module_path": "backend.cli.tui.screen.actions",
       "file_path": "backend/cli/tui/screen/actions.py",
-      "byte_size": 7646,
-      "loc": 216,
+      "byte_size": 8055,
+      "loc": 229,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -7335,7 +7407,6 @@
         "backend.cli.tui.dialogs",
         "backend.cli.tui.widgets.scan_line",
         "backend.cli.tui.widgets.scan_line.cards",
-        "backend.cli.tui.widgets.small",
         "backend.core.autonomy"
       ],
       "imported_by": []
@@ -7357,8 +7428,8 @@
     "backend.cli.tui.screen.input": {
       "module_path": "backend.cli.tui.screen.input",
       "file_path": "backend/cli/tui/screen/input.py",
-      "byte_size": 29499,
-      "loc": 770,
+      "byte_size": 30012,
+      "loc": 780,
       "class_count": 1,
       "def_count": 8,
       "importer_count": 0,
@@ -7386,8 +7457,8 @@
     "backend.cli.tui.screen.lifecycle": {
       "module_path": "backend.cli.tui.screen.lifecycle",
       "file_path": "backend/cli/tui/screen/lifecycle.py",
-      "byte_size": 17555,
-      "loc": 446,
+      "byte_size": 17836,
+      "loc": 454,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -7419,8 +7490,8 @@
     "backend.cli.tui.screen.lifecycle_bootstrap": {
       "module_path": "backend.cli.tui.screen.lifecycle_bootstrap",
       "file_path": "backend/cli/tui/screen/lifecycle_bootstrap.py",
-      "byte_size": 13043,
-      "loc": 358,
+      "byte_size": 13143,
+      "loc": 360,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -7442,7 +7513,7 @@
     "backend.cli.tui.screen.lifecycle_dispatch": {
       "module_path": "backend.cli.tui.screen.lifecycle_dispatch",
       "file_path": "backend/cli/tui/screen/lifecycle_dispatch.py",
-      "byte_size": 12903,
+      "byte_size": 12572,
       "loc": 331,
       "class_count": 1,
       "def_count": 0,
@@ -7460,8 +7531,8 @@
     "backend.cli.tui.screen.messages": {
       "module_path": "backend.cli.tui.screen.messages",
       "file_path": "backend/cli/tui/screen/messages.py",
-      "byte_size": 14880,
-      "loc": 411,
+      "byte_size": 16836,
+      "loc": 452,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -7487,8 +7558,8 @@
     "backend.cli.tui.screen.settings": {
       "module_path": "backend.cli.tui.screen.settings",
       "file_path": "backend/cli/tui/screen/settings.py",
-      "byte_size": 20850,
-      "loc": 544,
+      "byte_size": 22516,
+      "loc": 585,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -7604,7 +7675,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 932,
+          "lineno": 1541,
           "names": [
             "AcceptanceCriteriaDetailScreen"
           ],
@@ -7692,7 +7763,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/card.py",
-          "lineno": 17,
+          "lineno": 18,
           "names": [
             "DetailScreen"
           ],
@@ -7700,7 +7771,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 15,
+          "lineno": 17,
           "names": [
             "DetailScreen"
           ],
@@ -7754,8 +7825,8 @@
     "backend.cli.tui.screens.detail.helpers": {
       "module_path": "backend.cli.tui.screens.detail.helpers",
       "file_path": "backend/cli/tui/screens/detail/helpers.py",
-      "byte_size": 7466,
-      "loc": 246,
+      "byte_size": 7498,
+      "loc": 250,
       "class_count": 0,
       "def_count": 18,
       "importer_count": 4,
@@ -7836,7 +7907,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 641,
+          "lineno": 1058,
           "names": [
             "PayloadDetailScreen"
           ],
@@ -7844,7 +7915,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 726,
+          "lineno": 1167,
           "names": [
             "PayloadDetailScreen"
           ],
@@ -7852,7 +7923,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 769,
+          "lineno": 1218,
           "names": [
             "PayloadDetailScreen"
           ],
@@ -7860,7 +7931,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 846,
+          "lineno": 1310,
           "names": [
             "PayloadDetailScreen"
           ],
@@ -7952,7 +8023,7 @@
     "backend.cli.tui.transcript_tiers": {
       "module_path": "backend.cli.tui.transcript_tiers",
       "file_path": "backend/cli/tui/transcript_tiers.py",
-      "byte_size": 1816,
+      "byte_size": 1845,
       "loc": 57,
       "class_count": 0,
       "def_count": 0,
@@ -7967,12 +8038,12 @@
       "loc": 76,
       "class_count": 0,
       "def_count": 2,
-      "importer_count": 8,
+      "importer_count": 21,
       "intra_package_imports": [],
       "imported_by": [
         {
           "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-          "lineno": 22,
+          "lineno": 21,
           "names": [
             "THINKING_LABEL",
             "USER_PIPE",
@@ -7982,7 +8053,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-          "lineno": 57,
+          "lineno": 56,
           "names": [
             "TX_META"
           ],
@@ -8000,7 +8071,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/card.py",
-          "lineno": 164,
+          "lineno": 206,
           "names": [
             "TX_BODY"
           ],
@@ -8008,7 +8079,48 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 162,
+          "lineno": 91,
+          "names": [
+            "TX_META"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 99,
+          "names": [
+            "TX_MUTED"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 108,
+          "names": [
+            "TX_BODY",
+            "TX_KEY_HINT"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 125,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 150,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 305,
           "names": [
             "TX_BODY",
             "TX_LABEL"
@@ -8017,7 +8129,63 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 232,
+          "lineno": 663,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 792,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 1050,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 1145,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 1294,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 1423,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 1511,
+          "names": [
+            "TX_BODY_DIM"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 410,
           "names": [
             "EDIT_CARD_ACCENT"
           ],
@@ -8025,9 +8193,17 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 236,
+          "lineno": 414,
           "names": [
             "EDIT_CARD_ACCENT"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/cli/tui/widgets/scan_line/cards.py",
+          "lineno": 485,
+          "names": [
+            "TX_BODY_DIM"
           ],
           "is_type_checking": false
         },
@@ -8055,8 +8231,8 @@
     "backend.cli.tui.widgets.activity_card.__init__": {
       "module_path": "backend.cli.tui.widgets.activity_card.__init__",
       "file_path": "backend/cli/tui/widgets/activity_card/__init__.py",
-      "byte_size": 569,
-      "loc": 23,
+      "byte_size": 603,
+      "loc": 25,
       "class_count": 0,
       "def_count": 0,
       "importer_count": 0,
@@ -8069,9 +8245,9 @@
     "backend.cli.tui.widgets.activity_card.message_widgets": {
       "module_path": "backend.cli.tui.widgets.activity_card.message_widgets",
       "file_path": "backend/cli/tui/widgets/activity_card/message_widgets.py",
-      "byte_size": 9477,
-      "loc": 320,
-      "class_count": 4,
+      "byte_size": 10326,
+      "loc": 349,
+      "class_count": 5,
       "def_count": 0,
       "importer_count": 0,
       "intra_package_imports": [
@@ -8174,7 +8350,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/widgets/scan_line/card.py",
-          "lineno": 14,
+          "lineno": 15,
           "names": [
             "glyph"
           ],
@@ -8182,7 +8358,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 11,
+          "lineno": 13,
           "names": [
             "glyph"
           ],
@@ -8217,8 +8393,8 @@
     "backend.cli.tui.widgets.scan_line.__init__": {
       "module_path": "backend.cli.tui.widgets.scan_line.__init__",
       "file_path": "backend/cli/tui/widgets/scan_line/__init__.py",
-      "byte_size": 1173,
-      "loc": 50,
+      "byte_size": 1247,
+      "loc": 52,
       "class_count": 0,
       "def_count": 0,
       "importer_count": 0,
@@ -8231,8 +8407,8 @@
     "backend.cli.tui.widgets.scan_line.card": {
       "module_path": "backend.cli.tui.widgets.scan_line.card",
       "file_path": "backend/cli/tui/widgets/scan_line/card.py",
-      "byte_size": 8464,
-      "loc": 265,
+      "byte_size": 11323,
+      "loc": 350,
       "class_count": 1,
       "def_count": 2,
       "importer_count": 2,
@@ -8245,7 +8421,7 @@
       "imported_by": [
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 12,
+          "lineno": 14,
           "names": [
             "ScanLineCard"
           ],
@@ -8253,7 +8429,7 @@
         },
         {
           "importer": "backend/cli/tui/widgets/scan_line/cards.py",
-          "lineno": 239,
+          "lineno": 417,
           "names": [
             "SCAN_LINE_BORDER_COLORS"
           ],
@@ -8264,27 +8440,29 @@
     "backend.cli.tui.widgets.scan_line.cards": {
       "module_path": "backend.cli.tui.widgets.scan_line.cards",
       "file_path": "backend/cli/tui/widgets/scan_line/cards.py",
-      "byte_size": 31050,
-      "loc": 946,
-      "class_count": 11,
-      "def_count": 9,
+      "byte_size": 51426,
+      "loc": 1555,
+      "class_count": 12,
+      "def_count": 18,
       "importer_count": 0,
       "intra_package_imports": [
         "backend.cli.theme",
+        "backend.cli.tui.renderer.prep",
         "backend.cli.tui.screens.detail",
         "backend.cli.tui.screens.detail.acceptance_criteria",
         "backend.cli.tui.screens.detail.payload",
         "backend.cli.tui.transcript_typography",
         "backend.cli.tui.widgets.glyphs",
-        "backend.cli.tui.widgets.scan_line.card"
+        "backend.cli.tui.widgets.scan_line.card",
+        "backend.cli.tui.widgets.unified_diff_view"
       ],
       "imported_by": []
     },
     "backend.cli.tui.widgets.small": {
       "module_path": "backend.cli.tui.widgets.small",
       "file_path": "backend/cli/tui/widgets/small.py",
-      "byte_size": 25215,
-      "loc": 688,
+      "byte_size": 25972,
+      "loc": 710,
       "class_count": 9,
       "def_count": 0,
       "importer_count": 0,
@@ -8314,8 +8492,8 @@
     "backend.cli.tui.widgets.unified_diff_view": {
       "module_path": "backend.cli.tui.widgets.unified_diff_view",
       "file_path": "backend/cli/tui/widgets/unified_diff_view.py",
-      "byte_size": 20327,
-      "loc": 644,
+      "byte_size": 20434,
+      "loc": 647,
       "class_count": 3,
       "def_count": 12,
       "importer_count": 0,
@@ -8371,10 +8549,10 @@
     "backend.conftest": {
       "module_path": "backend.conftest",
       "file_path": "backend/conftest.py",
-      "byte_size": 5936,
-      "loc": 190,
+      "byte_size": 7160,
+      "loc": 227,
       "class_count": 1,
-      "def_count": 17,
+      "def_count": 19,
       "importer_count": 0,
       "intra_package_imports": [],
       "imported_by": []
@@ -8411,8 +8589,8 @@
     "backend.context.canonical_state.ops": {
       "module_path": "backend.context.canonical_state.ops",
       "file_path": "backend/context/canonical_state/ops.py",
-      "byte_size": 24568,
-      "loc": 652,
+      "byte_size": 24590,
+      "loc": 654,
       "class_count": 0,
       "def_count": 14,
       "importer_count": 2,
@@ -8441,7 +8619,7 @@
         },
         {
           "importer": "backend/context/context_pipeline/pipeline.py",
-          "lineno": 295,
+          "lineno": 313,
           "names": [
             "merge_compaction_summary_into_canonical"
           ],
@@ -8452,8 +8630,8 @@
     "backend.context.canonical_state.private": {
       "module_path": "backend.context.canonical_state.private",
       "file_path": "backend/context/canonical_state/private.py",
-      "byte_size": 23467,
-      "loc": 713,
+      "byte_size": 23489,
+      "loc": 715,
       "class_count": 0,
       "def_count": 37,
       "importer_count": 2,
@@ -8501,7 +8679,7 @@
       "loc": 224,
       "class_count": 0,
       "def_count": 10,
-      "importer_count": 2,
+      "importer_count": 1,
       "intra_package_imports": [
         "backend.context.context_explorer",
         "backend.core.workspace_resolution",
@@ -8509,16 +8687,8 @@
       ],
       "imported_by": [
         {
-          "importer": "backend/context/symbol_index/repo_map.py",
-          "lineno": 97,
-          "names": [
-            "_looks_like_coding_task"
-          ],
-          "is_type_checking": false
-        },
-        {
           "importer": "backend/engine/planner.py",
-          "lineno": 884,
+          "lineno": 922,
           "names": [
             "build_coding_preflight_block"
           ],
@@ -8814,8 +8984,8 @@
     "backend.context.compactor.pre_condensation_snapshot": {
       "module_path": "backend.context.compactor.pre_condensation_snapshot",
       "file_path": "backend/context/compactor/pre_condensation_snapshot.py",
-      "byte_size": 42284,
-      "loc": 1219,
+      "byte_size": 43549,
+      "loc": 1250,
       "class_count": 0,
       "def_count": 59,
       "importer_count": 21,
@@ -8981,7 +9151,7 @@
         },
         {
           "importer": "backend/context/render/execution_contract.py",
-          "lineno": 104,
+          "lineno": 201,
           "names": [
             "load_snapshot"
           ],
@@ -9168,8 +9338,8 @@
     "backend.context.compactor.strategies.structured_summary_compactor": {
       "module_path": "backend.context.compactor.strategies.structured_summary_compactor",
       "file_path": "backend/context/compactor/strategies/structured_summary_compactor.py",
-      "byte_size": 29145,
-      "loc": 653,
+      "byte_size": 41125,
+      "loc": 887,
       "class_count": 1,
       "def_count": 1,
       "importer_count": 1,
@@ -9177,18 +9347,20 @@
         "backend.context.canonical_state",
         "backend.context.compactor.compactor",
         "backend.context.context_pipeline.goal_context",
+        "backend.context.render.execution_contract",
         "backend.context.view",
         "backend.core.config.compactor_config",
         "backend.core.constants",
         "backend.core.logging.logger",
         "backend.core.message",
         "backend.ledger.event",
-        "backend.ledger.observation.agent"
+        "backend.ledger.observation.agent",
+        "backend.task_state"
       ],
       "imported_by": [
         {
           "importer": "backend/context/context_pipeline/pipeline.py",
-          "lineno": 584,
+          "lineno": 639,
           "names": [
             "StructuredSummaryCompactor"
           ],
@@ -9389,16 +9561,16 @@
     "backend.context.context_pipeline.helpers": {
       "module_path": "backend.context.context_pipeline.helpers",
       "file_path": "backend/context/context_pipeline/helpers.py",
-      "byte_size": 2673,
-      "loc": 73,
+      "byte_size": 2469,
+      "loc": 68,
       "class_count": 0,
       "def_count": 5,
       "importer_count": 2,
       "intra_package_imports": [
         "backend.context.context_pipeline.types",
-        "backend.context.prompt.context_packet",
         "backend.ledger.action.agent",
-        "backend.ledger.event"
+        "backend.ledger.event",
+        "backend.ledger.observation.agent"
       ],
       "imported_by": [
         {
@@ -9414,7 +9586,7 @@
         },
         {
           "importer": "backend/context/context_pipeline/pipeline.py",
-          "lineno": 406,
+          "lineno": 466,
           "names": [
             "clear_compact_guard_after_llm_step"
           ],
@@ -9425,8 +9597,8 @@
     "backend.context.context_pipeline.pipeline": {
       "module_path": "backend.context.context_pipeline.pipeline",
       "file_path": "backend/context/context_pipeline/pipeline.py",
-      "byte_size": 23801,
-      "loc": 613,
+      "byte_size": 25335,
+      "loc": 659,
       "class_count": 2,
       "def_count": 0,
       "importer_count": 0,
@@ -9450,7 +9622,6 @@
         "backend.context.prompt.context_packet",
         "backend.context.prompt.prompt_window",
         "backend.context.tool_result_storage",
-        "backend.core.config.compactor_config",
         "backend.core.config.llm_config",
         "backend.core.constants",
         "backend.core.logging.logger",
@@ -9572,8 +9743,8 @@
     "backend.context.memory.conversation_memory": {
       "module_path": "backend.context.memory.conversation_memory",
       "file_path": "backend/context/memory/conversation_memory.py",
-      "byte_size": 48382,
-      "loc": 1239,
+      "byte_size": 49953,
+      "loc": 1270,
       "class_count": 2,
       "def_count": 3,
       "importer_count": 2,
@@ -9629,8 +9800,8 @@
     "backend.context.memory.project_memory": {
       "module_path": "backend.context.memory.project_memory",
       "file_path": "backend/context/memory/project_memory.py",
-      "byte_size": 12882,
-      "loc": 342,
+      "byte_size": 13304,
+      "loc": 366,
       "class_count": 2,
       "def_count": 4,
       "importer_count": 2,
@@ -9641,7 +9812,7 @@
       "imported_by": [
         {
           "importer": "backend/engine/tools/session_lessons.py",
-          "lineno": 13,
+          "lineno": 8,
           "names": [
             "ProjectMemoryService"
           ],
@@ -9724,7 +9895,7 @@
         },
         {
           "importer": "backend/engine/memory_manager.py",
-          "lineno": 178,
+          "lineno": 206,
           "names": [
             "bind_session_context"
           ],
@@ -9833,8 +10004,8 @@
     "backend.context.processors.action_processors": {
       "module_path": "backend.context.processors.action_processors",
       "file_path": "backend/context/processors/action_processors.py",
-      "byte_size": 17359,
-      "loc": 498,
+      "byte_size": 17405,
+      "loc": 500,
       "class_count": 0,
       "def_count": 26,
       "importer_count": 0,
@@ -9855,8 +10026,8 @@
     "backend.context.processors.observation_processors": {
       "module_path": "backend.context.processors.observation_processors",
       "file_path": "backend/context/processors/observation_processors.py",
-      "byte_size": 26838,
-      "loc": 743,
+      "byte_size": 26989,
+      "loc": 744,
       "class_count": 0,
       "def_count": 37,
       "importer_count": 0,
@@ -9949,7 +10120,7 @@
     "backend.context.prompt.context_packet_cache": {
       "module_path": "backend.context.prompt.context_packet_cache",
       "file_path": "backend/context/prompt/context_packet_cache.py",
-      "byte_size": 6821,
+      "byte_size": 6843,
       "loc": 233,
       "class_count": 1,
       "def_count": 14,
@@ -9967,7 +10138,7 @@
       "imported_by": [
         {
           "importer": "backend/engine/memory_manager.py",
-          "lineno": 237,
+          "lineno": 265,
           "names": [
             "clear_context_packet_cache"
           ],
@@ -10011,10 +10182,10 @@
     "backend.context.prompt.prompt_window": {
       "module_path": "backend.context.prompt.prompt_window",
       "file_path": "backend/context/prompt/prompt_window.py",
-      "byte_size": 44133,
-      "loc": 1335,
+      "byte_size": 45944,
+      "loc": 1393,
       "class_count": 2,
-      "def_count": 86,
+      "def_count": 88,
       "importer_count": 3,
       "intra_package_imports": [
         "backend.context.memory.working_set",
@@ -10050,7 +10221,7 @@
         },
         {
           "importer": "backend/engine/memory_manager.py",
-          "lineno": 327,
+          "lineno": 347,
           "names": [
             "PromptWindowResult",
             "estimate_prompt_events_tokens"
@@ -10062,8 +10233,8 @@
     "backend.context.prompt.turn_context": {
       "module_path": "backend.context.prompt.turn_context",
       "file_path": "backend/context/prompt/turn_context.py",
-      "byte_size": 3716,
-      "loc": 106,
+      "byte_size": 3654,
+      "loc": 102,
       "class_count": 0,
       "def_count": 5,
       "importer_count": 3,
@@ -10071,7 +10242,7 @@
       "imported_by": [
         {
           "importer": "backend/engine/planner.py",
-          "lineno": 8,
+          "lineno": 9,
           "names": [
             "is_turn_context_text",
             "wrap_turn_context"
@@ -10138,10 +10309,10 @@
     "backend.context.render.execution_contract": {
       "module_path": "backend.context.render.execution_contract",
       "file_path": "backend/context/render/execution_contract.py",
-      "byte_size": 4241,
-      "loc": 137,
+      "byte_size": 7581,
+      "loc": 234,
       "class_count": 0,
-      "def_count": 6,
+      "def_count": 10,
       "importer_count": 0,
       "intra_package_imports": [
         "backend.context.canonical_state",
@@ -10150,7 +10321,8 @@
         "backend.core.constants",
         "backend.core.criteria",
         "backend.core.logging.logger",
-        "backend.core.task_tracker"
+        "backend.core.task_tracker",
+        "backend.task_state"
       ],
       "imported_by": []
     },
@@ -10158,7 +10330,7 @@
       "module_path": "backend.context.render.task_context",
       "file_path": "backend/context/render/task_context.py",
       "byte_size": 4749,
-      "loc": 150,
+      "loc": 144,
       "class_count": 0,
       "def_count": 6,
       "importer_count": 0,
@@ -10331,13 +10503,12 @@
     "backend.context.symbol_index.repo_map": {
       "module_path": "backend.context.symbol_index.repo_map",
       "file_path": "backend/context/symbol_index/repo_map.py",
-      "byte_size": 3448,
-      "loc": 126,
+      "byte_size": 3256,
+      "loc": 119,
       "class_count": 0,
       "def_count": 3,
       "importer_count": 1,
       "intra_package_imports": [
-        "backend.context.coding_preflight",
         "backend.context.symbol_index.rank",
         "backend.context.symbol_index.store",
         "backend.inference.llm.utils"
@@ -10345,7 +10516,7 @@
       "imported_by": [
         {
           "importer": "backend/engine/planner.py",
-          "lineno": 905,
+          "lineno": 943,
           "names": [
             "build_repo_map_block"
           ],
@@ -10434,7 +10605,7 @@
     "backend.context.vector_store.__init__": {
       "module_path": "backend.context.vector_store.__init__",
       "file_path": "backend/context/vector_store/__init__.py",
-      "byte_size": 1086,
+      "byte_size": 1121,
       "loc": 35,
       "class_count": 0,
       "def_count": 0,
@@ -10448,7 +10619,7 @@
     "backend.context.vector_store._local_vector_store": {
       "module_path": "backend.context.vector_store._local_vector_store",
       "file_path": "backend/context/vector_store/_local_vector_store.py",
-      "byte_size": 34299,
+      "byte_size": 35270,
       "loc": 971,
       "class_count": 3,
       "def_count": 1,
@@ -10461,7 +10632,7 @@
     "backend.context.vector_store._vector_store": {
       "module_path": "backend.context.vector_store._vector_store",
       "file_path": "backend/context/vector_store/_vector_store.py",
-      "byte_size": 28270,
+      "byte_size": 29083,
       "loc": 813,
       "class_count": 2,
       "def_count": 1,
@@ -10590,7 +10761,7 @@
       "imported_by": [
         {
           "importer": "backend/core/config/config_loader.py",
-          "lineno": 500,
+          "lineno": 503,
           "names": [
             "resolve_persisted_autonomy_level"
           ],
@@ -10606,7 +10777,7 @@
         },
         {
           "importer": "backend/engine/prompts/section_renderers/_security.py",
-          "lineno": 13,
+          "lineno": 16,
           "names": [
             "security_risk_required_for_autonomy"
           ],
@@ -10768,7 +10939,7 @@
     "backend.core.config.agent_config": {
       "module_path": "backend.core.config.agent_config",
       "file_path": "backend/core/config/agent_config.py",
-      "byte_size": 27372,
+      "byte_size": 27380,
       "loc": 693,
       "class_count": 1,
       "def_count": 0,
@@ -10801,7 +10972,7 @@
         },
         {
           "importer": "backend/core/config/config_loader.py",
-          "lineno": 449,
+          "lineno": 450,
           "names": [
             "AgentConfig"
           ],
@@ -10881,7 +11052,7 @@
       "imported_by": [
         {
           "importer": "backend/core/config/config_loader.py",
-          "lineno": 758,
+          "lineno": 772,
           "names": [
             "api_key_manager"
           ],
@@ -10913,7 +11084,7 @@
         },
         {
           "importer": "backend/inference/llm/core.py",
-          "lineno": 208,
+          "lineno": 223,
           "names": [
             "api_key_manager"
           ],
@@ -10924,8 +11095,8 @@
     "backend.core.config.app_config": {
       "module_path": "backend.core.config.app_config",
       "file_path": "backend/core/config/app_config.py",
-      "byte_size": 13310,
-      "loc": 341,
+      "byte_size": 13374,
+      "loc": 342,
       "class_count": 5,
       "def_count": 0,
       "importer_count": 17,
@@ -10984,7 +11155,7 @@
         },
         {
           "importer": "backend/execution/server/base.py",
-          "lineno": 444,
+          "lineno": 448,
           "names": [
             "AppConfig"
           ],
@@ -11092,7 +11263,7 @@
       "imported_by": [
         {
           "importer": "backend/core/config/config_loader.py",
-          "lineno": 726,
+          "lineno": 740,
           "names": [
             "get_headless_parser"
           ],
@@ -11143,7 +11314,7 @@
       "imported_by": [
         {
           "importer": "backend/core/config/config_loader.py",
-          "lineno": 635,
+          "lineno": 636,
           "names": [
             "ContextPipelineConfig"
           ],
@@ -11165,7 +11336,7 @@
         },
         {
           "importer": "backend/engine/memory_manager.py",
-          "lineno": 87,
+          "lineno": 88,
           "names": [
             "ContextPipelineConfig"
           ],
@@ -11176,8 +11347,8 @@
     "backend.core.config.config_loader": {
       "module_path": "backend.core.config.config_loader",
       "file_path": "backend/core/config/config_loader.py",
-      "byte_size": 27728,
-      "loc": 817,
+      "byte_size": 28277,
+      "loc": 831,
       "class_count": 2,
       "def_count": 36,
       "importer_count": 7,
@@ -11216,7 +11387,7 @@
         },
         {
           "importer": "backend/engine/tools/_tool_handlers.py",
-          "lineno": 443,
+          "lineno": 462,
           "names": [
             "_get_active_agent_config",
             "load_app_config"
@@ -11436,7 +11607,7 @@
         },
         {
           "importer": "backend/execution/server/base.py",
-          "lineno": 77,
+          "lineno": 80,
           "names": [
             "MCPConfig"
           ],
@@ -11460,7 +11631,7 @@
         },
         {
           "importer": "backend/integrations/mcp/client.py",
-          "lineno": 19,
+          "lineno": 21,
           "names": [
             "MCPServerConfig"
           ],
@@ -11618,8 +11789,8 @@
     "backend.core.config.tool_integration_defaults": {
       "module_path": "backend.core.config.tool_integration_defaults",
       "file_path": "backend/core/config/tool_integration_defaults.py",
-      "byte_size": 731,
-      "loc": 29,
+      "byte_size": 753,
+      "loc": 31,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 0,
@@ -11629,8 +11800,8 @@
     "backend.core.constants": {
       "module_path": "backend.core.constants",
       "file_path": "backend/core/constants.py",
-      "byte_size": 35739,
-      "loc": 730,
+      "byte_size": 36252,
+      "loc": 746,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 74,
@@ -11687,6 +11858,8 @@
           "lineno": 15,
           "names": [
             "GRINTA_LOG_WIRE",
+            "GRINTA_SESSION_LOG_BACKUP_COUNT",
+            "GRINTA_SESSION_LOG_MAX_BYTES",
             "LOG_LEVEL",
             "LOG_TO_FILE"
           ],
@@ -11784,7 +11957,7 @@
         },
         {
           "importer": "backend/engine/planner.py",
-          "lineno": 12,
+          "lineno": 13,
           "names": [
             "DEFAULT_AGENT_DEBUGGER_ENABLED",
             "DEFAULT_AGENT_LSP_QUERY_ENABLED"
@@ -11820,7 +11993,7 @@
         },
         {
           "importer": "backend/engine/tools/_tool_handlers.py",
-          "lineno": 451,
+          "lineno": 470,
           "names": [
             "DEFAULT_AGENT_ACCEPTANCE_CRITERIA_TOOL_ENABLED"
           ],
@@ -11964,7 +12137,7 @@
         },
         {
           "importer": "backend/execution/server/base.py",
-          "lineno": 445,
+          "lineno": 449,
           "names": [
             "DEFAULT_AGENT_DEBUGGER_ENABLED"
           ],
@@ -12006,7 +12179,7 @@
         },
         {
           "importer": "backend/inference/clients/base.py",
-          "lineno": 59,
+          "lineno": 70,
           "names": [
             "LLM_HTTP_CONNECT_TIMEOUT_SECONDS",
             "LLM_HTTP_POOL_TIMEOUT_SECONDS",
@@ -12018,7 +12191,7 @@
         },
         {
           "importer": "backend/inference/clients/base.py",
-          "lineno": 94,
+          "lineno": 105,
           "names": [
             "LLM_HTTP_CONNECT_TIMEOUT_SECONDS",
             "LLM_HTTP_POOL_TIMEOUT_SECONDS",
@@ -12189,7 +12362,7 @@
         },
         {
           "importer": "backend/orchestration/services/pending_action_service.py",
-          "lineno": 109,
+          "lineno": 114,
           "names": [
             "DELEGATE_WORKER_TIMEOUT_SECONDS"
           ],
@@ -12504,8 +12677,8 @@
     "backend.core.enums": {
       "module_path": "backend.core.enums",
       "file_path": "backend/core/enums.py",
-      "byte_size": 8325,
-      "loc": 283,
+      "byte_size": 8411,
+      "loc": 286,
       "class_count": 20,
       "def_count": 0,
       "importer_count": 63,
@@ -12966,7 +13139,7 @@
         },
         {
           "importer": "backend/orchestration/middleware/rollback_middleware.py",
-          "lineno": 155,
+          "lineno": 175,
           "names": [
             "ActionSecurityRisk"
           ],
@@ -13063,8 +13236,8 @@
     "backend.core.errors.structured_edit_errors": {
       "module_path": "backend.core.errors.structured_edit_errors",
       "file_path": "backend/core/errors/structured_edit_errors.py",
-      "byte_size": 14318,
-      "loc": 438,
+      "byte_size": 14721,
+      "loc": 450,
       "class_count": 0,
       "def_count": 19,
       "importer_count": 9,
@@ -13140,7 +13313,7 @@
         },
         {
           "importer": "backend/execution/server/base.py",
-          "lineno": 875,
+          "lineno": 887,
           "names": [
             "build_verification_failure_tool_result",
             "format_verification_failure_message"
@@ -13194,8 +13367,8 @@
     "backend.core.interaction_modes": {
       "module_path": "backend.core.interaction_modes",
       "file_path": "backend/core/interaction_modes.py",
-      "byte_size": 4545,
-      "loc": 145,
+      "byte_size": 4853,
+      "loc": 152,
       "class_count": 0,
       "def_count": 5,
       "importer_count": 21,
@@ -13258,7 +13431,7 @@
         },
         {
           "importer": "backend/engine/planner.py",
-          "lineno": 16,
+          "lineno": 17,
           "names": [
             "CHAT_MODE_ALLOWED_TOOLS",
             "PLAN_MODE",
@@ -13270,7 +13443,7 @@
         },
         {
           "importer": "backend/engine/prompts/prompt_builder.py",
-          "lineno": 252,
+          "lineno": 254,
           "names": [
             "normalize_interaction_mode"
           ],
@@ -13288,8 +13461,10 @@
         },
         {
           "importer": "backend/engine/prompts/section_renderers/_autonomy.py",
-          "lineno": 166,
+          "lineno": 105,
           "names": [
+            "is_chat_mode",
+            "is_plan_mode",
             "normalize_interaction_mode"
           ],
           "is_type_checking": false
@@ -13305,7 +13480,7 @@
         },
         {
           "importer": "backend/engine/prompts/section_renderers/_critical.py",
-          "lineno": 135,
+          "lineno": 151,
           "names": [
             "is_chat_mode",
             "is_plan_mode"
@@ -13314,7 +13489,7 @@
         },
         {
           "importer": "backend/engine/prompts/section_renderers/_interaction.py",
-          "lineno": 22,
+          "lineno": 23,
           "names": [
             "normalize_interaction_mode"
           ],
@@ -13579,7 +13754,7 @@
       "loc": 719,
       "class_count": 2,
       "def_count": 32,
-      "importer_count": 183,
+      "importer_count": 182,
       "intra_package_imports": [
         "backend.core.constants",
         "backend.core.logging.log_formatters",
@@ -13727,7 +13902,7 @@
         },
         {
           "importer": "backend/engine/planner.py",
-          "lineno": 23,
+          "lineno": 24,
           "names": [
             "app_logger"
           ],
@@ -13791,7 +13966,7 @@
         },
         {
           "importer": "backend/engine/tools/session_lessons.py",
-          "lineno": 11,
+          "lineno": 9,
           "names": [
             "app_logger"
           ],
@@ -13903,7 +14078,7 @@
         },
         {
           "importer": "backend/execution/io_mixins/_aes_io_run_mixin.py",
-          "lineno": 16,
+          "lineno": 15,
           "names": [
             "app_logger"
           ],
@@ -13935,15 +14110,7 @@
         },
         {
           "importer": "backend/execution/rollback/rollback_manager.py",
-          "lineno": 19,
-          "names": [
-            "app_logger"
-          ],
-          "is_type_checking": false
-        },
-        {
-          "importer": "backend/execution/rollback/shadow_repo.py",
-          "lineno": 35,
+          "lineno": 21,
           "names": [
             "app_logger"
           ],
@@ -14183,7 +14350,7 @@
         },
         {
           "importer": "backend/execution/utils/shell/simple_bash.py",
-          "lineno": 13,
+          "lineno": 14,
           "names": [
             "app_logger"
           ],
@@ -14247,7 +14414,7 @@
         },
         {
           "importer": "backend/inference/clients/base.py",
-          "lineno": 16,
+          "lineno": 18,
           "names": [
             "app_logger"
           ],
@@ -14375,7 +14542,7 @@
         },
         {
           "importer": "backend/integrations/mcp/client.py",
-          "lineno": 20,
+          "lineno": 22,
           "names": [
             "app_logger"
           ],
@@ -14383,7 +14550,7 @@
         },
         {
           "importer": "backend/integrations/mcp/client.py",
-          "lineno": 208,
+          "lineno": 219,
           "names": [
             "mcp_log_stream"
           ],
@@ -14391,7 +14558,7 @@
         },
         {
           "importer": "backend/integrations/mcp/client.py",
-          "lineno": 372,
+          "lineno": 391,
           "names": [
             "mcp_log_stream"
           ],
@@ -14591,7 +14758,7 @@
         },
         {
           "importer": "backend/orchestration/middleware/rollback_middleware.py",
-          "lineno": 17,
+          "lineno": 18,
           "names": [
             "app_logger"
           ],
@@ -14783,7 +14950,7 @@
         },
         {
           "importer": "backend/orchestration/services/state_transition_service.py",
-          "lineno": 5,
+          "lineno": 6,
           "names": [
             "app_logger"
           ],
@@ -14791,7 +14958,7 @@
         },
         {
           "importer": "backend/orchestration/services/state_transition_service.py",
-          "lineno": 185,
+          "lineno": 195,
           "names": [
             "finalize_session_logging_audit"
           ],
@@ -15071,7 +15238,7 @@
       "imported_by": [
         {
           "importer": "backend/core/logging/session_event_logger.py",
-          "lineno": 16,
+          "lineno": 22,
           "names": [
             "capture_context_snapshot",
             "clear_runtime_context",
@@ -15101,11 +15268,11 @@
     "backend.core.logging.session_event_logger": {
       "module_path": "backend.core.logging.session_event_logger",
       "file_path": "backend/core/logging/session_event_logger.py",
-      "byte_size": 13850,
-      "loc": 439,
+      "byte_size": 16233,
+      "loc": 504,
       "class_count": 2,
       "def_count": 11,
-      "importer_count": 13,
+      "importer_count": 14,
       "intra_package_imports": [
         "backend.core.constants",
         "backend.core.logging.session_context"
@@ -15131,7 +15298,7 @@
         },
         {
           "importer": "backend/core/tasks/task_tracker.py",
-          "lineno": 47,
+          "lineno": 48,
           "names": [
             "get_bound_session_id"
           ],
@@ -15139,7 +15306,7 @@
         },
         {
           "importer": "backend/engine/executor.py",
-          "lineno": 215,
+          "lineno": 210,
           "names": [
             "emit_session_event"
           ],
@@ -15171,7 +15338,7 @@
         },
         {
           "importer": "backend/inference/llm/core.py",
-          "lineno": 369,
+          "lineno": 404,
           "names": [
             "emit_session_event"
           ],
@@ -15203,7 +15370,7 @@
         },
         {
           "importer": "backend/orchestration/services/state_transition_service.py",
-          "lineno": 126,
+          "lineno": 136,
           "names": [
             "emit_session_event"
           ],
@@ -15216,14 +15383,22 @@
             "emit_session_context_if_changed"
           ],
           "is_type_checking": false
+        },
+        {
+          "importer": "backend/task_state/store.py",
+          "lineno": 15,
+          "names": [
+            "get_bound_session_id"
+          ],
+          "is_type_checking": false
         }
       ]
     },
     "backend.core.logging.session_log_audit": {
       "module_path": "backend.core.logging.session_log_audit",
       "file_path": "backend/core/logging/session_log_audit.py",
-      "byte_size": 14053,
-      "loc": 434,
+      "byte_size": 14516,
+      "loc": 447,
       "class_count": 2,
       "def_count": 13,
       "importer_count": 0,
@@ -15488,7 +15663,7 @@
         },
         {
           "importer": "backend/execution/utils/shell/simple_bash.py",
-          "lineno": 14,
+          "lineno": 15,
           "names": [
             "OS_CAPS"
           ],
@@ -15596,7 +15771,7 @@
       "imported_by": [
         {
           "importer": "backend/inference/llm/core.py",
-          "lineno": 473,
+          "lineno": 509,
           "names": [
             "get_plugin_registry"
           ],
@@ -15604,7 +15779,7 @@
         },
         {
           "importer": "backend/inference/llm/core.py",
-          "lineno": 507,
+          "lineno": 543,
           "names": [
             "get_plugin_registry"
           ],
@@ -15652,7 +15827,7 @@
       "imported_by": [
         {
           "importer": "backend/engine/executor.py",
-          "lineno": 216,
+          "lineno": 211,
           "names": [
             "current_astep_id"
           ],
@@ -15692,8 +15867,8 @@
     "backend.core.providers.configurations": {
       "module_path": "backend.core.providers.configurations",
       "file_path": "backend/core/providers/configurations.py",
-      "byte_size": 16584,
-      "loc": 565,
+      "byte_size": 17830,
+      "loc": 603,
       "class_count": 1,
       "def_count": 1,
       "importer_count": 2,
@@ -15704,7 +15879,7 @@
       "imported_by": [
         {
           "importer": "backend/inference/catalog/provider_catalog.py",
-          "lineno": 115,
+          "lineno": 119,
           "names": [
             "PROVIDER_CONFIGURATIONS"
           ],
@@ -15712,7 +15887,7 @@
         },
         {
           "importer": "backend/inference/catalog/provider_catalog.py",
-          "lineno": 155,
+          "lineno": 159,
           "names": [
             "PROVIDER_CONFIGURATIONS",
             "UNKNOWN_PROVIDER_CONFIG"
@@ -15790,7 +15965,7 @@
         },
         {
           "importer": "backend/execution/server/base.py",
-          "lineno": 78,
+          "lineno": 81,
           "names": [
             "ProviderToken",
             "ProviderTokenType",
@@ -16106,7 +16281,7 @@
       "imported_by": [
         {
           "importer": "backend/execution/task_tracking.py",
-          "lineno": 110,
+          "lineno": 112,
           "names": [
             "TaskTracker"
           ],
@@ -16114,7 +16289,7 @@
         },
         {
           "importer": "backend/execution/task_tracking.py",
-          "lineno": 204,
+          "lineno": 208,
           "names": [
             "TaskTracker"
           ],
@@ -16149,7 +16324,7 @@
       "imported_by": [
         {
           "importer": "backend/core/tasks/task_tracker.py",
-          "lineno": 81,
+          "lineno": 83,
           "names": [
             "normalize_plan_step_payload"
           ],
@@ -16157,7 +16332,7 @@
         },
         {
           "importer": "backend/core/tasks/task_tracker.py",
-          "lineno": 92,
+          "lineno": 94,
           "names": [
             "normalize_plan_step_payload"
           ],
@@ -16165,7 +16340,7 @@
         },
         {
           "importer": "backend/engine/tools/_tool_handlers.py",
-          "lineno": 404,
+          "lineno": 423,
           "names": [
             "normalize_plan_step_payload"
           ],
@@ -16255,7 +16430,7 @@
         },
         {
           "importer": "backend/orchestration/services/recovery_service.py",
-          "lineno": 637,
+          "lineno": 642,
           "names": [
             "TASK_STATUS_IN_PROGRESS"
           ],
@@ -16274,8 +16449,8 @@
     "backend.core.tasks.task_tracker": {
       "module_path": "backend.core.tasks.task_tracker",
       "file_path": "backend/core/tasks/task_tracker.py",
-      "byte_size": 6047,
-      "loc": 187,
+      "byte_size": 6049,
+      "loc": 189,
       "class_count": 1,
       "def_count": 3,
       "importer_count": 3,
@@ -16336,7 +16511,7 @@
       "imported_by": [
         {
           "importer": "backend/inference/clients/base.py",
-          "lineno": 100,
+          "lineno": 111,
           "names": [
             "llm_step_timeout_seconds_from_env"
           ],
@@ -16452,7 +16627,7 @@
       "imported_by": [
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 545,
+          "lineno": 564,
           "names": [
             "parse_tool_arguments_object"
           ],
@@ -16495,11 +16670,11 @@
     "backend.core.tools.tool_names": {
       "module_path": "backend.core.tools.tool_names",
       "file_path": "backend/core/tools/tool_names.py",
-      "byte_size": 3242,
-      "loc": 80,
+      "byte_size": 3306,
+      "loc": 82,
       "class_count": 0,
       "def_count": 0,
-      "importer_count": 26,
+      "importer_count": 27,
       "intra_package_imports": [],
       "imported_by": [
         {
@@ -16522,6 +16697,7 @@
             "MEMORY_TOOL_NAME",
             "SEARCH_HISTORY_TOOL_NAME",
             "SHARED_TASK_BOARD_TOOL_NAME",
+            "TASK_STATE_TOOL_NAME",
             "TASK_TRACKER_TOOL_NAME",
             "TERMINAL_TOOL_NAME",
             "UNDO_LAST_EDIT_TOOL_NAME",
@@ -16570,6 +16746,7 @@
           "lineno": 24,
           "names": [
             "ACCEPTANCE_CRITERIA_TOOL_NAME",
+            "TASK_STATE_TOOL_NAME",
             "TASK_TRACKER_TOOL_NAME",
             "TERMINAL_TOOL_NAME",
             "UNDO_LAST_EDIT_TOOL_NAME"
@@ -16712,6 +16889,14 @@
           "is_type_checking": false
         },
         {
+          "importer": "backend/engine/tools/task_state.py",
+          "lineno": 5,
+          "names": [
+            "TASK_STATE_TOOL_NAME"
+          ],
+          "is_type_checking": false
+        },
+        {
           "importer": "backend/engine/tools/task_tracker.py",
           "lineno": 13,
           "names": [
@@ -16766,7 +16951,7 @@
       "imported_by": [
         {
           "importer": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-          "lineno": 791,
+          "lineno": 810,
           "names": [
             "contains_tool_transport_markup"
           ],
@@ -17045,11 +17230,11 @@
     "backend.core.workspace_resolution": {
       "module_path": "backend.core.workspace_resolution",
       "file_path": "backend/core/workspace_resolution.py",
-      "byte_size": 12029,
+      "byte_size": 12058,
       "loc": 355,
       "class_count": 0,
       "def_count": 23,
-      "importer_count": 29,
+      "importer_count": 30,
       "intra_package_imports": [
         "backend.core.config.config_loader",
         "backend.core.os_capabilities",
@@ -17163,15 +17348,24 @@
         },
         {
           "importer": "backend/execution/rollback/rollback_manager.py",
-          "lineno": 20,
+          "lineno": 22,
           "names": [
-            "workspace_agent_state_dir"
+            "workspace_agent_state_dir",
+            "workspace_grinta_root"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/execution/rollback/shadow_repo.py",
+          "lineno": 11,
+          "names": [
+            "workspace_grinta_root"
           ],
           "is_type_checking": false
         },
         {
           "importer": "backend/execution/server/base.py",
-          "lineno": 700,
+          "lineno": 710,
           "names": [
             "WORKSPACE_NOT_OPEN_ERROR_ID",
             "is_workspace_not_open_error"
@@ -17180,7 +17374,7 @@
         },
         {
           "importer": "backend/integrations/mcp/client.py",
-          "lineno": 21,
+          "lineno": 23,
           "names": [
             "get_effective_workspace_root"
           ],
@@ -17275,17 +17469,16 @@
           "is_type_checking": false
         },
         {
-          "importer": "backend/utils/prompt.py",
-          "lineno": 338,
+          "importer": "backend/task_state/store.py",
+          "lineno": 24,
           "names": [
-            "get_effective_workspace_root",
             "workspace_agent_state_dir"
           ],
           "is_type_checking": false
         },
         {
           "importer": "backend/utils/prompt.py",
-          "lineno": 389,
+          "lineno": 345,
           "names": [
             "get_effective_workspace_root",
             "workspace_agent_state_dir"
@@ -17373,7 +17566,7 @@
       "loc": 175,
       "class_count": 8,
       "def_count": 0,
-      "importer_count": 14,
+      "importer_count": 15,
       "intra_package_imports": [],
       "imported_by": [
         {
@@ -17390,7 +17583,7 @@
         },
         {
           "importer": "backend/engine/planner.py",
-          "lineno": 37,
+          "lineno": 38,
           "names": [
             "NoopSafetyManager"
           ],
@@ -17477,6 +17670,14 @@
           "is_type_checking": false
         },
         {
+          "importer": "backend/engine/tools/task_state.py",
+          "lineno": 6,
+          "names": [
+            "ChatCompletionToolParam"
+          ],
+          "is_type_checking": false
+        },
+        {
           "importer": "backend/engine/tools/task_tracker.py",
           "lineno": 14,
           "names": [
@@ -17497,8 +17698,8 @@
     "backend.engine.executor": {
       "module_path": "backend.engine.executor",
       "file_path": "backend/engine/executor.py",
-      "byte_size": 13139,
-      "loc": 354,
+      "byte_size": 13062,
+      "loc": 352,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 2,
@@ -17552,8 +17753,8 @@
     "backend.engine.executor_mixins._executor_lifecycle_mixin": {
       "module_path": "backend.engine.executor_mixins._executor_lifecycle_mixin",
       "file_path": "backend/engine/executor_mixins/_executor_lifecycle_mixin.py",
-      "byte_size": 13922,
-      "loc": 378,
+      "byte_size": 15498,
+      "loc": 410,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -17562,6 +17763,7 @@
         "backend.core.logging.logger",
         "backend.engine.executor_mixins._executor_types",
         "backend.engine.streaming_checkpoint",
+        "backend.inference.capabilities.context_limits",
         "backend.inference.exceptions",
         "backend.inference.llm.utils",
         "backend.ledger.stream.persistence"
@@ -17589,8 +17791,8 @@
     "backend.engine.executor_mixins._executor_streaming_mixin": {
       "module_path": "backend.engine.executor_mixins._executor_streaming_mixin",
       "file_path": "backend/engine/executor_mixins/_executor_streaming_mixin.py",
-      "byte_size": 40582,
-      "loc": 1106,
+      "byte_size": 42624,
+      "loc": 1144,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -17618,8 +17820,8 @@
     "backend.engine.executor_mixins._executor_types": {
       "module_path": "backend.engine.executor_mixins._executor_types",
       "file_path": "backend/engine/executor_mixins/_executor_types.py",
-      "byte_size": 2734,
-      "loc": 90,
+      "byte_size": 2771,
+      "loc": 91,
       "class_count": 4,
       "def_count": 0,
       "importer_count": 1,
@@ -17700,8 +17902,8 @@
     "backend.engine.function_calling.dispatch": {
       "module_path": "backend.engine.function_calling.dispatch",
       "file_path": "backend/engine/function_calling/dispatch.py",
-      "byte_size": 12425,
-      "loc": 328,
+      "byte_size": 12535,
+      "loc": 331,
       "class_count": 0,
       "def_count": 7,
       "importer_count": 3,
@@ -17798,7 +18000,7 @@
         },
         {
           "importer": "backend/engine/tools/_tool_handlers.py",
-          "lineno": 30,
+          "lineno": 31,
           "names": [
             "parse_bool_argument",
             "require_tool_argument",
@@ -17826,8 +18028,8 @@
     "backend.engine.memory_manager": {
       "module_path": "backend.engine.memory_manager",
       "file_path": "backend/engine/memory_manager.py",
-      "byte_size": 17265,
-      "loc": 438,
+      "byte_size": 18745,
+      "loc": 482,
       "class_count": 2,
       "def_count": 0,
       "importer_count": 1,
@@ -17847,7 +18049,8 @@
         "backend.engine.memory_prompt_cache",
         "backend.ledger.action",
         "backend.ledger.action.message",
-        "backend.ledger.event"
+        "backend.ledger.event",
+        "backend.ledger.observation"
       ],
       "imported_by": [
         {
@@ -18014,8 +18217,8 @@
     "backend.engine.orchestrator_helpers.condensation": {
       "module_path": "backend.engine.orchestrator_helpers.condensation",
       "file_path": "backend/engine/orchestrator_helpers/condensation.py",
-      "byte_size": 3854,
-      "loc": 97,
+      "byte_size": 4175,
+      "loc": 102,
       "class_count": 0,
       "def_count": 5,
       "importer_count": 1,
@@ -18189,8 +18392,8 @@
     "backend.engine.planner": {
       "module_path": "backend.engine.planner",
       "file_path": "backend/engine/planner.py",
-      "byte_size": 41772,
-      "loc": 1059,
+      "byte_size": 43247,
+      "loc": 1097,
       "class_count": 1,
       "def_count": 6,
       "importer_count": 0,
@@ -18201,7 +18404,6 @@
         "backend.core.constants",
         "backend.core.interaction_modes",
         "backend.core.logging.logger",
-        "backend.engine.tools.acceptance_criteria",
         "backend.engine.tools.analyze_project_structure",
         "backend.engine.tools.browser_native",
         "backend.engine.tools.checkpoint",
@@ -18215,7 +18417,7 @@
         "backend.engine.tools.meta_cognition",
         "backend.engine.tools.native_file_tools",
         "backend.engine.tools.param_defs",
-        "backend.engine.tools.task_tracker",
+        "backend.engine.tools.task_state",
         "backend.engine.tools.terminal",
         "backend.engine.tools.web_tools",
         "backend.inference.capabilities.context_limits",
@@ -18230,7 +18432,7 @@
     "backend.engine.prompts.prompt_builder": {
       "module_path": "backend.engine.prompts.prompt_builder",
       "file_path": "backend/engine/prompts/prompt_builder.py",
-      "byte_size": 34138,
+      "byte_size": 34111,
       "loc": 923,
       "class_count": 1,
       "def_count": 27,
@@ -18276,7 +18478,7 @@
         },
         {
           "importer": "backend/utils/prompt.py",
-          "lineno": 313,
+          "lineno": 320,
           "names": [
             "build_mcp_user_addendum"
           ],
@@ -18287,8 +18489,8 @@
     "backend.engine.prompts.section_renderers.__init__": {
       "module_path": "backend.engine.prompts.section_renderers.__init__",
       "file_path": "backend/engine/prompts/section_renderers/__init__.py",
-      "byte_size": 3673,
-      "loc": 101,
+      "byte_size": 3607,
+      "loc": 99,
       "class_count": 0,
       "def_count": 0,
       "importer_count": 0,
@@ -18311,10 +18513,10 @@
     "backend.engine.prompts.section_renderers._autonomy": {
       "module_path": "backend.engine.prompts.section_renderers._autonomy",
       "file_path": "backend/engine/prompts/section_renderers/_autonomy.py",
-      "byte_size": 11297,
-      "loc": 281,
+      "byte_size": 11428,
+      "loc": 236,
       "class_count": 0,
-      "def_count": 6,
+      "def_count": 4,
       "importer_count": 0,
       "intra_package_imports": [
         "backend.core.interaction_modes",
@@ -18326,8 +18528,8 @@
     "backend.engine.prompts.section_renderers._capabilities": {
       "module_path": "backend.engine.prompts.section_renderers._capabilities",
       "file_path": "backend/engine/prompts/section_renderers/_capabilities.py",
-      "byte_size": 13747,
-      "loc": 344,
+      "byte_size": 13707,
+      "loc": 340,
       "class_count": 0,
       "def_count": 6,
       "importer_count": 0,
@@ -18367,8 +18569,8 @@
     "backend.engine.prompts.section_renderers._critical": {
       "module_path": "backend.engine.prompts.section_renderers._critical",
       "file_path": "backend/engine/prompts/section_renderers/_critical.py",
-      "byte_size": 10707,
-      "loc": 219,
+      "byte_size": 9929,
+      "loc": 225,
       "class_count": 0,
       "def_count": 4,
       "importer_count": 0,
@@ -18380,8 +18582,8 @@
     "backend.engine.prompts.section_renderers._env_hints": {
       "module_path": "backend.engine.prompts.section_renderers._env_hints",
       "file_path": "backend/engine/prompts/section_renderers/_env_hints.py",
-      "byte_size": 9790,
-      "loc": 236,
+      "byte_size": 8889,
+      "loc": 214,
       "class_count": 0,
       "def_count": 7,
       "importer_count": 2,
@@ -18416,8 +18618,8 @@
     "backend.engine.prompts.section_renderers._examples": {
       "module_path": "backend.engine.prompts.section_renderers._examples",
       "file_path": "backend/engine/prompts/section_renderers/_examples.py",
-      "byte_size": 4967,
-      "loc": 149,
+      "byte_size": 4237,
+      "loc": 124,
       "class_count": 0,
       "def_count": 6,
       "importer_count": 0,
@@ -18429,8 +18631,8 @@
     "backend.engine.prompts.section_renderers._interaction": {
       "module_path": "backend.engine.prompts.section_renderers._interaction",
       "file_path": "backend/engine/prompts/section_renderers/_interaction.py",
-      "byte_size": 1607,
-      "loc": 44,
+      "byte_size": 1817,
+      "loc": 46,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 0,
@@ -18442,7 +18644,7 @@
     "backend.engine.prompts.section_renderers._mcp": {
       "module_path": "backend.engine.prompts.section_renderers._mcp",
       "file_path": "backend/engine/prompts/section_renderers/_mcp.py",
-      "byte_size": 4528,
+      "byte_size": 4535,
       "loc": 105,
       "class_count": 0,
       "def_count": 2,
@@ -18466,8 +18668,8 @@
     "backend.engine.prompts.section_renderers._routing": {
       "module_path": "backend.engine.prompts.section_renderers._routing",
       "file_path": "backend/engine/prompts/section_renderers/_routing.py",
-      "byte_size": 4297,
-      "loc": 110,
+      "byte_size": 4837,
+      "loc": 123,
       "class_count": 0,
       "def_count": 1,
       "importer_count": 0,
@@ -18482,8 +18684,8 @@
     "backend.engine.prompts.section_renderers._security": {
       "module_path": "backend.engine.prompts.section_renderers._security",
       "file_path": "backend/engine/prompts/section_renderers/_security.py",
-      "byte_size": 2658,
-      "loc": 54,
+      "byte_size": 3030,
+      "loc": 72,
       "class_count": 0,
       "def_count": 1,
       "importer_count": 0,
@@ -18495,8 +18697,8 @@
     "backend.engine.prompts.section_renderers._tools": {
       "module_path": "backend.engine.prompts.section_renderers._tools",
       "file_path": "backend/engine/prompts/section_renderers/_tools.py",
-      "byte_size": 4563,
-      "loc": 108,
+      "byte_size": 5336,
+      "loc": 122,
       "class_count": 0,
       "def_count": 1,
       "importer_count": 0,
@@ -18578,8 +18780,8 @@
     "backend.engine.tools.__init__": {
       "module_path": "backend.engine.tools.__init__",
       "file_path": "backend/engine/tools/__init__.py",
-      "byte_size": 1717,
-      "loc": 53,
+      "byte_size": 1794,
+      "loc": 55,
       "class_count": 0,
       "def_count": 0,
       "importer_count": 0,
@@ -18589,7 +18791,7 @@
     "backend.engine.tools._aps_callers_coverage": {
       "module_path": "backend.engine.tools._aps_callers_coverage",
       "file_path": "backend/engine/tools/_aps_callers_coverage.py",
-      "byte_size": 4843,
+      "byte_size": 4819,
       "loc": 154,
       "class_count": 0,
       "def_count": 4,
@@ -18788,7 +18990,7 @@
     "backend.engine.tools._file_edits_multi": {
       "module_path": "backend.engine.tools._file_edits_multi",
       "file_path": "backend/engine/tools/_file_edits_multi.py",
-      "byte_size": 15092,
+      "byte_size": 15084,
       "loc": 425,
       "class_count": 0,
       "def_count": 14,
@@ -18847,7 +19049,7 @@
       "imported_by": [
         {
           "importer": "backend/engine/tools/_tool_handlers.py",
-          "lineno": 36,
+          "lineno": 37,
           "names": [
             "_relative_display_path",
             "_safe_workspace_path"
@@ -18923,10 +19125,10 @@
     "backend.engine.tools._tool_handlers": {
       "module_path": "backend.engine.tools._tool_handlers",
       "file_path": "backend/engine/tools/_tool_handlers.py",
-      "byte_size": 32959,
-      "loc": 861,
+      "byte_size": 33862,
+      "loc": 880,
       "class_count": 0,
-      "def_count": 36,
+      "def_count": 37,
       "importer_count": 2,
       "intra_package_imports": [
         "backend.core.config.config_loader",
@@ -19248,23 +19450,13 @@
     "backend.engine.tools.ignore_filter": {
       "module_path": "backend.engine.tools.ignore_filter",
       "file_path": "backend/engine/tools/ignore_filter.py",
-      "byte_size": 2377,
-      "loc": 83,
+      "byte_size": 1422,
+      "loc": 48,
       "class_count": 0,
       "def_count": 3,
-      "importer_count": 4,
+      "importer_count": 3,
       "intra_package_imports": [],
       "imported_by": [
-        {
-          "importer": "backend/execution/rollback/shadow_repo.py",
-          "lineno": 403,
-          "names": [
-            "get_ignore_spec",
-            "is_ignored_file",
-            "prune_ignored_dirs"
-          ],
-          "is_type_checking": false
-        },
         {
           "importer": "backend/execution/rollback/workspace_checkpoint.py",
           "lineno": 182,
@@ -19277,21 +19469,21 @@
         },
         {
           "importer": "backend/utils/impact_analysis.py",
-          "lineno": 196,
+          "lineno": 244,
           "names": [
             "get_ignore_spec",
-            "prune_ignored_dirs",
-            "is_ignored_file"
+            "is_ignored_file",
+            "prune_ignored_dirs"
           ],
           "is_type_checking": false
         },
         {
           "importer": "backend/utils/impact_analysis.py",
-          "lineno": 134,
+          "lineno": 172,
           "names": [
             "get_ignore_spec",
-            "prune_ignored_dirs",
-            "is_ignored_file"
+            "is_ignored_file",
+            "prune_ignored_dirs"
           ],
           "is_type_checking": false
         }
@@ -19344,8 +19536,8 @@
     "backend.engine.tools.memory": {
       "module_path": "backend.engine.tools.memory",
       "file_path": "backend/engine/tools/memory.py",
-      "byte_size": 4934,
-      "loc": 137,
+      "byte_size": 4949,
+      "loc": 141,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 0,
@@ -19395,7 +19587,7 @@
       "loc": 197,
       "class_count": 0,
       "def_count": 10,
-      "importer_count": 4,
+      "importer_count": 5,
       "intra_package_imports": [
         "backend.core.autonomy",
         "backend.core.constants",
@@ -19407,6 +19599,15 @@
           "lineno": 15,
           "names": [
             "create_tool_definition"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/engine/tools/task_state.py",
+          "lineno": 7,
+          "names": [
+            "create_tool_definition",
+            "get_command_param"
           ],
           "is_type_checking": false
         },
@@ -19498,8 +19699,8 @@
     "backend.engine.tools.session_lessons": {
       "module_path": "backend.engine.tools.session_lessons",
       "file_path": "backend/engine/tools/session_lessons.py",
-      "byte_size": 9377,
-      "loc": 219,
+      "byte_size": 10239,
+      "loc": 264,
       "class_count": 0,
       "def_count": 4,
       "importer_count": 1,
@@ -19511,7 +19712,7 @@
       "imported_by": [
         {
           "importer": "backend/orchestration/services/event_router_mixins/_event_router_actions_mixin.py",
-          "lineno": 246,
+          "lineno": 229,
           "names": [
             "persist_finish_lessons"
           ],
@@ -19566,6 +19767,21 @@
         }
       ]
     },
+    "backend.engine.tools.task_state": {
+      "module_path": "backend.engine.tools.task_state",
+      "file_path": "backend/engine/tools/task_state.py",
+      "byte_size": 5608,
+      "loc": 161,
+      "class_count": 0,
+      "def_count": 2,
+      "importer_count": 0,
+      "intra_package_imports": [
+        "backend.core.tools.tool_names",
+        "backend.engine.contracts",
+        "backend.engine.tools.param_defs"
+      ],
+      "imported_by": []
+    },
     "backend.engine.tools.task_tracker": {
       "module_path": "backend.engine.tools.task_tracker",
       "file_path": "backend/engine/tools/task_tracker.py",
@@ -19586,8 +19802,8 @@
     "backend.engine.tools.terminal": {
       "module_path": "backend.engine.tools.terminal",
       "file_path": "backend/engine/tools/terminal.py",
-      "byte_size": 8122,
-      "loc": 179,
+      "byte_size": 8158,
+      "loc": 180,
       "class_count": 0,
       "def_count": 1,
       "importer_count": 0,
@@ -19689,8 +19905,8 @@
     "backend.engine.tools.workspace_memory": {
       "module_path": "backend.engine.tools.workspace_memory",
       "file_path": "backend/engine/tools/workspace_memory.py",
-      "byte_size": 8344,
-      "loc": 290,
+      "byte_size": 8365,
+      "loc": 293,
       "class_count": 0,
       "def_count": 13,
       "importer_count": 1,
@@ -19704,7 +19920,7 @@
       "imported_by": [
         {
           "importer": "backend/utils/prompt.py",
-          "lineno": 377,
+          "lineno": 384,
           "names": [
             "format_prompt_block"
           ],
@@ -19847,7 +20063,7 @@
         },
         {
           "importer": "backend/execution/io_mixins/_aes_io_run_mixin.py",
-          "lineno": 17,
+          "lineno": 16,
           "names": [
             "truncate_cmd_output"
           ],
@@ -19990,7 +20206,7 @@
         },
         {
           "importer": "backend/execution/io_mixins/_aes_io_run_mixin.py",
-          "lineno": 20,
+          "lineno": 19,
           "names": [
             "apply_grep_filter"
           ],
@@ -19998,7 +20214,7 @@
         },
         {
           "importer": "backend/execution/io_mixins/_aes_io_run_mixin.py",
-          "lineno": 23,
+          "lineno": 22,
           "names": [
             "apply_terminal_resize_if_requested"
           ],
@@ -20006,7 +20222,7 @@
         },
         {
           "importer": "backend/execution/io_mixins/_aes_io_run_mixin.py",
-          "lineno": 26,
+          "lineno": 25,
           "names": [
             "attach_detected_server"
           ],
@@ -20985,7 +21201,7 @@
     "backend.execution.document_readers": {
       "module_path": "backend.execution.document_readers",
       "file_path": "backend/execution/document_readers.py",
-      "byte_size": 2252,
+      "byte_size": 2316,
       "loc": 64,
       "class_count": 0,
       "def_count": 4,
@@ -21153,8 +21369,8 @@
     "backend.execution.io_mixins._aes_io_run_mixin": {
       "module_path": "backend.execution.io_mixins._aes_io_run_mixin",
       "file_path": "backend/execution/io_mixins/_aes_io_run_mixin.py",
-      "byte_size": 11991,
-      "loc": 309,
+      "byte_size": 11844,
+      "loc": 307,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 1,
@@ -21186,8 +21402,8 @@
     "backend.execution.io_mixins._aes_io_terminal_mixin": {
       "module_path": "backend.execution.io_mixins._aes_io_terminal_mixin",
       "file_path": "backend/execution/io_mixins/_aes_io_terminal_mixin.py",
-      "byte_size": 38902,
-      "loc": 1029,
+      "byte_size": 39065,
+      "loc": 1039,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 1,
@@ -21275,7 +21491,7 @@
       "imported_by": [
         {
           "importer": "backend/execution/server/action_execution_server.py",
-          "lineno": 26,
+          "lineno": 27,
           "names": [
             "init_plugins"
           ],
@@ -21331,7 +21547,7 @@
     "backend.execution.plugins.agent_skills.database.__init__": {
       "module_path": "backend.execution.plugins.agent_skills.database.__init__",
       "file_path": "backend/execution/plugins/agent_skills/database/__init__.py",
-      "byte_size": 15774,
+      "byte_size": 16319,
       "loc": 545,
       "class_count": 0,
       "def_count": 15,
@@ -21395,7 +21611,7 @@
     "backend.execution.plugins.agent_skills.file_reader.file_readers": {
       "module_path": "backend.execution.plugins.agent_skills.file_reader.file_readers",
       "file_path": "backend/execution/plugins/agent_skills/file_reader/file_readers.py",
-      "byte_size": 7246,
+      "byte_size": 7459,
       "loc": 213,
       "class_count": 0,
       "def_count": 10,
@@ -21457,15 +21673,14 @@
     "backend.execution.rollback.rollback_manager": {
       "module_path": "backend.execution.rollback.rollback_manager",
       "file_path": "backend/execution/rollback/rollback_manager.py",
-      "byte_size": 22219,
-      "loc": 630,
+      "byte_size": 22555,
+      "loc": 645,
       "class_count": 2,
       "def_count": 0,
       "importer_count": 4,
       "intra_package_imports": [
         "backend.core.logging.logger",
-        "backend.core.workspace_resolution",
-        "backend.execution.rollback.shadow_repo"
+        "backend.core.workspace_resolution"
       ],
       "imported_by": [
         {
@@ -21486,7 +21701,7 @@
         },
         {
           "importer": "backend/orchestration/middleware/rollback_middleware.py",
-          "lineno": 21,
+          "lineno": 22,
           "names": [
             "RollbackManager"
           ],
@@ -21494,7 +21709,7 @@
         },
         {
           "importer": "backend/orchestration/middleware/rollback_middleware.py",
-          "lineno": 122,
+          "lineno": 142,
           "names": [
             "RollbackManager"
           ],
@@ -21505,14 +21720,13 @@
     "backend.execution.rollback.shadow_repo": {
       "module_path": "backend.execution.rollback.shadow_repo",
       "file_path": "backend/execution/rollback/shadow_repo.py",
-      "byte_size": 18628,
-      "loc": 500,
-      "class_count": 2,
+      "byte_size": 1534,
+      "loc": 48,
+      "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
       "intra_package_imports": [
-        "backend.core.logging.logger",
-        "backend.engine.tools.ignore_filter"
+        "backend.core.workspace_resolution"
       ],
       "imported_by": []
     },
@@ -21544,8 +21758,8 @@
     "backend.execution.runtime.factory": {
       "module_path": "backend.execution.runtime.factory",
       "file_path": "backend/execution/runtime/factory.py",
-      "byte_size": 1268,
-      "loc": 41,
+      "byte_size": 1508,
+      "loc": 48,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 0,
@@ -21838,8 +22052,8 @@
     "backend.execution.server.base": {
       "module_path": "backend.execution.server.base",
       "file_path": "backend/execution/server/base.py",
-      "byte_size": 40002,
-      "loc": 1086,
+      "byte_size": 40680,
+      "loc": 1098,
       "class_count": 1,
       "def_count": 3,
       "importer_count": 3,
@@ -21861,6 +22075,7 @@
         "backend.execution.runtime_mixins.command_timeout",
         "backend.execution.runtime_mixins.env_manager",
         "backend.execution.runtime_mixins.git_setup",
+        "backend.execution.task_state",
         "backend.execution.task_tracking",
         "backend.execution.utils.git.git_handler",
         "backend.execution.utils.process.process_manager",
@@ -21913,11 +22128,26 @@
       ],
       "imported_by": []
     },
+    "backend.execution.task_state": {
+      "module_path": "backend.execution.task_state",
+      "file_path": "backend/execution/task_state.py",
+      "byte_size": 807,
+      "loc": 22,
+      "class_count": 1,
+      "def_count": 0,
+      "importer_count": 0,
+      "intra_package_imports": [
+        "backend.ledger.observation",
+        "backend.ledger.observation.task_state",
+        "backend.task_state"
+      ],
+      "imported_by": []
+    },
     "backend.execution.task_tracking": {
       "module_path": "backend.execution.task_tracking",
       "file_path": "backend/execution/task_tracking.py",
-      "byte_size": 8867,
-      "loc": 234,
+      "byte_size": 8913,
+      "loc": 238,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -22052,8 +22282,8 @@
     "backend.execution.utils.file_editor._file_editor_edit_helpers": {
       "module_path": "backend.execution.utils.file_editor._file_editor_edit_helpers",
       "file_path": "backend/execution/utils/file_editor/_file_editor_edit_helpers.py",
-      "byte_size": 20858,
-      "loc": 682,
+      "byte_size": 20954,
+      "loc": 690,
       "class_count": 0,
       "def_count": 21,
       "importer_count": 11,
@@ -22145,7 +22375,7 @@
         },
         {
           "importer": "backend/orchestration/file_edits/pre_exec_diff.py",
-          "lineno": 149,
+          "lineno": 161,
           "names": [
             "_replace_all_with_boundary_check"
           ],
@@ -22374,7 +22604,7 @@
       "imported_by": [
         {
           "importer": "backend/execution/utils/shell/simple_bash.py",
-          "lineno": 15,
+          "lineno": 16,
           "names": [
             "bounded_communicate"
           ],
@@ -22643,7 +22873,7 @@
         },
         {
           "importer": "backend/execution/utils/shell/session_manager.py",
-          "lineno": 10,
+          "lineno": 11,
           "names": [
             "TaskCancellationService"
           ],
@@ -22925,7 +23155,7 @@
     "backend.execution.utils.shell.bash": {
       "module_path": "backend.execution.utils.shell.bash",
       "file_path": "backend/execution/utils/shell/bash.py",
-      "byte_size": 15152,
+      "byte_size": 15178,
       "loc": 455,
       "class_count": 2,
       "def_count": 2,
@@ -23069,8 +23299,8 @@
     "backend.execution.utils.shell.pty_shell_session": {
       "module_path": "backend.execution.utils.shell.pty_shell_session",
       "file_path": "backend/execution/utils/shell/pty_shell_session.py",
-      "byte_size": 23944,
-      "loc": 615,
+      "byte_size": 23941,
+      "loc": 616,
       "class_count": 1,
       "def_count": 6,
       "importer_count": 1,
@@ -23097,8 +23327,8 @@
     "backend.execution.utils.shell.session_manager": {
       "module_path": "backend.execution.utils.shell.session_manager",
       "file_path": "backend/execution/utils/shell/session_manager.py",
-      "byte_size": 8832,
-      "loc": 236,
+      "byte_size": 9753,
+      "loc": 260,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -23125,7 +23355,7 @@
       "imported_by": [
         {
           "importer": "backend/execution/utils/shell/simple_bash.py",
-          "lineno": 94,
+          "lineno": 95,
           "names": [
             "apply_cmd_output_timeout_metadata"
           ],
@@ -23152,8 +23382,8 @@
     "backend.execution.utils.shell.simple_bash": {
       "module_path": "backend.execution.utils.shell.simple_bash",
       "file_path": "backend/execution/utils/shell/simple_bash.py",
-      "byte_size": 9929,
-      "loc": 238,
+      "byte_size": 10034,
+      "loc": 249,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 2,
@@ -23463,8 +23693,8 @@
     "backend.inference.caching.prompt_caching": {
       "module_path": "backend.inference.caching.prompt_caching",
       "file_path": "backend/inference/caching/prompt_caching.py",
-      "byte_size": 5039,
-      "loc": 179,
+      "byte_size": 5585,
+      "loc": 189,
       "class_count": 0,
       "def_count": 9,
       "importer_count": 6,
@@ -23474,7 +23704,7 @@
       "imported_by": [
         {
           "importer": "backend/inference/catalog/catalog_loader.py",
-          "lineno": 415,
+          "lineno": 416,
           "names": [
             "resolve_prompt_cache_mode_from_runtime"
           ],
@@ -23482,7 +23712,7 @@
         },
         {
           "importer": "backend/inference/catalog/catalog_loader.py",
-          "lineno": 1116,
+          "lineno": 1117,
           "names": [
             "implicit_prompt_cache_key"
           ],
@@ -23536,11 +23766,11 @@
     "backend.inference.capabilities.context_limits": {
       "module_path": "backend.inference.capabilities.context_limits",
       "file_path": "backend/inference/capabilities/context_limits.py",
-      "byte_size": 6295,
-      "loc": 179,
+      "byte_size": 6837,
+      "loc": 194,
       "class_count": 1,
-      "def_count": 4,
-      "importer_count": 5,
+      "def_count": 5,
+      "importer_count": 7,
       "intra_package_imports": [
         "backend.inference.catalog.catalog_loader",
         "backend.inference.runtime_profile"
@@ -23548,7 +23778,7 @@
       "imported_by": [
         {
           "importer": "backend/inference/capabilities/model_features.py",
-          "lineno": 215,
+          "lineno": 219,
           "names": [
             "derive_usable_input_tokens"
           ],
@@ -23556,7 +23786,7 @@
         },
         {
           "importer": "backend/inference/catalog/catalog_loader.py",
-          "lineno": 864,
+          "lineno": 865,
           "names": [
             "derive_usable_input_tokens"
           ],
@@ -23564,7 +23794,7 @@
         },
         {
           "importer": "backend/inference/clients/factory.py",
-          "lineno": 104,
+          "lineno": 109,
           "names": [
             "derive_usable_input_tokens"
           ],
@@ -23572,9 +23802,25 @@
         },
         {
           "importer": "backend/inference/llm/config.py",
-          "lineno": 162,
+          "lineno": 165,
           "names": [
             "limits_from_config"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/inference/llm/core.py",
+          "lineno": 309,
+          "names": [
+            "cap_generation_output_tokens"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/inference/llm/core.py",
+          "lineno": 199,
+          "names": [
+            "cap_generation_output_tokens"
           ],
           "is_type_checking": false
         },
@@ -23594,8 +23840,8 @@
     "backend.inference.capabilities.model_features": {
       "module_path": "backend.inference.capabilities.model_features",
       "file_path": "backend/inference/capabilities/model_features.py",
-      "byte_size": 6913,
-      "loc": 245,
+      "byte_size": 7001,
+      "loc": 249,
       "class_count": 1,
       "def_count": 5,
       "importer_count": 7,
@@ -23623,7 +23869,7 @@
         },
         {
           "importer": "backend/inference/catalog/provider_catalog.py",
-          "lineno": 378,
+          "lineno": 382,
           "names": [
             "get_features"
           ],
@@ -23655,7 +23901,7 @@
         },
         {
           "importer": "backend/utils/prompt.py",
-          "lineno": 249,
+          "lineno": 256,
           "names": [
             "get_features"
           ],
@@ -23678,7 +23924,7 @@
       "imported_by": [
         {
           "importer": "backend/inference/catalog/provider_catalog.py",
-          "lineno": 237,
+          "lineno": 241,
           "names": [
             "resolve_effective_model_entry"
           ],
@@ -23686,7 +23932,7 @@
         },
         {
           "importer": "backend/inference/catalog/provider_catalog.py",
-          "lineno": 268,
+          "lineno": 272,
           "names": [
             "resolve_effective_model_entry"
           ],
@@ -23722,7 +23968,7 @@
         },
         {
           "importer": "backend/inference/catalog/provider_catalog.py",
-          "lineno": 385,
+          "lineno": 389,
           "names": [
             "get_provider_capabilities"
           ],
@@ -23730,7 +23976,7 @@
         },
         {
           "importer": "backend/inference/clients/base.py",
-          "lineno": 542,
+          "lineno": 555,
           "names": [
             "get_provider_capabilities"
           ],
@@ -23752,8 +23998,8 @@
     "backend.inference.catalog.catalog_loader": {
       "module_path": "backend.inference.catalog.catalog_loader",
       "file_path": "backend/inference/catalog/catalog_loader.py",
-      "byte_size": 40230,
-      "loc": 1176,
+      "byte_size": 40262,
+      "loc": 1177,
       "class_count": 1,
       "def_count": 50,
       "importer_count": 17,
@@ -23800,7 +24046,7 @@
         },
         {
           "importer": "backend/inference/catalog/provider_catalog.py",
-          "lineno": 240,
+          "lineno": 244,
           "names": [
             "lookup_provider_model"
           ],
@@ -23808,7 +24054,7 @@
         },
         {
           "importer": "backend/inference/clients/factory.py",
-          "lineno": 105,
+          "lineno": 110,
           "names": [
             "compact_metadata_for_log",
             "lookup_provider_model",
@@ -23827,7 +24073,7 @@
         },
         {
           "importer": "backend/inference/llm/config.py",
-          "lineno": 163,
+          "lineno": 166,
           "names": [
             "compact_metadata_for_log",
             "lookup",
@@ -23846,7 +24092,7 @@
         },
         {
           "importer": "backend/inference/llm/core.py",
-          "lineno": 270,
+          "lineno": 285,
           "names": [
             "apply_model_param_overrides",
             "sanitize_call_kwargs_for_provider"
@@ -23932,8 +24178,8 @@
     "backend.inference.catalog.catalog_validator": {
       "module_path": "backend.inference.catalog.catalog_validator",
       "file_path": "backend/inference/catalog/catalog_validator.py",
-      "byte_size": 16060,
-      "loc": 481,
+      "byte_size": 16088,
+      "loc": 482,
       "class_count": 1,
       "def_count": 6,
       "importer_count": 0,
@@ -23964,8 +24210,8 @@
     "backend.inference.catalog.provider_catalog": {
       "module_path": "backend.inference.catalog.provider_catalog",
       "file_path": "backend/inference/catalog/provider_catalog.py",
-      "byte_size": 13782,
-      "loc": 442,
+      "byte_size": 13949,
+      "loc": 448,
       "class_count": 0,
       "def_count": 20,
       "importer_count": 4,
@@ -24016,8 +24262,8 @@
     "backend.inference.clients.__init__": {
       "module_path": "backend.inference.clients.__init__",
       "file_path": "backend/inference/clients/__init__.py",
-      "byte_size": 2325,
-      "loc": 74,
+      "byte_size": 2520,
+      "loc": 80,
       "class_count": 0,
       "def_count": 1,
       "importer_count": 0,
@@ -24025,6 +24271,7 @@
         "backend.inference.clients",
         "backend.inference.clients.anthropic_client",
         "backend.inference.clients.base",
+        "backend.inference.clients.codex_app_server",
         "backend.inference.clients.factory",
         "backend.inference.clients.openai_client",
         "backend.inference.providers.anthropic_ops",
@@ -24059,11 +24306,11 @@
     "backend.inference.clients.base": {
       "module_path": "backend.inference.clients.base",
       "file_path": "backend/inference/clients/base.py",
-      "byte_size": 23396,
-      "loc": 679,
+      "byte_size": 23802,
+      "loc": 692,
       "class_count": 3,
       "def_count": 20,
-      "importer_count": 16,
+      "importer_count": 17,
       "intra_package_imports": [
         "backend.core",
         "backend.core.constants",
@@ -24076,6 +24323,17 @@
       ],
       "imported_by": [
         {
+          "importer": "backend/inference/clients/codex_app_server.py",
+          "lineno": 26,
+          "names": [
+            "DirectLLMClient",
+            "LLMResponse",
+            "get_shared_async_http_client",
+            "get_shared_http_client"
+          ],
+          "is_type_checking": false
+        },
+        {
           "importer": "backend/inference/clients/factory.py",
           "lineno": 10,
           "names": [
@@ -24086,7 +24344,7 @@
         },
         {
           "importer": "backend/inference/clients/openai_client.py",
-          "lineno": 10,
+          "lineno": 11,
           "names": [
             "DirectLLMClient",
             "LLMResponse",
@@ -24213,11 +24471,33 @@
         }
       ]
     },
+    "backend.inference.clients.codex_app_server": {
+      "module_path": "backend.inference.clients.codex_app_server",
+      "file_path": "backend/inference/clients/codex_app_server.py",
+      "byte_size": 34993,
+      "loc": 906,
+      "class_count": 2,
+      "def_count": 12,
+      "importer_count": 1,
+      "intra_package_imports": [
+        "backend.inference.clients.base"
+      ],
+      "imported_by": [
+        {
+          "importer": "backend/inference/clients/factory.py",
+          "lineno": 53,
+          "names": [
+            "CodexResponsesClient"
+          ],
+          "is_type_checking": false
+        }
+      ]
+    },
     "backend.inference.clients.factory": {
       "module_path": "backend.inference.clients.factory",
       "file_path": "backend/inference/clients/factory.py",
-      "byte_size": 10620,
-      "loc": 322,
+      "byte_size": 10814,
+      "loc": 327,
       "class_count": 0,
       "def_count": 8,
       "importer_count": 0,
@@ -24228,6 +24508,7 @@
         "backend.inference.catalog.catalog_loader",
         "backend.inference.clients.anthropic_client",
         "backend.inference.clients.base",
+        "backend.inference.clients.codex_app_server",
         "backend.inference.clients.openai_client",
         "backend.inference.provider_resolver",
         "backend.inference.providers.gemini_ops",
@@ -24239,8 +24520,8 @@
     "backend.inference.clients.openai_client": {
       "module_path": "backend.inference.clients.openai_client",
       "file_path": "backend/inference/clients/openai_client.py",
-      "byte_size": 4476,
-      "loc": 124,
+      "byte_size": 4590,
+      "loc": 126,
       "class_count": 2,
       "def_count": 0,
       "importer_count": 0,
@@ -24740,8 +25021,8 @@
     "backend.inference.fn_call._fn_call_examples": {
       "module_path": "backend.inference.fn_call._fn_call_examples",
       "file_path": "backend/inference/fn_call/_fn_call_examples.py",
-      "byte_size": 19220,
-      "loc": 385,
+      "byte_size": 19221,
+      "loc": 386,
       "class_count": 1,
       "def_count": 13,
       "importer_count": 1,
@@ -24805,8 +25086,8 @@
     "backend.inference.llm.config": {
       "module_path": "backend.inference.llm.config",
       "file_path": "backend/inference/llm/config.py",
-      "byte_size": 10177,
-      "loc": 259,
+      "byte_size": 10363,
+      "loc": 262,
       "class_count": 0,
       "def_count": 9,
       "importer_count": 1,
@@ -24843,8 +25124,8 @@
     "backend.inference.llm.core": {
       "module_path": "backend.inference.llm.core",
       "file_path": "backend/inference/llm/core.py",
-      "byte_size": 29213,
-      "loc": 760,
+      "byte_size": 31170,
+      "loc": 796,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -24858,6 +25139,7 @@
         "backend.core.message",
         "backend.core.plugin",
         "backend.inference",
+        "backend.inference.capabilities.context_limits",
         "backend.inference.capabilities.model_features",
         "backend.inference.catalog.catalog_loader",
         "backend.inference.debug_mixin",
@@ -24969,8 +25251,8 @@
     "backend.inference.local_model": {
       "module_path": "backend.inference.local_model",
       "file_path": "backend/inference/local_model.py",
-      "byte_size": 1491,
-      "loc": 42,
+      "byte_size": 1556,
+      "loc": 45,
       "class_count": 0,
       "def_count": 2,
       "importer_count": 0,
@@ -25123,8 +25405,8 @@
     "backend.inference.metrics": {
       "module_path": "backend.inference.metrics",
       "file_path": "backend/inference/metrics.py",
-      "byte_size": 13459,
-      "loc": 360,
+      "byte_size": 13800,
+      "loc": 366,
       "class_count": 4,
       "def_count": 0,
       "importer_count": 6,
@@ -25190,7 +25472,7 @@
       "loc": 459,
       "class_count": 1,
       "def_count": 11,
-      "importer_count": 3,
+      "importer_count": 4,
       "intra_package_imports": [
         "backend.core.logging.logger",
         "backend.inference.catalog.catalog_loader",
@@ -25219,6 +25501,14 @@
           "lineno": 108,
           "names": [
             "canonicalize_model_selection"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/utils/prompt.py",
+          "lineno": 182,
+          "names": [
+            "get_resolver"
           ],
           "is_type_checking": false
         }
@@ -25379,8 +25669,8 @@
     "backend.inference.runtime_profile": {
       "module_path": "backend.inference.runtime_profile",
       "file_path": "backend/inference/runtime_profile.py",
-      "byte_size": 5287,
-      "loc": 163,
+      "byte_size": 5577,
+      "loc": 170,
       "class_count": 1,
       "def_count": 6,
       "importer_count": 0,
@@ -25521,10 +25811,10 @@
     "backend.integrations.mcp.client": {
       "module_path": "backend.integrations.mcp.client",
       "file_path": "backend/integrations/mcp/client.py",
-      "byte_size": 19248,
-      "loc": 493,
+      "byte_size": 19906,
+      "loc": 516,
       "class_count": 1,
-      "def_count": 3,
+      "def_count": 4,
       "importer_count": 2,
       "intra_package_imports": [
         "backend.core.config.mcp_config",
@@ -25789,8 +26079,8 @@
     "backend.ledger.action.__init__": {
       "module_path": "backend.ledger.action.__init__",
       "file_path": "backend/ledger/action/__init__.py",
-      "byte_size": 2774,
-      "loc": 103,
+      "byte_size": 2818,
+      "loc": 105,
       "class_count": 0,
       "def_count": 0,
       "importer_count": 0,
@@ -25969,9 +26259,9 @@
     "backend.ledger.action.agent": {
       "module_path": "backend.ledger.action.agent",
       "file_path": "backend/ledger/action/agent.py",
-      "byte_size": 13264,
-      "loc": 347,
-      "class_count": 11,
+      "byte_size": 13602,
+      "loc": 360,
+      "class_count": 12,
       "def_count": 0,
       "importer_count": 11,
       "intra_package_imports": [
@@ -25994,6 +26284,7 @@
             "DelegateTaskAction",
             "RecallAction",
             "SystemHintAction",
+            "TaskStateAction",
             "TaskTrackingAction"
           ],
           "is_type_checking": false
@@ -26126,7 +26417,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 24,
+          "lineno": 25,
           "names": [
             "BrowserToolAction"
           ],
@@ -26157,7 +26448,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 25,
+          "lineno": 26,
           "names": [
             "LspQueryAction"
           ],
@@ -26181,7 +26472,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 26,
+          "lineno": 27,
           "names": [
             "CmdRunAction"
           ],
@@ -26229,7 +26520,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 27,
+          "lineno": 28,
           "names": [
             "DebuggerAction"
           ],
@@ -26268,7 +26559,7 @@
         },
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 28,
+          "lineno": 29,
           "names": [
             "NullAction"
           ],
@@ -26316,7 +26607,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 29,
+          "lineno": 30,
           "names": [
             "FileEditAction",
             "FileReadAction"
@@ -26349,7 +26640,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 33,
+          "lineno": 34,
           "names": [
             "MCPAction"
           ],
@@ -26380,7 +26671,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 34,
+          "lineno": 35,
           "names": [
             "CheckpointAction",
             "MemoryPersistAction",
@@ -26409,7 +26700,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 42,
+          "lineno": 43,
           "names": [
             "MessageAction",
             "StreamingChunkAction",
@@ -26490,7 +26781,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 47,
+          "lineno": 48,
           "names": [
             "AnalyzeProjectStructureAction",
             "FindSymbolsAction",
@@ -26517,7 +26808,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/action.py",
-          "lineno": 53,
+          "lineno": 54,
           "names": [
             "TerminalCloseAction",
             "TerminalInputAction",
@@ -26884,8 +27175,8 @@
     "backend.ledger.observation.__init__": {
       "module_path": "backend.ledger.observation.__init__",
       "file_path": "backend/ledger/observation/__init__.py",
-      "byte_size": 3564,
-      "loc": 105,
+      "byte_size": 3663,
+      "loc": 107,
       "class_count": 0,
       "def_count": 0,
       "importer_count": 0,
@@ -26909,6 +27200,7 @@
         "backend.ledger.observation.server",
         "backend.ledger.observation.status",
         "backend.ledger.observation.success",
+        "backend.ledger.observation.task_state",
         "backend.ledger.observation.task_tracking",
         "backend.ledger.observation.terminal"
       ],
@@ -27393,7 +27685,7 @@
       "loc": 43,
       "class_count": 1,
       "def_count": 0,
-      "importer_count": 10,
+      "importer_count": 11,
       "intra_package_imports": [
         "backend._canonical",
         "backend.ledger.event"
@@ -27433,6 +27725,14 @@
         },
         {
           "importer": "backend/ledger/observation/success.py",
+          "lineno": 7,
+          "names": [
+            "Observation"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/ledger/observation/task_state.py",
           "lineno": 7,
           "names": [
             "Observation"
@@ -27614,6 +27914,29 @@
         }
       ]
     },
+    "backend.ledger.observation.task_state": {
+      "module_path": "backend.ledger.observation.task_state",
+      "file_path": "backend/ledger/observation/task_state.py",
+      "byte_size": 465,
+      "loc": 15,
+      "class_count": 1,
+      "def_count": 0,
+      "importer_count": 1,
+      "intra_package_imports": [
+        "backend.core.schemas",
+        "backend.ledger.observation.observation"
+      ],
+      "imported_by": [
+        {
+          "importer": "backend/ledger/serialization/observation.py",
+          "lineno": 52,
+          "names": [
+            "TaskStateObservation"
+          ],
+          "is_type_checking": false
+        }
+      ]
+    },
     "backend.ledger.observation.task_tracking": {
       "module_path": "backend.ledger.observation.task_tracking",
       "file_path": "backend/ledger/observation/task_tracking.py",
@@ -27629,7 +27952,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/observation.py",
-          "lineno": 52,
+          "lineno": 53,
           "names": [
             "TaskTrackingObservation"
           ],
@@ -27652,7 +27975,7 @@
       "imported_by": [
         {
           "importer": "backend/ledger/serialization/observation.py",
-          "lineno": 53,
+          "lineno": 54,
           "names": [
             "TerminalObservation"
           ],
@@ -27789,8 +28112,8 @@
     "backend.ledger.serialization.action": {
       "module_path": "backend.ledger.serialization.action",
       "file_path": "backend/ledger/serialization/action.py",
-      "byte_size": 6289,
-      "loc": 195,
+      "byte_size": 6331,
+      "loc": 197,
       "class_count": 0,
       "def_count": 6,
       "importer_count": 2,
@@ -27850,7 +28173,7 @@
         },
         {
           "importer": "backend/ledger/serialization/observation.py",
-          "lineno": 154,
+          "lineno": 156,
           "names": [
             "COMMON_METADATA_FIELDS"
           ],
@@ -27930,8 +28253,8 @@
     "backend.ledger.serialization.observation": {
       "module_path": "backend.ledger.serialization.observation",
       "file_path": "backend/ledger/serialization/observation.py",
-      "byte_size": 8808,
-      "loc": 251,
+      "byte_size": 8905,
+      "loc": 253,
       "class_count": 0,
       "def_count": 9,
       "importer_count": 0,
@@ -27954,6 +28277,7 @@
         "backend.ledger.observation.search",
         "backend.ledger.observation.status",
         "backend.ledger.observation.success",
+        "backend.ledger.observation.task_state",
         "backend.ledger.observation.task_tracking",
         "backend.ledger.observation.terminal",
         "backend.ledger.serialization.common"
@@ -28192,8 +28516,8 @@
     "backend.orchestration.agent.__init__": {
       "module_path": "backend.orchestration.agent.__init__",
       "file_path": "backend/orchestration/agent/__init__.py",
-      "byte_size": 10550,
-      "loc": 303,
+      "byte_size": 10957,
+      "loc": 311,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 0,
@@ -28409,7 +28733,7 @@
         },
         {
           "importer": "backend/orchestration/services/pending_action_service.py",
-          "lineno": 445,
+          "lineno": 450,
           "names": [
             "get_file_edit_transaction_coordinator"
           ],
@@ -28446,8 +28770,8 @@
     "backend.orchestration.file_edits.pre_exec_diff": {
       "module_path": "backend.orchestration.file_edits.pre_exec_diff",
       "file_path": "backend/orchestration/file_edits/pre_exec_diff.py",
-      "byte_size": 8776,
-      "loc": 207,
+      "byte_size": 8948,
+      "loc": 219,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 1,
@@ -28683,8 +29007,8 @@
     "backend.orchestration.middleware.rollback_middleware": {
       "module_path": "backend.orchestration.middleware.rollback_middleware",
       "file_path": "backend/orchestration/middleware/rollback_middleware.py",
-      "byte_size": 10646,
-      "loc": 263,
+      "byte_size": 11253,
+      "loc": 284,
       "class_count": 1,
       "def_count": 1,
       "importer_count": 1,
@@ -29226,7 +29550,7 @@
       "imported_by": [
         {
           "importer": "backend/orchestration/services/recovery_service.py",
-          "lineno": 687,
+          "lineno": 692,
           "names": [
             "resolve_error_id"
           ],
@@ -29234,7 +29558,7 @@
         },
         {
           "importer": "backend/orchestration/services/recovery_service.py",
-          "lineno": 693,
+          "lineno": 698,
           "names": [
             "format_error_text"
           ],
@@ -29242,7 +29566,7 @@
         },
         {
           "importer": "backend/orchestration/services/recovery_service.py",
-          "lineno": 699,
+          "lineno": 704,
           "names": [
             "format_error_guidance"
           ],
@@ -29250,7 +29574,7 @@
         },
         {
           "importer": "backend/orchestration/services/recovery_service.py",
-          "lineno": 705,
+          "lineno": 710,
           "names": [
             "_format_rate_limit_text"
           ],
@@ -29258,7 +29582,7 @@
         },
         {
           "importer": "backend/orchestration/services/recovery_service.py",
-          "lineno": 713,
+          "lineno": 718,
           "names": [
             "_format_rate_limit_guidance"
           ],
@@ -29275,7 +29599,7 @@
         },
         {
           "importer": "backend/orchestration/services/recovery_service.py",
-          "lineno": 676,
+          "lineno": 681,
           "names": [
             "format_exception"
           ],
@@ -29302,8 +29626,8 @@
     "backend.orchestration.services.event_router_mixins._event_router_actions_mixin": {
       "module_path": "backend.orchestration.services.event_router_mixins._event_router_actions_mixin",
       "file_path": "backend/orchestration/services/event_router_mixins/_event_router_actions_mixin.py",
-      "byte_size": 10458,
-      "loc": 259,
+      "byte_size": 11479,
+      "loc": 286,
       "class_count": 1,
       "def_count": 0,
       "importer_count": 1,
@@ -29319,7 +29643,8 @@
         "backend.ledger.action.message",
         "backend.ledger.observation",
         "backend.orchestration.agent.agent_protocol",
-        "backend.orchestration.state.state"
+        "backend.orchestration.state.state",
+        "backend.utils.async_helpers.async_utils"
       ],
       "imported_by": [
         {
@@ -29667,7 +29992,7 @@
         },
         {
           "importer": "backend/orchestration/services/state_transition_service.py",
-          "lineno": 11,
+          "lineno": 12,
           "names": [
             "OrchestrationContext"
           ],
@@ -29702,10 +30027,10 @@
     "backend.orchestration.services.pending_action_service": {
       "module_path": "backend.orchestration.services.pending_action_service",
       "file_path": "backend/orchestration/services/pending_action_service.py",
-      "byte_size": 24111,
-      "loc": 637,
+      "byte_size": 24287,
+      "loc": 642,
       "class_count": 1,
-      "def_count": 10,
+      "def_count": 11,
       "importer_count": 0,
       "intra_package_imports": [
         "backend.core.constants",
@@ -29723,8 +30048,8 @@
     "backend.orchestration.services.recovery_service": {
       "module_path": "backend.orchestration.services.recovery_service",
       "file_path": "backend/orchestration/services/recovery_service.py",
-      "byte_size": 29689,
-      "loc": 717,
+      "byte_size": 29829,
+      "loc": 722,
       "class_count": 1,
       "def_count": 8,
       "importer_count": 0,
@@ -29811,8 +30136,8 @@
     "backend.orchestration.services.state_transition_service": {
       "module_path": "backend.orchestration.services.state_transition_service",
       "file_path": "backend/orchestration/services/state_transition_service.py",
-      "byte_size": 8839,
-      "loc": 262,
+      "byte_size": 9306,
+      "loc": 276,
       "class_count": 2,
       "def_count": 0,
       "importer_count": 0,
@@ -29821,7 +30146,8 @@
         "backend.core.logging.session_event_logger",
         "backend.core.schemas",
         "backend.ledger",
-        "backend.ledger.observation"
+        "backend.ledger.observation",
+        "backend.utils.async_helpers.async_utils"
       ],
       "imported_by": []
     },
@@ -30631,12 +30957,20 @@
       "loc": 42,
       "class_count": 0,
       "def_count": 2,
-      "importer_count": 1,
+      "importer_count": 2,
       "intra_package_imports": [],
       "imported_by": [
         {
           "importer": "backend/persistence/file_store/local_file_store.py",
           "lineno": 14,
+          "names": [
+            "replace_file_with_retry"
+          ],
+          "is_type_checking": false
+        },
+        {
+          "importer": "backend/task_state/store.py",
+          "lineno": 43,
           "names": [
             "replace_file_with_retry"
           ],
@@ -31192,7 +31526,7 @@
     "backend.scripts.verify.check_file_size": {
       "module_path": "backend.scripts.verify.check_file_size",
       "file_path": "backend/scripts/verify/check_file_size.py",
-      "byte_size": 3687,
+      "byte_size": 3689,
       "loc": 131,
       "class_count": 0,
       "def_count": 6,
@@ -31214,8 +31548,8 @@
     "backend.scripts.verify.ga_onboarding_gate": {
       "module_path": "backend.scripts.verify.ga_onboarding_gate",
       "file_path": "backend/scripts/verify/ga_onboarding_gate.py",
-      "byte_size": 6893,
-      "loc": 211,
+      "byte_size": 7055,
+      "loc": 222,
       "class_count": 1,
       "def_count": 10,
       "importer_count": 0,
@@ -31331,6 +31665,54 @@
       "def_count": 0,
       "importer_count": 0,
       "intra_package_imports": [],
+      "imported_by": []
+    },
+    "backend.task_state.__init__": {
+      "module_path": "backend.task_state.__init__",
+      "file_path": "backend/task_state/__init__.py",
+      "byte_size": 212,
+      "loc": 7,
+      "class_count": 0,
+      "def_count": 0,
+      "importer_count": 0,
+      "intra_package_imports": [],
+      "imported_by": []
+    },
+    "backend.task_state.models": {
+      "module_path": "backend.task_state.models",
+      "file_path": "backend/task_state/models.py",
+      "byte_size": 3550,
+      "loc": 118,
+      "class_count": 6,
+      "def_count": 1,
+      "importer_count": 0,
+      "intra_package_imports": [],
+      "imported_by": []
+    },
+    "backend.task_state.service": {
+      "module_path": "backend.task_state.service",
+      "file_path": "backend/task_state/service.py",
+      "byte_size": 10553,
+      "loc": 262,
+      "class_count": 1,
+      "def_count": 0,
+      "importer_count": 0,
+      "intra_package_imports": [],
+      "imported_by": []
+    },
+    "backend.task_state.store": {
+      "module_path": "backend.task_state.store",
+      "file_path": "backend/task_state/store.py",
+      "byte_size": 1783,
+      "loc": 57,
+      "class_count": 1,
+      "def_count": 1,
+      "importer_count": 0,
+      "intra_package_imports": [
+        "backend.core.logging.session_event_logger",
+        "backend.core.workspace_resolution",
+        "backend.persistence.file_store.atomic_write"
+      ],
       "imported_by": []
     },
     "backend.telemetry.__init__": {
@@ -31583,8 +31965,8 @@
     "backend.utils.impact_analysis": {
       "module_path": "backend.utils.impact_analysis",
       "file_path": "backend/utils/impact_analysis.py",
-      "byte_size": 16375,
-      "loc": 416,
+      "byte_size": 17010,
+      "loc": 488,
       "class_count": 2,
       "def_count": 4,
       "importer_count": 0,
@@ -31643,7 +32025,7 @@
       "imported_by": [
         {
           "importer": "backend/utils/lsp/lsp_client.py",
-          "lineno": 486,
+          "lineno": 488,
           "names": [
             "CLIENT_CAPABILITIES"
           ],
@@ -31663,8 +32045,8 @@
     "backend.utils.lsp.lsp_client": {
       "module_path": "backend.utils.lsp.lsp_client",
       "file_path": "backend/utils/lsp/lsp_client.py",
-      "byte_size": 40938,
-      "loc": 1171,
+      "byte_size": 40966,
+      "loc": 1173,
       "class_count": 5,
       "def_count": 3,
       "importer_count": 1,
@@ -31723,8 +32105,8 @@
     "backend.utils.lsp.lsp_session": {
       "module_path": "backend.utils.lsp.lsp_session",
       "file_path": "backend/utils/lsp/lsp_session.py",
-      "byte_size": 20006,
-      "loc": 557,
+      "byte_size": 20642,
+      "loc": 565,
       "class_count": 2,
       "def_count": 4,
       "importer_count": 0,
@@ -31808,10 +32190,10 @@
     "backend.utils.prompt": {
       "module_path": "backend.utils.prompt",
       "file_path": "backend/utils/prompt.py",
-      "byte_size": 16093,
-      "loc": 419,
+      "byte_size": 15221,
+      "loc": 395,
       "class_count": 6,
-      "def_count": 0,
+      "def_count": 1,
       "importer_count": 0,
       "intra_package_imports": [
         "backend.core.message",
@@ -31820,6 +32202,7 @@
         "backend.engine.prompts.prompt_builder",
         "backend.engine.tools.workspace_memory",
         "backend.inference.capabilities.model_features",
+        "backend.inference.provider_resolver",
         "backend.utils.terminal.terminal_contract"
       ],
       "imported_by": []
@@ -31838,7 +32221,7 @@
     "backend.utils.runtime_detect": {
       "module_path": "backend.utils.runtime_detect",
       "file_path": "backend/utils/runtime_detect.py",
-      "byte_size": 36753,
+      "byte_size": 35732,
       "loc": 1028,
       "class_count": 2,
       "def_count": 15,
@@ -32235,7 +32618,7 @@
     "launch.entry": {
       "module_path": "launch.entry",
       "file_path": "launch/entry.py",
-      "byte_size": 2971,
+      "byte_size": 3074,
       "loc": 103,
       "class_count": 0,
       "def_count": 5,

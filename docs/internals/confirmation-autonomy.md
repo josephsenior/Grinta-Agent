@@ -15,7 +15,7 @@ The system had **two independent confirmation layers** that could both set `AWAI
 - **Status**: ✅ Working correctly
 
 ### Layer 2: Runtime (SecurityEnforcementMixin)
-- **Location**: `backend/execution/security_enforcement.py`
+- **Location**: `backend/execution/aes/security_enforcement.py`
 - **Responsibility**: Execution + safety enforcement
 - **Behavior**: Independently re-evaluated risk and could override Layer 1's decision
 - **Status**: ❌ **BUG** - Did not check autonomy level, causing intermittent confirmation dialogs
@@ -55,7 +55,7 @@ The event stream serializes/deserializes actions (`event_to_dict` → `event_fro
 ### Changes Made
 
 #### 1. Removed Confirmation Policy from Runtime
-**File**: `backend/execution/security_enforcement.py`
+**File**: `backend/execution/aes/security_enforcement.py`
 
 - **Removed**: `require_confirmation` field from `SecurityPolicyDecision` dataclass
 - **Removed**: `_is_full_autonomy()` helper method (no longer needed)
@@ -101,7 +101,7 @@ All related tests pass:
 
 ## Files Modified
 
-1. `backend/execution/security_enforcement.py` - Removed confirmation policy logic
+1. `backend/execution/aes/security_enforcement.py` - Runtime security enforcement without confirmation ownership
 2. `backend/tests/unit/execution/test_security_enforcement.py` - Updated test to reflect new architecture
 
 ## Migration Notes

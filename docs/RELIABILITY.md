@@ -51,12 +51,13 @@ actions so the agent does not lose context on an unrelated tool result.
 
 ## Debugger latency contract
 
-The DAP debugger (`backend/execution/debugger.py`) is one of the slowest tools
+The DAP debugger (`backend/execution/dap/`) is one of the slowest tools
 because it spawns a real debug-adapter subprocess (for Python, typically
 ``debugpy.adapter`` when ``debugpy`` is installed). The runtime provides two
 reliability primitives for that path:
 
-1. **Off-loaded sync work.** `action_execution_server_io.py::debugger` runs
+1. **Off-loaded sync work.**
+   `debugger()` in `backend/execution/io_mixins/_aes_io_run_mixin.py` runs
    `DAPDebugManager.handle` via `asyncio.to_thread`, so the event loop is
    never blocked during cold start.
 2. **Granular progress logging.** Every DAP step (`spawning adapter`,
@@ -74,8 +75,9 @@ instead of seeing a bare `DAPError`.
 
 ## Crash & shutdown contract
 
-* **EventStream.** Closed on `/quit`, `Ctrl-C`, and on uncaught exceptions
-  via the global handler in `backend/core/logger.py`.
+* **EventStream.** Closed by orchestrator and CLI teardown paths on `/quit`,
+  `Ctrl-C`, and normal session shutdown. Uncaught exceptions are logged by
+  `backend/core/logging/logger.py`.
 * **Worker pool.** The `ThreadPoolExecutor` used by `call_async_from_sync` is
   shut down at interpreter exit (`atexit`) with `cancel_futures=True` so the
   process exits promptly even with stuck non-daemon threads.
@@ -108,9 +110,24 @@ agent or after a **finished** run. Those diagnostics are recorded on the
 controller (`set_last_error`, logs), but Grinta **does not** transition
 `STOPPED → ERROR` or `FINISHED → ERROR`: that would conflate a deliberate
 terminal with a broken session and could break WAL/reconnect semantics.
-See `backend/orchestration/runtime_late_error_guard.py`, early status
-handling in `backend/core/bootstrap/main.py`, and
-`backend/core/bootstrap/agent_control_loop.py`.
+The canonical terminal-state rules live in `VALID_TRANSITIONS` in
+`backend/orchestration/services/state_transition_service.py`; invalid late
+transitions are rejected and logged.
+
+## Workspace checkpoints and restore recovery
+
+Before eligible edits, mutating commands, destructive commands, and selected
+phase boundaries, rollback middleware asks `RollbackManager` for a checkpoint.
+The manager uses the standalone
+[ShadowGit](https://github.com/josephsenior/ShadowGit) package through Grinta's
+compatibility adapter in `backend/execution/rollback/shadow_repo.py`.
+
+The snapshot store is independent of the workspace's `.git` and preserves
+file bytes, symlinks, and POSIX executable modes. Restore moves extra files to
+quarantine rather than deleting them irreversibly. A restore journal records
+progress so an interrupted restore can be detected and recovered on the next
+open. Retention pruning bounds checkpoint history; Grinta owns the retention
+policy while ShadowGit owns object-store pruning and integrity mechanics.
 
 ## Two kinds of rate limiting
 
@@ -201,8 +218,9 @@ Search `logs/workspaces/<ws>/sessions/<session_id>/session.jsonl` for:
 ## What this document does not promise
 
 * No guarantee against a malicious model intentionally destroying files in
-  the workspace. Use git checkpoints (auto-created on every successful
-  edit) to recover.
+  the workspace. ShadowGit-backed checkpoints cover eligible guarded actions,
+  but they are not a substitute for normal version control, backups, or an
+  isolated disposable environment.
 * No guarantee against a malicious MCP server. Only enable MCP servers you
   trust.
 * No guarantee that long-running terminals will behave identically across

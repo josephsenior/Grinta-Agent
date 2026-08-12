@@ -5,14 +5,16 @@ Goal: keep prompt chrome, transcript cards, and live panels visually coherent ac
 
 ## Core rules
 
-- Use tokens from `backend/cli/theme.py` and `backend/cli/layout_tokens.py`.
+- Import theme tokens from `backend.cli.theme`; their definitions live under
+  `backend/cli/theme/`. Layout tokens live in
+  `backend/cli/display/layout_tokens.py`.
 - Do not introduce ad-hoc color hex values in renderer/transcript modules.
 - Keep panel titles short, Title Case nouns (`Files`, `Terminal`, `Workers`, `Tool`).
 - Keep spacing rhythm consistent via shared helpers (`frame_transcript_body`, panel padding tokens).
 
 ## Marker policy
 
-Canonical markers live in `backend/cli/theme.py`:
+Canonical markers are exported by `backend.cli.theme`:
 
 - `MARK_OK` for success
 - `MARK_ERR` for failures
@@ -45,15 +47,17 @@ Extended diagnostics (for example MCP/skills counts) should live in explicit sta
 | Preset                        | Description                                                                                                                                       |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `default` / `dark`            | Navy-dark with cyan accents (original)                                                                                                            |
-| `light`                       | Light background variant                                                                                                                          |
-| `high-contrast`               | Accessibility-first: bold ANSI colors, no hex                                                                                                     |
+| `light`                       | Internal light-background preset; not currently an accepted `--theme` value                                                                       |
+| `high-contrast`               | Internal accessibility preset; not currently an accepted `--theme` value                                                                           |
 | `ocean`                       | Blue-water palette                                                                                                                                |
 | `mono`                        | Monochrome with dim/bold only                                                                                                                     |
 | `deep-system-instrumentation` | NASA mission-control aesthetic: `#0a0e14` navy bg, `#5fb3b3` teal accents, `#99c794` emerald, `#ec5f67` coral. Designed for long coding sessions. |
 
 ### Theme activation
 
-- CLI flag: `grinta --theme deep-system-instrumentation`
+- CLI flag: `grinta --theme deep-system-instrumentation`. Public CLI choices
+  are `default`, `dark`, `ocean`, `mono`, and
+  `deep-system-instrumentation`.
 - Environment: `GRINTA_THEME=deep-system-instrumentation`
 
 ## "Deep System Instrumentation" palette reference

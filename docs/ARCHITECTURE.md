@@ -138,7 +138,7 @@ Design intent:
 ### Middleware Pipeline
 
 The orchestrator uses a middleware pipeline (assembled in
-`backend/orchestration/mixins/_session_orchestrator_lifecycle_mixin.py`)
+`backend/orchestration/mixins/lifecycle.py`)
 for cross-cutting concerns:
 
 ```python
@@ -154,6 +154,7 @@ middlewares = [
     PreExecDiffMiddleware(),  # Generate diffs before edits
     AutoCheckMiddleware(),  # Post-execution validation
     PostEditDiagnosticsMiddleware(),  # Diagnostics after edits
+    SymbolIndexInvalidationMiddleware(),  # Invalidate changed symbol indexes
     FileStateMiddleware(),  # File-state tracking
     LoggingMiddleware(self),  # Request/response logging
     TelemetryMiddleware(self),  # Metrics collection
@@ -166,26 +167,27 @@ Middleware execution order matters - safety checks run first, telemetry runs las
 ### Key Flows
 
 #### Step Execution Flow
-1. `orchestrator.step()` called
-2. Acquires `self._step_lock` (asyncio.Lock)
-3. Calls `services.pending_action.set(action)`
-4. Middleware pipeline processes action
-5. Action executed via `services.action_execution`
-6. Observation processed by `services.observation`
-7. State updated via `state_tracker`
-8. Releases lock, updates metrics
+1. `SessionOrchestrator.step()` enters the guarded step lifecycle.
+2. The engine plans or continues the next action.
+3. `PendingActionService` records runnable actions by stream id.
+4. The middleware pipeline validates and enriches the action.
+5. `ActionExecutionService` dispatches to the local execution server.
+6. The resulting observation is appended and routed.
+7. Completion, retry, and state-transition services decide the next state.
 
 #### Error Recovery Flow
 1. Exception occurs during step
 2. `services.recovery.react_to_exception(e)` called
 3. Error classified as recoverable or terminal
 4. Recoverable: retry with backoff via `services.retry`
-5. Terminal: emit error observation, transition to CLOSING
+5. Terminal: emit an error observation and transition to `ERROR`
 
 #### Lifecycle Transitions
-- INITIALIZING → ACTIVE: After service initialization
-- ACTIVE → CLOSING: On agent finish or error
-- CLOSING → CLOSED: After cleanup and checkpoint
+The canonical transition graph is `VALID_TRANSITIONS` in
+`backend/orchestration/services/state_transition_service.py`. Public states
+include `LOADING`, `RUNNING`, `AWAITING_USER_INPUT`,
+`AWAITING_USER_CONFIRMATION`, `RETRYING`, `RATE_LIMITED`, `FINISHED`,
+`REJECTED`, `ERROR`, and `STOPPED`.
 
 ## Execution Layer
 
@@ -193,11 +195,12 @@ Execution is implemented in `backend/execution/`.
 
 Important components:
 
-- `action_execution_server.py`: runtime executor implementation used by the local runtime
-- `security_enforcement.py`: policy checks for command/path behavior
+- `server/action_execution_server.py`: runtime executor used by the local runtime
+- `aes/security_enforcement.py`: policy checks for command/path behavior
 - `browser/`: native browser session and CDP helpers
 - `dap/`: debugger adapter protocol integration
-- `mcp/`: MCP bootstrap/proxy support for runtime-connected external tools
+- `mcp/`: bundled MCP configuration; integration clients live under
+  `backend/integrations/mcp/`
 - `utils/`: command helpers, diffing, session handling, monitoring
 
 ## Durability Layer
@@ -210,6 +213,16 @@ Key properties:
 - replay-friendly serialization
 - backpressure and stream controls
 - persistence support for reliable recovery paths
+
+Workspace rollback is a separate durability path. Grinta consumes the
+standalone [ShadowGit](https://github.com/josephsenior/ShadowGit) package through
+`backend/execution/rollback/shadow_repo.py`. It writes content-addressed
+snapshots to a private bare object store under Grinta's per-workspace data and
+never modifies the user's `.git`. Restores preserve bytes, symlinks, and POSIX
+executable modes, quarantine post-snapshot extras, and use a recovery journal
+to resume or repair an interrupted restore. `RollbackManager` owns Grinta's
+checkpoint policy and manifest; ShadowGit owns snapshot storage and restore
+mechanics.
 
 ## Configuration Model
 

@@ -9,7 +9,7 @@ Secrets belong in a sibling `.env` file or your shell environment. Reference the
 
 ## Configuration precedence (highest → lowest)
 
-1. CLI flags (`--model`, `-l`, etc.)
+1. CLI flags (`--model` / `-m`, `--project` / `-p`, etc.)
 2. `settings.json` values for keys the loader recognizes
 3. Environment variables loaded before JSON merge
 4. Code defaults

@@ -57,11 +57,12 @@ active shell contract (`security.windows_shell` on Windows: `bash` vs `powershel
 
 | Method | Status | Notes |
 | --- | --- | --- |
-| PyPI (`pipx install grinta`) | Supported | Recommended installation path for users. |
+| GitHub VCS install (`pipx install "git+https://github.com/josephsenior/Grinta-Coding-Agent.git"`) | Supported | Current isolated installation path for users. |
+| PyPI (`pipx install grinta`) | Not published | No `grinta` project is currently available on PyPI. |
 | Editable source install (`pipx install -e .`) | Supported | For contributors developing Grinta itself. |
 | Source (`uv run python -m backend.cli.entry`) | Supported | For contributors running directly from a checkout. |
 | Docker | Community / experimental | Container images may be available, but this repo does not provide an officially supported `docker compose` stack. |
-| Homebrew / Scoop | Not currently documented | Use the published PyPI package unless a package-manager artifact has been independently validated. |
+| Homebrew / Scoop | Not currently documented | Use the GitHub VCS install unless a package-manager artifact has been independently validated. |
 
 ## Product Surface
 

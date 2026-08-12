@@ -12,12 +12,12 @@ This guide maps how Grinta talks to **LLM providers** versus **external tools**.
 
 ## Inference layer
 
-**Public read API:** [`backend/inference/registry.py`](../backend/inference/registry.py)
+**Registry and provider resolution:** [`backend/inference/llm_registry.py`](../backend/inference/llm_registry.py) and [`backend/inference/provider_resolver.py`](../backend/inference/provider_resolver.py)
 
 Responsibilities:
 
 - Provider IDs, default base URLs, and model listing (static catalog + optional remote `/v1/models` + local discovery)
-- LLM transport via [`llm.py`](../backend/inference/llm.py) and [`direct_clients.py`](../backend/inference/direct_clients.py)
+- LLM transport via [`llm/`](../backend/inference/llm/) and provider clients in [`clients/`](../backend/inference/clients/)
 - Capability lookup (catalog → conservative defaults for uncataloged ids)
 
 Configuration keys and param validation live in [`backend/core/config/`](../backend/core/config/). Prompt assembly lives in [`backend/engine/prompts/`](../backend/engine/prompts/) and [`backend/context/`](../backend/context/) — those consume inference; they do not call providers directly.
@@ -27,8 +27,8 @@ Configuration keys and param validation live in [`backend/core/config/`](../back
 Grinta uses **catalog-only listing** for hosted providers and **live probes** for local runtimes:
 
 1. **Static catalog (hosted providers)** — [`catalogs/*.json`](../backend/inference/catalogs/) are the single source of truth for picker models, pricing, limits, capability flags, reasoning tiers/wires, param overrides, and aliases.
-2. **Local probe (Ollama / LM Studio / vLLM)** — [`registry.get_local_model_names()`](../backend/inference/registry.py) discovers installed models when the local server is running.
-3. **Conservative fallback** — uncataloged manual/local model ids use safe defaults (tools on, reasoning off) via [`param_profiles.py`](../backend/inference/param_profiles.py).
+2. **Local probe (Ollama / LM Studio / vLLM)** — [`provider_catalog.get_local_model_names()`](../backend/inference/catalog/provider_catalog.py) delegates discovery to the provider resolver when the local server is running.
+3. **Conservative fallback** — uncataloged manual/local model ids use safe defaults via [`param_profiles.py`](../backend/inference/capabilities/param_profiles.py).
 4. **Session pinning** — [`runtime_profile.py`](../backend/inference/runtime_profile.py) pins limits on the LLM instance; `settings.json` overrides still win.
 
 ### Catalog maintenance

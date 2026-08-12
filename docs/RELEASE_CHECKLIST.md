@@ -12,8 +12,8 @@ These workflows run on every PR and on pushes to `main`. All **required** jobs m
 
 | Workflow | Jobs | What they cover |
 | --- | --- | --- |
-| **Run Python Tests** | `gates-on-linux-coverage-{a,b,c,d,g,e}` + `report` | Full unit corpus on Linux with sharded coverage; combined report enforces **75%** (`--fail-under=75`). Execution shards (D/G) skip `compileall`; syntax is gated on other shards. |
-| **Run Python Tests** | `gates-on-linux-extended` | Integration, e2e, and stress suites on Linux (runs after the coverage report job passes). |
+| **Run Python Tests** | `gates-on-linux-coverage-{a,b,c,d,g,e}` + `report` | Full unit corpus on Linux with sharded coverage; the report combines Linux unit and extended artifacts and enforces **74%** (`--fail-under=74`). Execution shards (D/G) skip `compileall`; syntax is gated on other shards. |
+| **Run Python Tests** | `gates-on-linux-extended` | Integration, e2e, and stress suites on Linux; its coverage artifact is required by the final coverage-report job. |
 | **Run Python Tests** | `gates-on-windows` (3.12 + 3.13) | Full unit corpus cross-platform smoke. |
 | **Run Python Tests** | `gates-on-windows-extended` | Integration, e2e, and stress suites on Windows (runs after unit gates pass; Python 3.12). |
 | **Run Python Tests** | `gates-on-macos` | Full unit corpus on macOS. |
@@ -48,10 +48,12 @@ Run these on the release commit (or the PR branch right before merge) in additio
 
 ```bash
 uv run python scripts/bootstrap_env.py dev-test
-PYTHONPATH=. uv run pytest --cov=backend --cov-fail-under=75 backend/tests/unit
+PYTHONPATH=. uv run pytest --cov=backend --cov-fail-under=74 backend/tests/unit
 ```
 
-CI already shards unit coverage across six Linux jobs and enforces 75% in `gates-on-linux-coverage-report`; run this locally when debugging coverage gaps.
+CI shards unit coverage across six Linux jobs, combines the Linux extended
+suite's coverage, and enforces 74% in `gates-on-linux-coverage-report`; run the
+unit-only command locally as an approximation when debugging coverage gaps.
 
 - [ ] **Windows unit smoke (optional local mirror):**
 

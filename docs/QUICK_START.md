@@ -1,19 +1,23 @@
 # Quick Start
 
-Grinta 1.0.0 is stable and published on PyPI. Grinta is the local-first coding agent that survives failures and finishes long tasks.
+Grinta is a local-first coding agent for long-running coding tasks. The current
+repository is the release source of truth; a `grinta` project is not currently
+published on PyPI.
 
 ## Install and launch
 
 From the project you want Grinta to work on, run:
 
 ```bash
-pipx install grinta
+pipx install "git+https://github.com/josephsenior/Grinta-Coding-Agent.git"
 grinta
 ```
 
 The first launch guides you through provider and model setup. To configure Grinta before launching the TUI, run `grinta init`.
 
-The Grinta package and your target project are separate: `pipx` installs the application in an isolated environment, while `grinta` operates on the directory where you launch it. Quote paths that contain spaces.
+The Grinta package and your target project are separate: `pipx` installs the
+application from GitHub in an isolated environment, while `grinta` operates on
+the directory where you launch it. Quote paths that contain spaces.
 
 To open a different target explicitly:
 
@@ -26,7 +30,7 @@ grinta -p "<project>"
 Use the same two-command install in PowerShell or a POSIX shell:
 
 ```bash
-pipx install grinta
+pipx install "git+https://github.com/josephsenior/Grinta-Coding-Agent.git"
 grinta
 ```
 
@@ -44,18 +48,21 @@ If required, install the WSL prerequisites first:
 sudo apt update
 sudo apt install -y pipx
 pipx ensurepath
-pipx install grinta
+pipx install "git+https://github.com/josephsenior/Grinta-Coding-Agent.git"
 grinta
 ```
 
 ## Optional features
 
-Install an optional dependency set instead of the base package:
+For optional dependency sets, clone the source tree and install the desired
+extra:
 
 ```bash
-pipx install "grinta[rag]"       # vector-memory support
-pipx install "grinta[browser]"   # browser tools
-pipx install "grinta[all]"       # all optional integrations
+git clone https://github.com/josephsenior/Grinta-Coding-Agent.git Grinta
+cd Grinta
+pipx install ".[rag]"       # vector-memory support
+pipx install ".[browser]"   # browser tools
+pipx install ".[all]"       # all optional integrations
 ```
 
 ## Develop from source

@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Date | YYYY-MM-DD |
-| Install path | PyPI pipx / editable source / source uv / docker |
+| Install path | GitHub pipx / editable source / source uv / docker |
 | OS | Linux / Windows / macOS / WSL2 Ubuntu + version |
 | Python version | |
 | Grinta version | `grinta --version` or commit SHA |
@@ -25,7 +25,7 @@
 
 | Step | Pass / fail | Notes |
 | --- | --- | --- |
-| Install (`pipx install grinta` for users; editable/source bootstrap for contributors) | | |
+| Install (GitHub VCS `pipx` URL for users; editable/source bootstrap for contributors) | | |
 | `grinta init` (interactive wizard) | | |
 | `grinta` TUI launch | | |
 | First agent task (`/health` or starter prompt) | | |

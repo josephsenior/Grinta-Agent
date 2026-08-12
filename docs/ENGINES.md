@@ -1,161 +1,58 @@
-# Grinta Agent Engines
+# Grinta Agent Engine
 
-Grinta's current tree is centered on **one production agent engine** and **one minimal test-support agent**.
+Grinta ships one production agent engine: the **Orchestrator**. Browser, MCP,
+debugger, LSP, memory, and editing features are capabilities exposed to that
+engine; they are not separate agents.
 
-The production system is the **Orchestrator**. Web browsing and other remote capabilities are exposed through tools and MCP integration, not through separate built-in agent engines. The `Echo` agent exists as a deterministic harness for tests and custom-agent examples.
-
-This document reflects the engines that are actually present in the current repository.
-
----
-
-## Engine Overview
-
-| Engine / Capability | Status | Best For |
-| --- | --- | --- |
-| **Orchestrator** | Production engine | Coding, debugging, refactoring, multi-step task execution |
-| **Native browser + MCP capabilities** | Capabilities used by the Orchestrator | Web research, browser automation, remote tools |
-| **Echo** | Test-support agent | Deterministic testing, pipeline debugging, custom-agent examples |
-
----
-
-## 1. Orchestrator
-
-**Default engine.** The Orchestrator is the main agent loop Grinta ships today.
-
-It coordinates planning, tool use, observation handling, safety checks, memory, and finish behavior. If you are using Grinta normally, this is the engine doing the work.
-
-### Execution Loop
-
-At a high level, the Orchestrator runs a deliberate loop:
+## Runtime model
 
 ```text
-Observe -> Plan -> Act -> Observe -> Validate -> Repeat
+user input -> SessionOrchestrator -> Orchestrator -> Planner -> tools
+           <- observations / state / validation / completion evidence
 ```
 
-The exact runtime path depends on the task and enabled tools, but the important point is that the Orchestrator is not just a chat wrapper. It is the control loop around the model.
+The engine proposes tool calls and consumes observations. The orchestration
+layer owns lifecycle, confirmation, middleware, retries, pending actions, and
+completion policy. The execution layer performs approved actions.
 
-### Core Modules
+## Main implementation
 
-These are the main implementation files in `backend/engine/` today:
+- `backend/engine/orchestrator.py` coordinates a model turn.
+- `backend/engine/orchestrator_helpers/` contains step, recovery, prompt, and
+  condensation helpers.
+- `backend/engine/planner.py` builds and mode-filters the model toolset.
+- `backend/engine/executor.py` and `executor_mixins/` process streaming and
+  non-streaming model responses.
+- `backend/engine/function_calling/` validates and dispatches tool calls.
+- `backend/engine/prompts/` builds the system prompt from Python renderers and
+  markdown partials.
+- `backend/engine/tools/` defines native tools.
+- `backend/engine/tool_registry.py` validates the LLM-facing tool registry.
 
-- `orchestrator.py`: top-level agent orchestration
-- `planner.py`: plan construction and task decomposition
-- `executor.py`: action execution and result handling
-- `safety.py`: risk classification and action policy support
-- `memory_manager.py`: working-memory and retrieval coordination
-- `reflection.py`: optional reflection flow
-- `action_verifier.py`: post-action verification helpers
-- `streaming_checkpoint.py`: checkpointing and recovery support
-- `tool_registry.py`: tool registration and availability
-- `function_calling.py`: tool-call parsing and model I/O glue
+The exact toolset depends on configuration and interaction mode:
 
-### Common Tool Surface
+- **Chat** exposes read/discovery tools plus user questions.
+- **Plan** adds task state, task tracking, and acceptance criteria.
+- **Agent** exposes the configured execution surface, including edits,
+  terminals, browser, debugger, memory, and MCP tools.
 
-The exact tool list is **configuration-dependent**. A typical Orchestrator session exposes a mix of:
+The canonical mode policy is `backend/core/interaction_modes.py`; toolset
+construction is in `backend/engine/planner.py`.
 
-- reasoning and control tools: `think`, `finish`, `task_tracker`
-- project exploration tools: `grep`, `glob`, `analyze_project_structure`, `read_file`, `find_symbols`
-- editing tools: `create_file`, `replace_string`, `multiedit`
-- execution tools: `bash`, `terminal_manager`
-- memory tool: `memory` (`working` | `persist` | `recall`)
-- external capability bridge: `call_mcp_tool`
+## Browser and MCP
 
-Some tools appear only when specific features are enabled, so it is better to think of the Orchestrator as a configurable engine with a stable core rather than a fixed tool count.
+Native browser execution lives under `backend/execution/browser/`, with the
+model-facing tool in `backend/engine/tools/browser_native.py`. External MCP
+servers are integrated under `backend/integrations/mcp/` and reached through
+the compact MCP gateway tool.
 
-### Prompt System
+## Extensibility boundary
 
-Prompt assembly lives in `backend/engine/prompts/` and is now built through a **pure-Python prompt builder** with markdown partials, not Jinja2 templates.
+The supported extension points are tools, MCP servers, provider/model
+configuration, and orchestration services. Grinta does not currently ship an
+Echo, Locator, Auditor, or other peer engine, and the repository does not
+document a stable third-party agent-class plugin API.
 
-See:
-
-- `backend/engine/prompts/prompt_builder.py`
-- `backend/engine/README.md`
-- Historical context: [journey/15-prompts-are-programs.md](journey/15-prompts-are-programs.md)
-
----
-
-## 2. Native Browser and MCP Remote Capabilities
-
-Browsing is a capability, not a separate built-in agent class in the main engine tree.
-
-Grinta has native browser plumbing under `backend/execution/browser/` and a
-model-facing browser tool under `backend/engine/tools/browser_native.py`.
-Separately, the Orchestrator can reach external capabilities through the Model
-Context Protocol layer in `backend/integrations/mcp/`.
-
-### How It Works
-
-```text
-Orchestrator -> browser_tool(...) -> native browser runtime -> observation
-Orchestrator -> call_mcp_tool(...) -> MCP integration layer -> connected server -> observation
-```
-
-### When to Use
-
-- web research
-- browser interaction
-- remote tool integration
-- capabilities that do not belong in the native local tool layer
-
-### Important Clarification
-
-Earlier drafts of this documentation treated "MCP Browser" like a standalone first-class engine. In the current codebase, it is more accurate to describe browsing as native and MCP-backed capabilities used by the Orchestrator, not a separate production agent peer.
-
----
-
-## 3. Echo
-
-`Echo` is a minimal deterministic agent used in test support.
-
-It lives under:
-
-- `backend/tests/support/echo/agent.py`
-
-### What It Does
-
-The Echo agent is not meant to be a user-facing coding engine. It exists to exercise the agent pipeline predictably by emitting predefined actions and observations.
-
-That makes it useful for:
-
-- testing event flow
-- validating agent/runtime plumbing
-- debugging integration behavior without a real model in the loop
-- serving as the smallest useful custom-agent example
-
-If you want to understand the minimum amount of code required to plug a custom agent into the system, Echo is the right starting point.
-
----
-
-## Engine Selection and Custom Agents
-
-The default agent name in the current codebase is `Orchestrator`.
-
-Custom agents can be registered through the config loader with a `classpath` entry. The app config stores a dictionary of named agents plus the `default_agent` name that should be used by default.
-
-Example pattern in `settings.json`:
-
-```json
-{
-  "default_agent": "MyCustomAgent",
-  "agent": {
-    "MyCustomAgent": {
-      "classpath": "my_package.my_module.MyAgent"
-    }
-  }
-}
-```
-
-See:
-
-- `backend/core/config/app_config.py`
-- `backend/core/config/config_loader.py`
-
----
-
-## What Is Not Bundled Today
-
-The current Grinta tree does **not** ship separate built-in `Locator` or `Auditor` engines.
-
-If you want specialized code-navigation or review agents, the right model is to implement them as custom agents and register them through the same `classpath` mechanism used elsewhere in the config system.
-
-That keeps this document aligned with the code that actually exists rather than preserving older architectural sketches as if they were shipping product.
+See [ARCHITECTURE.md](ARCHITECTURE.md),
+[INFERENCE_AND_INTEGRATIONS.md](INFERENCE_AND_INTEGRATIONS.md), and
+[`backend/engine/README.md`](../backend/engine/README.md).
