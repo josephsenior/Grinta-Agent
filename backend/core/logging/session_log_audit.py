@@ -406,11 +406,19 @@ def analyze_session(
 
     verdict, notes = _compute_verdict(acc)
     write_session_transcript(events, transcript_path)
+    evidence_summary: dict[str, Any] | None = None
+    try:
+        from backend.telemetry.evidence.report import write_evidence_report
+
+        evidence_summary = write_evidence_report(log_path.parent)
+    except Exception:
+        # Derived evidence must never prevent the established audit artifacts.
+        evidence_summary = None
     report_path.write_text(
-        _write_report(acc, log_path, transcript_path, verdict, notes),
+        _write_report(acc, log_path, transcript_path, verdict, notes)
+        + _write_execution_evidence_section(evidence_summary),
         encoding='utf-8',
     )
-
     return SessionAuditResult(
         log_path=log_path,
         stripped_path=transcript_path,
@@ -421,6 +429,44 @@ def analyze_session(
         verdict=verdict,
     )
 
+
+def _write_execution_evidence_section(summary: dict[str, Any] | None) -> str:
+    if not isinstance(summary, dict):
+        return ''
+    run = summary.get('run', {})
+    model = summary.get('model', {})
+    tools = summary.get('tools', {})
+    reliability = summary.get('reliability', {})
+    verification = summary.get('verification_activity', {})
+    completion = summary.get('completion', {})
+    duration = run.get('duration_ms')
+    duration_text = 'not recorded' if duration is None else f'{int(duration) // 1000}s'
+    validator = completion.get('completion_validator') or {}
+    validator_text = 'not run'
+    if isinstance(validator, dict):
+        if validator.get('enabled') is False:
+            validator_text = 'disabled (advisory)'
+        elif validator.get('passed') is not None:
+            validator_text = f"{'PASS' if validator['passed'] else 'FAIL'} (advisory)"
+    last_test = verification.get('last_test_exit_code')
+    last_test_text = 'not recorded' if last_test is None else ('PASS' if last_test == 0 else f'FAIL ({last_test})')
+    return (
+        '\n\nEXECUTION EVIDENCE\n==================\n\n'
+        f'Duration:                  {duration_text}\n'
+        f"Model turns:               {model.get('turns', 0)}\n"
+        f"Tool executions:           {tools.get('total', 0)}\n"
+        f"Tool failures:             {tools.get('failed', 0)}\n"
+        f"Control interventions:     {reliability.get('control_interventions', 0)}\n"
+        f"Recovery retries:          {reliability.get('retries', 0)}\n"
+        f"Context compactions:       {reliability.get('context_compactions', 0)}\n"
+        f"Checkpoints:               {reliability.get('checkpoints_created', 0)}\n"
+        f"Test runs:                 {verification.get('test_runs', 0)}\n"
+        f'Last test result:          {last_test_text}\n'
+        f"Additional user inputs:    {run.get('additional_user_inputs', 'unknown')}\n\n"
+        'COMPLETION\n==========\n\n'
+        f"Agent state:               {run.get('final_agent_state') or 'not recorded'}\n"
+        f'Current validator:         {validator_text}\n'
+    )
 
 def generate_session_audit_artifacts(
     log_dir: str | Path,

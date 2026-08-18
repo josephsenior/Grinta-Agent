@@ -533,6 +533,12 @@ def finalize_session_logging_audit(log_dir: str | None = None) -> None:
     from backend.core.logging.session_log_audit import generate_session_audit_artifacts
 
     _flush_shared_file_handler()
+    # Flush the asynchronous JSONL writer before deriving evidence/audit files.
+    try:
+        from backend.core.logging.session_event_logger import get_session_event_logger
+        get_session_event_logger().flush()
+    except Exception:
+        pass
     target_dir = log_dir or get_log_dir()
     try:
         result = generate_session_audit_artifacts(target_dir)

@@ -402,6 +402,7 @@ class LLM(RetryMixin, DebugMixin):
         )
         try:
             from backend.core.logging.session_event_logger import emit_session_event
+            from backend.telemetry.evidence import EvidenceKind, emit_execution_evidence
 
             emit_session_event(
                 'METRICS',
@@ -417,6 +418,25 @@ class LLM(RetryMixin, DebugMixin):
                     'cost_usd': cost,
                     'duration_ms': int(latency * 1000),
                     'response_id': getattr(response, 'id', None),
+                },
+            )
+            emit_execution_evidence(
+                EvidenceKind.MODEL_TURN,
+                {
+                    'model': self.config.model,
+                    'provider': getattr(self.config, 'provider', None),
+                    'prompt_tokens': prompt_tokens,
+                    'completion_tokens': completion_tokens,
+                    'reasoning_tokens': reasoning_tokens,
+                    'cache_read_tokens': cache_read,
+                    'cache_write_tokens': cache_write,
+                    'full_request_tokens': full_request_tokens,
+                    'usable_input_tokens': usable_input_tokens,
+                    'context_window': self._get_context_window_for_metrics(),
+                    'usage_estimated': usage_estimated,
+                    'cost_usd': cost,
+                    'latency_ms': int(latency * 1000),
+                    'stop_reason': None,
                 },
             )
         except Exception:

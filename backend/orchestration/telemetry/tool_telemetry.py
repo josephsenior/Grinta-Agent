@@ -158,6 +158,8 @@ class ToolTelemetry:
             outcome,
             duration,
             telemetry if isinstance(telemetry, dict) else None,
+            action=ctx.action,
+            observation=observation,
         )
 
     def on_blocked(self, ctx, reason: str | None = None) -> None:
@@ -172,6 +174,7 @@ class ToolTelemetry:
             f'blocked:{outcome_reason}',
             duration,
             telemetry if isinstance(telemetry, dict) else None,
+            action=ctx.action,
         )
 
     # ------------------------------------------------------------------ #
@@ -211,6 +214,9 @@ class ToolTelemetry:
         outcome: str,
         duration: float,
         telemetry: dict[str, Any] | None = None,
+        *,
+        action: Any | None = None,
+        observation: Any | None = None,
     ) -> None:
         tool_name = tool or '<unknown>'
         outcome_name = outcome or 'success'
@@ -243,6 +249,78 @@ class ToolTelemetry:
                 )
         except Exception as exc:  # pragma: no cover - metrics failures shouldn't crash
             logger.debug('Skipping telemetry metric export: %s', exc)
+
+        # Session evidence deliberately avoids the rich schemas above: they may
+        # contain command text, file contents, or tool output needed only by the ledger.
+        try:
+            from backend.telemetry.evidence import EvidenceKind, emit_execution_evidence
+            from backend.telemetry.evidence.fingerprint import fingerprint_json
+            from backend.telemetry.evidence.schema import Correlation
+            from backend.validation.command_classification import (
+                classify_shell_intent,
+                is_test_run_command,
+            )
+
+            command = str(getattr(action, 'command', '') or '')
+            action_type = str(getattr(action, 'action', tool_name) or tool_name)
+            changed = (
+                [str(getattr(action, 'path'))]
+                if action_type == 'edit' and getattr(action, 'path', None)
+                else []
+            )
+            read = (
+                [str(getattr(action, 'path'))]
+                if action_type == 'read' and getattr(action, 'path', None)
+                else []
+            )
+            exit_code = getattr(observation, 'exit_code', None)
+            if exit_code is None:
+                meta = getattr(observation, 'metadata', None)
+                exit_code = (
+                    getattr(meta, 'exit_code', None) if meta is not None else None
+                )
+            emit_execution_evidence(
+                EvidenceKind.TOOL_EXECUTION,
+                {
+                    'tool': tool_name,
+                    'outcome': outcome_name,
+                    'duration_ms': int(duration * 1000),
+                    'action_fingerprint': fingerprint_json(
+                        {
+                            'tool': action_type,
+                            'command': command,
+                            'path': getattr(action, 'path', None),
+                        }
+                    ),
+                    'result_fingerprint': fingerprint_json(
+                        {
+                            'type': type(observation).__name__
+                            if observation is not None
+                            else None,
+                            'exit_code': exit_code,
+                        }
+                    ),
+                    'shell_intent': classify_shell_intent(command) if command else None,
+                    'verification_kind': 'test'
+                    if command and is_test_run_command(command)
+                    else None,
+                    'exit_code': exit_code if isinstance(exit_code, int) else None,
+                    'changed_paths': changed,
+                    'read_paths': read,
+                    'result_bytes': len(
+                        str(getattr(observation, 'content', '') or '').encode('utf-8')
+                    ),
+                    'result_truncated': bool(getattr(observation, 'truncated', False)),
+                },
+                correlation=Correlation(
+                    ledger_event_id=getattr(action, 'id', None),
+                    action_id=getattr(action, 'id', None),
+                    cause_event_id=getattr(action, 'cause_event_id', None),
+                    observation_event_id=getattr(observation, 'id', None),
+                ),
+            )
+        except Exception:
+            logger.debug('Tool execution evidence emission failed', exc_info=True)
 
     @staticmethod
     def _model_validate(schema_class: Any, payload: dict[str, Any]) -> Any:

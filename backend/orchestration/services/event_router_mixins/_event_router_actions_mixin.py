@@ -122,6 +122,24 @@ class _EventRouterActionsMixin(EventRouterService if TYPE_CHECKING else object):
                     'USER_TURN',
                     {'text': content, 'event_id': eid},
                 )
+                try:
+                    from backend.telemetry.evidence import (
+                        EvidenceKind,
+                        emit_execution_evidence,
+                    )
+                    from backend.telemetry.evidence.fingerprint import fingerprint_text
+
+                    emit_execution_evidence(
+                        EvidenceKind.USER_INPUT,
+                        {
+                            'content_fingerprint': fingerprint_text(content),
+                            'content_length': len(content),
+                            'agent_state': None,
+                            'during_active_run': True,
+                        },
+                    )
+                except Exception:
+                    pass
             elif event.source == EventSource.AGENT:
                 emit_session_event(
                     'AGENT_STEP',
@@ -221,6 +239,49 @@ class _EventRouterActionsMixin(EventRouterService if TYPE_CHECKING else object):
         from backend.utils.async_helpers.async_utils import create_tracked_task
 
         async def _run() -> None:
+            # This is deliberately after FINISHED has been published by the caller.
+            try:
+                from backend.task_state.service import TaskStateService
+                from backend.telemetry.evidence import (
+                    EvidenceKind,
+                    emit_execution_evidence,
+                )
+                from backend.telemetry.evidence.fingerprint import (
+                    fingerprint_contract,
+                    fingerprint_plan,
+                    fingerprint_text,
+                )
+
+                state = TaskStateService().store.load()
+                raw = state.to_dict()
+                recorded, _, _, _ = TaskStateService.recorded_status(state)
+                contract = raw.get('contract') or {}
+                items = [
+                    x
+                    for group in ('requirements', 'constraints', 'success_conditions')
+                    for x in contract.get(group, [])
+                    if isinstance(x, dict)
+                ]
+                emit_execution_evidence(
+                    EvidenceKind.FINISH_DECLARED,
+                    {
+                        'final_action_id': getattr(action, 'id', None),
+                        'response_fingerprint': fingerprint_text(content),
+                        'response_length': len(content),
+                        'task_state_revision': state.revision,
+                        'recorded_task_status': recorded,
+                        'contract_fingerprint': fingerprint_contract(contract),
+                        'plan_fingerprint': fingerprint_plan(raw.get('plan')),
+                        'criteria_with_evidence': sum(
+                            bool(x.get('evidence')) for x in items
+                        ),
+                        'criteria_without_evidence': sum(
+                            not x.get('evidence') for x in items
+                        ),
+                    },
+                )
+            except Exception:
+                logger.debug('Finish evidence emission failed', exc_info=True)
             # Optional LLM-judge quality check. A warning may arrive after the
             # run becomes ready, but this work must never delay that transition.
             await self._ctrl.task_validation_service.validate_completion_quality(action)

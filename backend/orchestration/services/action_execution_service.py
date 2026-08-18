@@ -497,10 +497,30 @@ class ActionExecutionService:
                 error_signature,
             )
             await self._set_controller_error_if_running(controller)
+            try:
+                from backend.telemetry.evidence.emitter import emit_control_intervention
+
+                emit_control_intervention(
+                    'repair_retry_exhausted', exception=exc,
+                    attempt=identical_error_count, strategy='action_validation_repair',
+                    outcome='error_state',
+                )
+            except Exception:
+                logger.debug('Action-repair evidence emission failed', exc_info=True)
             return False, error_logged, error_signature, identical_error_count
 
         if attempt < max_repair_attempts:
             await self._yield_for_repair_retry()
+            try:
+                from backend.telemetry.evidence.emitter import emit_control_intervention
+
+                emit_control_intervention(
+                    'repair_retry_scheduled', exception=exc,
+                    attempt=attempt + 1, strategy='action_validation_repair',
+                    outcome='scheduled',
+                )
+            except Exception:
+                logger.debug('Action-repair evidence emission failed', exc_info=True)
             return True, error_logged, error_signature, identical_error_count
 
         logger.error(
@@ -508,6 +528,16 @@ class ActionExecutionService:
             max_repair_attempts,
         )
         await self._set_controller_error_if_running(controller)
+        try:
+            from backend.telemetry.evidence.emitter import emit_control_intervention
+
+            emit_control_intervention(
+                'repair_retry_exhausted', exception=exc,
+                attempt=attempt, strategy='action_validation_repair',
+                outcome='error_state',
+            )
+        except Exception:
+            logger.debug('Action-repair evidence emission failed', exc_info=True)
         return False, error_logged, error_signature, identical_error_count
 
     async def get_next_action(self) -> Action | None:

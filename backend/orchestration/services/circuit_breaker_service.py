@@ -93,7 +93,20 @@ class CircuitBreakerService:
         """Run circuit breaker check for current controller state."""
         if not self._circuit_breaker:
             return None
-        return self._circuit_breaker.check(getattr(self.controller, 'state', None))
+        result = self._circuit_breaker.check(getattr(self.controller, 'state', None))
+        if result is not None and result.tripped:
+            try:
+                from backend.telemetry.evidence.emitter import emit_control_intervention
+
+                emit_control_intervention(
+                    'circuit_breaker_triggered',
+                    failure_category='circuit_breaker',
+                    reason=result.reason,
+                    outcome='paused',
+                )
+            except Exception:
+                logger.debug('Circuit-breaker evidence emission failed', exc_info=True)
+        return result
 
     def record_error(self, error: Exception, tool_name: str = '') -> None:
         """Record an error with the circuit breaker."""
@@ -114,6 +127,12 @@ class CircuitBreakerService:
         """Record a stuck detection event."""
         if self._circuit_breaker:
             self._circuit_breaker.record_stuck_detection()
+            try:
+                from backend.telemetry.evidence.emitter import emit_control_intervention
+
+                emit_control_intervention('stuck_detected', outcome='recorded')
+            except Exception:
+                logger.debug('Stuck-detection evidence emission failed', exc_info=True)
 
     def record_progress_signal(self, note: str = '') -> None:
         """Record a progress signal that reduces stuck-detection pressure."""

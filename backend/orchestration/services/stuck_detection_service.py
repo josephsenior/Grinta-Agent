@@ -32,7 +32,15 @@ class StuckDetectionService:
 
         if not self._detector:
             return False
-        return bool(self._detector.is_stuck(self._controller.headless_mode))
+        result = bool(self._detector.is_stuck(self._controller.headless_mode))
+        if result:
+            try:
+                from backend.telemetry.evidence.emitter import emit_control_intervention
+
+                emit_control_intervention('stuck_detected', outcome='detected')
+            except Exception:
+                pass
+        return result
 
     def compute_repetition_score(self) -> float:
         """Compute a 0.0-1.0 proximity score for stuck detection.

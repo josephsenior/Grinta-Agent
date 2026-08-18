@@ -44,6 +44,13 @@ class TaskValidationService:
         controller = self._context.get_controller()
         validator = getattr(controller, 'task_validator', None)
         if validator is None:
+            self._emit_evidence(
+                {
+                    'validator': 'current_task_validator',
+                    'mode': 'advisory',
+                    'enabled': False,
+                }
+            )
             return
 
         agent = getattr(controller, 'agent', None)
@@ -51,6 +58,13 @@ class TaskValidationService:
         enabled_raw = getattr(config, 'enable_completion_validation', False)
         enabled = isinstance(enabled_raw, bool) and enabled_raw
         if not enabled:
+            self._emit_evidence(
+                {
+                    'validator': 'current_task_validator',
+                    'mode': 'advisory',
+                    'enabled': False,
+                }
+            )
             return
 
         task = controller._get_initial_task()
@@ -62,6 +76,20 @@ class TaskValidationService:
         except Exception as exc:  # pragma: no cover - defensive log
             logger.warning('Completion validator raised; ignoring: %s', exc)
             return
+
+        self._emit_evidence(
+            {
+                'validator': 'current_task_validator',
+                'mode': 'advisory',
+                'enabled': True,
+                'applicable': True,
+                'passed': bool(validation.passed),
+                'confidence': getattr(validation, 'confidence', None),
+                'reason': getattr(validation, 'reason', None),
+                'missing_items': list(getattr(validation, 'missing_items', []) or []),
+                'suggestions': list(getattr(validation, 'suggestions', []) or []),
+            }
+        )
 
         if validation.passed:
             logger.info(
@@ -111,3 +139,12 @@ class TaskValidationService:
             context='task_validation_service.quality_warning',
         )
         controller.event_stream.add_event(warning, EventSource.ENVIRONMENT)
+
+    @staticmethod
+    def _emit_evidence(data: dict[str, Any]) -> None:
+        try:
+            from backend.telemetry.evidence import EvidenceKind, emit_execution_evidence
+
+            emit_execution_evidence(EvidenceKind.COMPLETION_VALIDATION, data)
+        except Exception:
+            logger.debug('Completion-validation evidence failed', exc_info=True)

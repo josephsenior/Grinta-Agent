@@ -232,6 +232,20 @@ class RollbackMiddleware(ToolInvocationMiddleware):
             )
             ctx.metadata['rollback_checkpoint_id'] = checkpoint_id
             ctx.metadata['rollback_available'] = True
+            try:
+                from backend.telemetry.evidence import (
+                    EvidenceKind,
+                    emit_execution_evidence,
+                )
+                from backend.telemetry.evidence.schema import Correlation
+
+                emit_execution_evidence(
+                    EvidenceKind.CHECKPOINT,
+                    {'operation': 'create', 'checkpoint_id': checkpoint_id, 'action_id': getattr(ctx.action, 'id', None), 'reason': 'pre_mutation'},
+                    correlation=Correlation(action_id=getattr(ctx.action, 'id', None)),
+                )
+            except Exception:
+                logger.debug('Checkpoint evidence emission failed', exc_info=True)
             logger.debug('Checkpoint %s created before %s', checkpoint_id, action_type)
         except Exception:
             logger.debug(
@@ -275,7 +289,17 @@ class RollbackMiddleware(ToolInvocationMiddleware):
         """Rollback to a previously created checkpoint (delegates to manager)."""
         if self._manager is None:
             return False
-        return self._manager.rollback_to(checkpoint_id)
+        outcome = self._manager.rollback_to(checkpoint_id)
+        try:
+            from backend.telemetry.evidence import EvidenceKind, emit_execution_evidence
+
+            emit_execution_evidence(
+                EvidenceKind.CHECKPOINT,
+                {'operation': 'restore', 'checkpoint_id': checkpoint_id, 'outcome': 'success' if outcome else 'failed'},
+            )
+        except Exception:
+            logger.debug('Rollback evidence emission failed', exc_info=True)
+        return outcome
 
     def list_checkpoints(self) -> list[dict]:
         """Return available checkpoints."""

@@ -72,7 +72,20 @@ class TaskState:
                         source=str(row.get('source', 'agent')).strip(),
                         status=str(row.get('status', 'unknown')).strip(),
                         evidence=[
-                            Evidence(**e)
+                            Evidence(
+                                kind=str(e.get('kind', 'inspection')),
+                                summary=str(e.get('summary', '')),
+                                source_event_ids=[
+                                    value
+                                    for value in e.get('source_event_ids', [])
+                                    if isinstance(value, int)
+                                    and not isinstance(value, bool)
+                                    and value >= 0
+                                ]
+                                if isinstance(e.get('source_event_ids', []), list)
+                                else [],
+                                created_at=str(e.get('created_at') or _now()),
+                            )
                             for e in row.get('evidence', [])
                             if isinstance(e, dict)
                         ],

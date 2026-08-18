@@ -172,16 +172,36 @@ class TaskStateService:
             + state.contract.success_conditions
         )
         by_id = {item.id: item for item in all_items}
-        for row in args.get('evidence', []):
+        rows = args.get('evidence', [])
+        if not isinstance(rows, list):
+            raise ValueError('Audit evidence must be a list.')
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError('Audit entries must be objects.')
             item = by_id.get(str(row.get('item_id', '')))
             status = str(row.get('status', ''))
             if item is None or status not in _CONTRACT_STATUSES:
                 raise ValueError('Audit entries need known item_id and valid status.')
             item.status = status
+            source_event_ids = row.get('source_event_ids', [])
+            if not isinstance(source_event_ids, list):
+                raise ValueError(
+                    'source_event_ids must be a list of non-negative integers.'
+                )
+            if len(source_event_ids) > 50 or any(
+                not isinstance(event_id, int)
+                or isinstance(event_id, bool)
+                or event_id < 0
+                for event_id in source_event_ids
+            ):
+                raise ValueError(
+                    'source_event_ids must contain at most 50 non-negative integers.'
+                )
             item.evidence.append(
                 Evidence(
                     kind=str(row.get('kind', 'inspection')),
                     summary=str(row.get('evidence', '')).strip(),
+                    source_event_ids=list(dict.fromkeys(source_event_ids)),
                 )
             )
 

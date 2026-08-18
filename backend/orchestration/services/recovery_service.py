@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from backend.core.errors import (
     AgentRuntimeDisconnectedError,
@@ -168,6 +168,15 @@ class RecoveryService:
     def __init__(self, context: OrchestrationContext) -> None:
         self._context = context
 
+    @staticmethod
+    def _emit_intervention(intervention: str, exc: Exception, **data: Any) -> None:
+        try:
+            from backend.telemetry.evidence.emitter import emit_control_intervention
+
+            emit_control_intervention(intervention, exception=exc, **data)
+        except Exception:
+            logger.debug('Recovery evidence emission failed', exc_info=True)
+
     def _record_circuit_breaker_error(self, controller, exc: Exception) -> None:
         from backend.orchestration.services.error_formatting import (
             exception_is_notify_ui_only,
@@ -281,8 +290,10 @@ class RecoveryService:
         # For context window errors, attempt aggressive compaction before giving up.
         if isinstance(exc, (ContextWindowExceededError, LLMContextWindowExceedError)):
             if await self._attempt_aggressive_compaction(controller):
+                self._emit_intervention('context_compaction_requested', exc, outcome='scheduled')
                 return True
         await self._set_awaiting_user_input_if_allowed(controller)
+        self._emit_intervention('hard_stop', exc, failure_category=self._error_category_for(exc), outcome='awaiting_user')
         return True
 
     async def _attempt_aggressive_compaction(self, controller) -> bool:
@@ -333,6 +344,7 @@ class RecoveryService:
             exc,
         )
         await self._set_awaiting_user_input_if_allowed(controller)
+        self._emit_intervention('step_limit_reached', exc, outcome='awaiting_user')
         return True
 
     def _emit_rate_limit_think_observation(self, controller, exc: Exception) -> None:
@@ -580,6 +592,12 @@ class RecoveryService:
             return
 
         await self._continue_after_survivable_error(controller, exc)
+        self._emit_intervention(
+            'survivable_error_continue',
+            exc,
+            failure_category=self._error_category_for(exc),
+            outcome='continued',
+        )
 
     @staticmethod
     def _event_is_background_detach_warning(event) -> bool:

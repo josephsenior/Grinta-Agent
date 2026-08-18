@@ -272,6 +272,15 @@ class RetryService:
                 next_attempt - 1,
                 max_retries,
             )
+            try:
+                from backend.telemetry.evidence.emitter import emit_control_intervention
+
+                emit_control_intervention(
+                    'retry_exhausted', exception=exc, attempt=next_attempt - 1,
+                    strategy='queued_retry', outcome='exhausted',
+                )
+            except Exception:
+                logger.debug('Retry exhaustion evidence failed', exc_info=True)
             return False
 
         metadata: dict[str, Any] = {
@@ -321,6 +330,15 @@ class RetryService:
                 'provider': getattr(exc, 'llm_provider', None),
             },
         )
+        try:
+            from backend.telemetry.evidence.emitter import emit_control_intervention
+
+            emit_control_intervention(
+                'retry_scheduled', exception=exc, attempt=next_attempt,
+                delay_ms=int(initial_delay * 1000), strategy='queued_retry', outcome='scheduled',
+            )
+        except Exception:
+            logger.debug('Retry scheduling evidence failed', exc_info=True)
         logger.warning(
             'Scheduled retry task %s for controller %s due to %s (delay=%.1fs)',
             task.id,
