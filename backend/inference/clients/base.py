@@ -193,7 +193,7 @@ def _pool_key(provider: str, base_url: str | None) -> str:
     return f'{provider}::{base_url or "default"}'
 
 
-def get_shared_http_client(provider: str, base_url: str | None = None) -> httpx.Client:
+def get_shared_http_client(provider: str, base_url: str | None = None) -> Any:
     """Return a shared *sync* httpx.Client for the given provider."""
     key = _pool_key(provider, base_url)
     if key not in _shared_sync_clients:
@@ -211,7 +211,7 @@ def get_shared_http_client(provider: str, base_url: str | None = None) -> httpx.
 
 def get_shared_async_http_client(
     provider: str, base_url: str | None = None
-) -> httpx.AsyncClient:
+) -> Any:
     """Return a shared *async* httpx.AsyncClient for the given provider."""
     key = _pool_key(provider, base_url)
     if key not in _shared_async_clients:

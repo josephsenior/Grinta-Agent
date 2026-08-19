@@ -322,7 +322,7 @@ class TestProcessToolCalls:
             return action
 
         rp.process_tool_calls(
-            msg, _response(), lambda tc, args: MagicMock(), rp.extract_thought_from_message,
+            msg, _response(), lambda tc, args: MessageAction(content='', thought=''), rp.extract_thought_from_message,
             combine,
         )
         assert combined == []
@@ -332,7 +332,7 @@ class TestProcessToolCalls:
         msg = _message([call])
         with patch.object(_APP_LOGGER, 'info', side_effect=RuntimeError('log boom')):
             actions = rp.process_tool_calls(
-                msg, _response(), lambda tc, args: MagicMock(),
+                msg, _response(), lambda tc, args: MessageAction(content='', thought=''),
                 rp.extract_thought_from_message, lambda a, t: a,
             )
         assert len(actions) == 1
@@ -362,7 +362,7 @@ class TestCommonResponseToActions:
     def test_message_only_action(self):
         actions = rp.common_response_to_actions(
             _response(content='hello there'),
-            lambda tc, args: None,
+            lambda tc, args: MessageAction(content='', thought=''),
             lambda a, t: a,
         )
         assert len(actions) == 1
@@ -373,7 +373,7 @@ class TestCommonResponseToActions:
     def test_empty_content_and_no_calls(self):
         actions = rp.common_response_to_actions(
             _response(content=''),
-            lambda tc, args: None,
+            lambda tc, args: MessageAction(content='', thought=''),
             lambda a, t: a,
         )
         assert len(actions) == 1
@@ -400,7 +400,7 @@ class TestCommonResponseToActions:
         calls = [_tool_call('edit_file', '{"p": "a.py"}', 'c1')]
         actions = rp.common_response_to_actions(
             _response(calls, content='Editing now.'),
-            lambda tc, args: MagicMock(),
+            lambda tc, args: MessageAction(content='', thought=''),
             lambda a, t: a,
         )
         assert len(actions) == 2  # transcript message + tool action
@@ -472,7 +472,7 @@ class TestCommonResponseToActions:
         with pytest.raises(rp.CoreFunctionCallValidationError, match='FORMAT_ERROR'):
             rp.common_response_to_actions(
                 _response(native, content=''),
-                lambda tc, args: None,
+                lambda tc, args: MessageAction(content='', thought=''),
                 lambda a, t: a,
                 xml_tool_names=frozenset({'edit_file'}),
             )
@@ -501,7 +501,7 @@ class TestCommonResponseToActions:
         calls = [_tool_call('grep', '{}', 'c1')]
         msg = _message(calls)
         actions = rp._build_tool_actions(
-            msg, _response(), calls, lambda tc, args: MagicMock(),
+            msg, _response(), calls, lambda tc, args: MessageAction(content='', thought=''),
             lambda a, t: a, ['mcp_grep'],
         )
         assert len(actions) == 1
@@ -599,26 +599,26 @@ class TestXmlParsing:
         }
 
     def test_annotate_xml_syntax_errors_unclosed(self):
-        params = {}
+        params: dict[str, str] = {}
         rp._annotate_xml_syntax_errors(params, 'body', is_unclosed=True)
         assert '__xml_syntax_error__' in params
 
     def test_annotate_xml_syntax_errors_no_params(self):
-        params = {}
+        params: dict[str, str] = {}
         rp._annotate_xml_syntax_errors(params, '  body  ', is_unclosed=False)
         assert 'No <parameter' in params['__xml_syntax_error__']
 
     def test_annotate_xml_syntax_errors_with_params(self):
-        params = {'path': '/x'}
+        params: dict[str, str] = {'path': '/x'}
         rp._annotate_xml_syntax_errors(params, 'body', is_unclosed=False)
         assert '__xml_syntax_error__' not in params
 
     def test_apply_xml_retry_guard_no_error(self):
-        params = {'path': '/x'}
+        params: dict[str, str] = {'path': '/x'}
         assert rp._apply_xml_retry_guard(params, 'edit_file') == params
 
     def test_apply_xml_retry_guard_allowed_then_blocked(self):
-        params = {'__xml_syntax_error__': 'Unclosed <function> tag.'}
+        params: dict[str, str] = {'__xml_syntax_error__': 'Unclosed <function> tag.'}
         first = rp._apply_xml_retry_guard(dict(params), 'edit_file')
         assert first == params
         rp._apply_xml_retry_guard(dict(params), 'edit_file')
@@ -630,7 +630,7 @@ class TestXmlParsing:
             raise ValueError('bad body')
 
         with patch.object(_APP_LOGGER, 'warning') as warn:
-            params = rp._extract_xml_params('body', 'edit_file', False, boom)
+            params: dict[str, str] = rp._extract_xml_params('body', 'edit_file', False, boom)
         assert 'Malformed parameters' in params['__xml_syntax_error__']
         assert any('Failed to parse parameters' in str(c.args) for c in warn.call_args_list)
 
@@ -705,12 +705,12 @@ class TestRemainingBranches:
             rp.extract_assistant_message(SimpleNamespace(choices=[choice]))
 
     def test_arguments_empty_tool_calls(self):
-        resp = {'choices': [{'message': {'tool_calls': []}}]}
+        resp: dict = {'choices': [{'message': {'tool_calls': []}}]}
         md = SimpleNamespace(tool_call_id='c1', model_response=resp)
         assert rp.arguments_from_tool_call_metadata(md) == {}
 
     def test_arguments_non_dict_function_dict_style(self):
-        resp = {
+        resp: dict = {
             'choices': [
                 {'message': {'tool_calls': [
                     {'id': 'c1', 'function': 'plain-string'},
