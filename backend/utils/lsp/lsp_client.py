@@ -1161,7 +1161,7 @@ class LspClient:
         if parsed.netloc:
             return unquote(f'//{parsed.netloc}{parsed.path}')
         path = unquote(parsed.path)
-        if os.name == 'nt' and len(path) >= 3 and path[0] == '/' and path[2] == ':':
+        if len(path) >= 3 and path[0] == '/' and path[2] == ':':
             return path[1:]
         return path
 
