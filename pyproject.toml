@@ -50,7 +50,7 @@ dependencies = [
   "httpx>=0.28.1,<1",
   "json-repair>=0.63.0,<1",
   "libtmux>=0.62.0,<0.63",
-  "mcp>=2.0.0,<3",
+  "mcp>=1.28.1,<2",
   "openai>=2.53.0,<3",
   "orjson>=3.11.9,<4",
   "pathspec>=1.1.1,<2",
@@ -84,13 +84,9 @@ dependencies = [
 ]
 
 optional-dependencies.all = [
-  "browser-use>=0.13.7,<0.15",
   "chromadb>=1.5.9,<2",
   "fastembed>=0.8.0,<1",
   "flashrank>=0.2.10,<1",
-]
-optional-dependencies.browser = [
-  "browser-use>=0.13.7,<0.15",
 ]
 optional-dependencies.rag = [
   "chromadb>=1.5.9,<2",
@@ -100,9 +96,15 @@ optional-dependencies.rag = [
 urls = { Homepage = "https://github.com/josephsenior/Grinta-Coding-Agent", Repository = "https://github.com/josephsenior/Grinta-Coding-Agent", Documentation = "https://github.com/josephsenior/Grinta-Coding-Agent/tree/main/docs", Changelog = "https://github.com/josephsenior/Grinta-Coding-Agent/blob/main/CHANGELOG.md", Issues = "https://github.com/josephsenior/Grinta-Coding-Agent/issues", Discussions = "https://github.com/josephsenior/Grinta-Coding-Agent/discussions" }
 
 # User-installable extras. Base install includes PDF/DOCX/PPTX/LaTeX parsers.
-# pip install "grinta[rag]"     — long-term semantic memory (Chroma + ONNX embeddings)
-# pip install "grinta[browser]" — native browser automation (browser-use)
-# pip install "grinta[all]"     — rag + browser
+# pip install "grinta[rag]" — long-term semantic memory (Chroma + ONNX embeddings)
+# pip install "grinta[all]" — rag
+#
+# NOTE: the `browser` extra was removed (v1.0.1). browser-use 0.13.x pins its
+# entire transitive tree with exact `==` specifiers (openai==2.16.0, mcp==1.26.0,
+# rich==14.3.1, requests==2.33.0, aiohttp==3.13.4, ...) which conflicts with
+# Grinta's modern dependency floor, making the extra permanently unresolvable.
+# The adapter in backend/execution/browser stays dormant with lazy imports and
+# can be revived once browser-use adopts sane pinning. See docs/ for details.
 scripts.grinta = "launch.entry:main"
 
 [dependency-groups]
@@ -112,6 +114,7 @@ dev = [
   "debugpy>=1.8.21,<2",
   "grpcio>=1.83.0",
   "grpcio-tools>=1.83.0",
+  "mutmut>=3.0.0",
   "mypy==2.3",
   "pip-audit>=2.10.1",
   "pre-commit==4.6.2",
@@ -145,6 +148,10 @@ exclude = [
   "/traces/**",
   "/rustup-init.exe",
 ]
+
+[tool.hatch.metadata]
+# shadowgit is a direct git reference until it is published on PyPI.
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = [
@@ -332,6 +339,9 @@ constraint-dependencies = [
 ]
 override-dependencies = [
   "aiohttp>=3.14.3",
-  "mcp>=2.0.0,<3",
+  # fastmcp-slim (client/server) requires mcp<2.0; Grinta's MCP code and
+  # error handling use the 1.x API (McpError, Tool.input_schema). Keep mcp
+  # on 1.x until both move to the 2.x API in lockstep.
+  "mcp>=1.28.1,<2",
   "pypdf>=6.12.0",
 ]

@@ -53,7 +53,7 @@ Commands:
 - upload_file: index + path under workspace.
 - select_dropdown_option: index plus option_text or option_value.
 
-Requires: python scripts/bootstrap_env.py browser and uvx browser-use install for Chromium.
+Requires: browser-use installed in an isolated environment (the `[browser]` extra was removed in v1.0.1) and `uvx browser-use install` for Chromium.
 
 Debugging: GRINTA_BROWSER_TRACE=1 prints browser stages to stderr.
 """

@@ -9,7 +9,7 @@ For CI gates and layer-boundary checks, see [`backend/scripts/`](../backend/scri
 
 | Script | Purpose |
 | --- | --- |
-| [`bootstrap_env.py`](bootstrap_env.py) | Canonical `uv sync` wrapper for dependency profiles (`base`, `browser`, `dev`, `dev-test`, `dev-test-browser`). Used by CI, `START_HERE`, and `CONTRIBUTING.md`. |
+| [`bootstrap_env.py`](bootstrap_env.py) | Canonical `uv sync` wrapper for dependency profiles (`base`, `dev`, `dev-test`). Used by CI, `START_HERE`, and `CONTRIBUTING.md`. |
 | [`check_contributor_bootstrap.sh`](check_contributor_bootstrap.sh) | Quick sanity check that `bootstrap_env.py dev-test` succeeds on Linux/macOS. |
 
 ## Launch / Docker

@@ -23,8 +23,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   classifiers, and project URLs for package-index searchability.
 - **Citation metadata:** credits maintainer Youssef Mejdi and records the
   public repository URL.
+- **Dependency resolution restored:** the committed `uv.lock` was stale
+  (missing `shadowgit`, pinned pre-bump `rich`/`requests`) and could not be
+  regenerated while the `[browser]` extra was declared — `browser-use`
+  0.13.x pins its entire transitive tree (`openai==2.16.0`, `mcp==1.26.0`,
+  `rich==14.3.1`, `requests==2.33.0`, `aiohttp==3.13.4`, ...), which
+  conflicts with Grinta's modern dependency floor and made `uv lock` /
+  `uv run` fail for every contributor. Removed the extra so the lockfile
+  resolves again; the adapter stays dormant and the extra can return when
+  browser-use adopts sane pinning.
 
 ### Removed
+
+- **`[browser]` optional extra removed** (and with it `browser-use` from
+  `[all]`). The adapter code in `backend/execution/browser/` remains with
+  lazy imports and a clear runtime error; see the `Changed` entry above for
+  the reasoning.
 
 - **`read_symbol` tool removed after a brief trial.** Targeted discovery remains
   in `find_symbols`; file content is read through `read_file`. Removing the
@@ -41,6 +55,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   supports `replace_string` operations only. The `allOf`/`if-then`
   conditional schema is gone; the operation shape is just
   `path`, `old_string`, `new_string`, `replace_all`.
+
+### Fixed
+
+- **`_cancel_pending_tasks_bounded` could hang forever on Windows
+  Proactor.** A background task that swallows `CancelledError` (as
+  browser-style CDP tasks do) made `wait_for(gather(...))` never time
+  out: the timeout cancels the waiting task, whose cancellation is
+  delegated to the awaited gather and then into the stubborn child, so
+  the waiting task is never woken. The bound is now enforced with
+  `asyncio.wait(..., timeout=...)`, which releases its waiter via
+  `call_later` regardless of child behaviour, keeping
+  `call_async_from_sync` worker threads bounded as documented.
+- **LSP reliability-machinery coverage:** three reliability modules are now
+  exercised to the edges. `async_utils.py` **75.6% → 98.2%**
+  (`test_async_utils_edges.py`), `lsp_session.py` **76.6% → 99.1%**
+  (`test_lsp_session_edges.py`), and `lsp_client.py` **49.0% → 100%**
+  (`test_lsp_client_edges.py` + `test_lsp_client_helpers.py`), covering
+  one-shot subprocess fallbacks, response parsing, URI handling, session
+  failure paths, and the Proactor cancellation regression. Aggregate unit-suite
+  coverage rose **74.37% → 75.23%**, still above the CI gate.
 
 ### Changed
 
@@ -63,6 +97,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Testing:** [`pytest.ini`](pytest.ini) `testpaths` defaults to
   `backend/tests` (full tree for a bare `pytest`); use `pytest backend/tests/unit`
   to match the required gates locally.
+- **Mutation testing:** Added `mutmut` to dev dependencies and CI workflow
+  (`.github/workflows/mutation-testing.yml`). Targeted at reliability modules
+  (`async_utils`, `lsp_client`, `lsp_session`, `response_processing`) to
+  quantify test suite resilience against injected faults. Runs on Linux CI
+  (mutmut does not support native Windows; see issue boxed/mutmut#397).
 - **Docs:** [CONTRIBUTING.md](CONTRIBUTING.md) testing instructions match CI;
   added [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md),
   [docs/REGRESSION_TESTS.md](docs/REGRESSION_TESTS.md); user-facing autonomy

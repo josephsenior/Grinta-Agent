@@ -1,4 +1,4 @@
-"""Runtime detection for pip optional extras ([rag], [browser])."""
+"""Runtime detection for pip optional extras ([rag]) and manually installed modules."""
 
 from __future__ import annotations
 
@@ -21,7 +21,12 @@ def is_rag_extra_available() -> bool:
 
 
 def is_browser_extra_available() -> bool:
-    """Return True when the ``[browser]`` extra (browser-use) is installed."""
+    """Return True when ``browser_use`` is installed.
+
+    The ``[browser]`` extra was removed (v1.0.1) because browser-use 0.13.x
+    pins a conflicting transitive tree; this check still detects a manual
+    install so the dormant adapter works when available.
+    """
     return _optional_extra_installed('browser_use')
 
 
@@ -33,7 +38,7 @@ def _resolve_agent_config(config: Any) -> Any:
 
 
 def browser_tool_enabled(config: Any) -> bool:
-    """Config allows browser **and** the ``[browser]`` extra is installed."""
+    """Config allows browser **and** ``browser_use`` is installed."""
     agent = _resolve_agent_config(config)
     return (
         bool(getattr(agent, 'enable_browsing', True)) and is_browser_extra_available()

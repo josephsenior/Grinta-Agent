@@ -46,7 +46,7 @@ pipx install grinta
 grinta
 ```
 
-Optional integrations are available as `grinta[rag]`, `grinta[browser]`, or `grinta[all]`. See the [Quick Start](docs/QUICK_START.md) for Windows, WSL2, Linux, macOS, and provider setup.
+Optional integrations are available as `grinta[rag]` or `grinta[all]`. See the [Quick Start](docs/QUICK_START.md) for Windows, WSL2, Linux, macOS, and provider setup.
 
 Contributors developing Grinta itself should follow the source setup in [CONTRIBUTING.md](CONTRIBUTING.md).
 

@@ -150,9 +150,10 @@ class GrintaNativeBrowser:
             from browser_use import Browser as BrowserCls  # pyright: ignore[reportMissingImports]  # noqa: I001
         except ImportError as e:
             raise RuntimeError(
-                'browser-use is not installed. Install the optional dependency group '
-                '(`python scripts/bootstrap_env.py browser`) and run `uvx browser-use install` to '
-                'download Chromium.'
+                'browser-use is not installed. The `[browser]` extra was removed in '
+                'v1.0.1 (browser-use pins a conflicting transitive tree); install it '
+                'manually into an isolated environment if needed, then run '
+                '`uvx browser-use install` to download Chromium.'
             ) from e
         browser = BrowserCls(headless=True)
         t0 = time.monotonic()

@@ -243,14 +243,19 @@ def _cancel_pending_tasks_bounded(
         return
     for t in pending:
         t.cancel()
-    gather_coro = asyncio.gather(*pending, return_exceptions=True)
-    try:
-        loop.run_until_complete(asyncio.wait_for(gather_coro, timeout=timeout_sec))
-    except TimeoutError:
-        undone = sum(1 for t in pending if not t.done())
+    # ``asyncio.wait`` (not ``wait_for`` + ``gather``) so the bound holds even when a task
+    # swallows CancelledError.  ``wait_for``'s timeout cancels the waiting task, whose
+    # cancellation is delegated to the awaited gather and then into the stubborn child; the
+    # waiting task is never woken and the timeout can never fire (observed on Windows
+    # Proactor).  ``wait`` releases its waiter via ``call_later`` instead, returning
+    # ``(done, pending)`` after *timeout_sec* no matter what the tasks do.
+    _, still_pending = loop.run_until_complete(
+        asyncio.wait(pending, timeout=timeout_sec)
+    )
+    if still_pending:
         _logger.warning(
             'call_async_from_sync: %d task(s) still pending after %.1fs shutdown wait',
-            undone,
+            len(still_pending),
             timeout_sec,
         )
 

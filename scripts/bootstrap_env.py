@@ -9,19 +9,8 @@ import sys
 
 PROFILE_COMMANDS: dict[str, list[str]] = {
     'base': ['uv', 'sync'],
-    'browser': ['uv', 'sync', '--group', 'browser'],
     'dev': ['uv', 'sync', '--group', 'dev'],
     'dev-test': ['uv', 'sync', '--group', 'dev', '--group', 'test'],
-    'dev-test-browser': [
-        'uv',
-        'sync',
-        '--group',
-        'dev',
-        '--group',
-        'test',
-        '--group',
-        'browser',
-    ],
 }
 
 

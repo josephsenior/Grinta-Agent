@@ -16,7 +16,7 @@ OPTIONAL_TOP_LEVEL_MODULES = {
     'redis',
     # memory / RAG (extras: rag)
     'chromadb',
-    # browser (extras: browser)
+    # browser (manually installed; [browser] extra removed in v1.0.1)
     'browser_use',
     # telemetry
     'opentelemetry',

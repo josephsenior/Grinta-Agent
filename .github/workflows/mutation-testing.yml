@@ -1,0 +1,59 @@
+# Mutation testing workflow
+name: Mutation Testing
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation-test:
+    name: Mutation Testing (reliability modules)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          version: '0.9.15'
+          enable-cache: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Resolve lockfile for runner
+        run: uv lock
+      - name: Install Python dependencies
+        run: python scripts/bootstrap_env.py dev-test
+      - name: Verify optional imports
+        run: python backend/scripts/verify/verify_optional_imports.py
+      - name: Compile backend (syntax gate)
+        run: uv run python -m compileall backend
+      - name: Run mutation testing
+        run: |
+          uv run mutmut run \
+            --paths-to-mutate=backend/utils/async_helpers,backend/utils/lsp,backend/engine/response_processing \
+            --runner="uv run pytest -p no:cacheprovider -q" \
+            --tests-dir=backend/tests/unit \
+            --timeout-factor=2.0
+      - name: Upload mutation results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: mutation-results
+          path: .mutmut-cache
+          if-no-files-found: ignore
+      - name: Report mutation score
+        run: |
+          echo "## Mutation Testing Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          uv run mutmut results --detail 2>&1 | tee mutation-summary.txt
+          cat mutation-summary.txt >> $GITHUB_STEP_SUMMARY

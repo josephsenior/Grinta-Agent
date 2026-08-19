@@ -124,7 +124,7 @@ If your change touches the CLI, REPL, or orchestration hot paths, also run the [
 
 For bugfix PRs, prefer adding a **regression test** next to the code you fixed (see [docs/REGRESSION_TESTS.md](docs/REGRESSION_TESTS.md)).
 
-Dependency profiles are centralized in `scripts/bootstrap_env.py` (for example: `base`, `browser`, `dev`, `dev-test`, `dev-test-browser`).
+Dependency profiles are centralized in `scripts/bootstrap_env.py` (for example: `base`, `dev`, `dev-test`).
 
 For a one-command onboarding sanity check on Unix-like systems:
 
