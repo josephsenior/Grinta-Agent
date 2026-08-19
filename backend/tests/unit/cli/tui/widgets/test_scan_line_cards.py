@@ -570,7 +570,8 @@ def test_browser_card_running():
     assert card.state == 'running'
     assert '⌁ Browser' in _line_text(card)
     assert f'[{NAVY_RUNNING}]⌁ Browser[/]' in _line_text(card)
-    assert 'github.com' in _line_text(card)
+    # domain contains github.com - check it's rendered (not a URL substring check on user input)
+    assert 'github.com/raft/paper' in _line_text(card)
     assert 'extracting' in card._delta_text()
 
 

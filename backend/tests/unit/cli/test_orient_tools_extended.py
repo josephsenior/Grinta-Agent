@@ -113,9 +113,10 @@ def test_mcp_action_models_for_docs_and_fetch() -> None:
 
 def test_library_and_fetch_target_edge_cases() -> None:
     assert _library_target('react', '') == 'react'
-    assert _fetch_target({'urls': ['https://a.com', 'https://b.com']}).startswith(
-        'a.com'
-    )
+    # _fetch_target parses URL and returns host (or host+path for single URL with path)
+    # For https://a.com without path, returns 'a.com'
+    result = _fetch_target({'urls': ['https://a.com', 'https://b.com']})
+    assert result == 'a.com'
 
 
 def test_orient_line_with_result_on_mcp_models() -> None:

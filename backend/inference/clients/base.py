@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -40,6 +41,21 @@ if sys.platform == 'win32':
         logger.warning('truststore is unavailable; falling back to Python CA bundle.')
     else:
         _HTTPX_VERIFY = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+
+def _is_openai_api_base(base_url: str | None) -> bool:
+    """Check if the base_url points to the official OpenAI API.
+
+    Uses proper URL parsing to avoid substring bypasses like
+    'https://api.openai.com.evil.com'.
+    """
+    if not base_url:
+        return False
+    try:
+        parsed = urlparse(str(base_url).strip())
+        return parsed.scheme == 'https' and parsed.netloc.lower() == 'api.openai.com'
+    except Exception:
+        return False
 
 
 def _normalize_timeout_seconds(timeout: float | int | None) -> float | None:
@@ -559,11 +575,7 @@ def _resolve_transport_profile(
     # Metadata: only the real OpenAI API accepts the `metadata` request field.
     is_native_openai = model_family == 'openai' and (
         not base_url
-        or str(base_url)
-        .strip()
-        .rstrip('/')
-        .lower()
-        .startswith('https://api.openai.com')
+        or _is_openai_api_base(base_url)
     )
 
     # Tool replay correctness comes from the provider capability registry:
