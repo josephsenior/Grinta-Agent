@@ -342,5 +342,21 @@ also_copy = [
   "scripts/evals",
 ]
 pytest_add_cli_args = [ "-p", "no:cacheprovider", "-q" ]
-pytest_add_cli_args_test_selection = [ "backend/tests/unit" ]
+pytest_add_cli_args_test_selection = [
+  "backend/tests/unit/engine/test_response_processing_edges.py",
+  "backend/tests/unit/engine/orchestrator/tools/test_lsp_query.py",
+  "backend/tests/unit/execution/utils/test_tenacity_stop.py",
+  "backend/tests/unit/orchestration/test_agent_circuit_breaker.py",
+  "backend/tests/unit/orchestration/services/test_circuit_breaker_service.py",
+  "backend/tests/unit/utils/test_circuit_breaker.py",
+  "backend/tests/unit/utils/test_lsp_client_edges.py",
+  "backend/tests/unit/utils/test_lsp_client_helpers.py",
+  "backend/tests/unit/utils/test_lsp_project_routing.py",
+  "backend/tests/unit/utils/test_lsp_session_edges.py",
+  "backend/tests/unit/utils/test_lsp_session_reader.py",
+  "backend/tests/unit/utils/test_lsp_session.py",
+  "backend/tests/unit/utils/test_lsp_timeouts.py",
+  "backend/tests/unit/utils/test_tenacity_metrics.py",
+  "backend/tests/unit/utils/test_tenacity_stop.py",
+]
 timeout_multiplier = 2.0
