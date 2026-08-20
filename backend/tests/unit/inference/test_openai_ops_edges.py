@@ -549,7 +549,9 @@ class TestAStream:
             )
 
         client = self._client(_gen())
-        out = [c async for c in ops.astream(client, [{'role': 'user', 'content': 'hi'}])]
+        out = [
+            c async for c in ops.astream(client, [{'role': 'user', 'content': 'hi'}])
+        ]
         assert out[0] == {'choices': [{'delta': {'content': 'a'}}]}
         assert out[1]['choices'][0]['delta'] == {
             'reasoning': 'r',

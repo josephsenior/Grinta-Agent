@@ -209,9 +209,7 @@ def get_shared_http_client(provider: str, base_url: str | None = None) -> Any:
     return _shared_sync_clients[key]
 
 
-def get_shared_async_http_client(
-    provider: str, base_url: str | None = None
-) -> Any:
+def get_shared_async_http_client(provider: str, base_url: str | None = None) -> Any:
     """Return a shared *async* httpx.AsyncClient for the given provider."""
     key = _pool_key(provider, base_url)
     if key not in _shared_async_clients:
@@ -574,8 +572,7 @@ def _resolve_transport_profile(
 
     # Metadata: only the real OpenAI API accepts the `metadata` request field.
     is_native_openai = model_family == 'openai' and (
-        not base_url
-        or _is_openai_api_base(base_url)
+        not base_url or _is_openai_api_base(base_url)
     )
 
     # Tool replay correctness comes from the provider capability registry:

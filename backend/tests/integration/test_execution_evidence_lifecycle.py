@@ -6,7 +6,9 @@ from backend.telemetry.evidence.report import write_evidence_report
 from backend.telemetry.evidence.schema import EvidenceKind, ExecutionEvidence
 
 
-def test_synthetic_session_lifecycle_produces_coherent_evidence_report(tmp_path) -> None:
+def test_synthetic_session_lifecycle_produces_coherent_evidence_report(
+    tmp_path,
+) -> None:
     session_log = tmp_path / 'session.jsonl'
     records = [
         ExecutionEvidence(
@@ -33,15 +35,24 @@ def test_synthetic_session_lifecycle_produces_coherent_evidence_report(tmp_path)
         ),
         ExecutionEvidence(
             EvidenceKind.COMPLETION_VALIDATION,
-            {'validator': 'current_task_validator', 'mode': 'advisory', 'enabled': False},
+            {
+                'validator': 'current_task_validator',
+                'mode': 'advisory',
+                'enabled': False,
+            },
         ),
     ]
     with session_log.open('w', encoding='utf-8') as handle:
         for record in records:
-            handle.write(json.dumps({'event': 'EXECUTION_EVIDENCE', 'payload': record.to_dict()}) + '\n')
+            handle.write(
+                json.dumps({'event': 'EXECUTION_EVIDENCE', 'payload': record.to_dict()})
+                + '\n'
+            )
 
     summary = write_evidence_report(tmp_path)
-    report = json.loads((tmp_path / 'session.evidence.json').read_text(encoding='utf-8'))
+    report = json.loads(
+        (tmp_path / 'session.evidence.json').read_text(encoding='utf-8')
+    )
 
     assert report == summary
     assert report['run']['final_agent_state'] == 'FINISHED'

@@ -80,7 +80,9 @@ class TestClose:
         proc.wait.return_value = 0
         session._process = proc  # noqa: SLF001
         session._initialized = True  # noqa: SLF001
-        with patch.object(session, '_write_message', side_effect=OSError('broken pipe')):
+        with patch.object(
+            session, '_write_message', side_effect=OSError('broken pipe')
+        ):
             session.close()  # must not raise
 
     def test_kill_exception_swallowed(self):
@@ -114,7 +116,10 @@ class TestClose:
         session._stderr_ring.append('segfault here')  # noqa: SLF001
         with patch.object(logging.getLogger('app'), 'warning') as warn:
             session.close()
-        assert any('exited with code' in str(c.args) and 1 in c.args for c in warn.call_args_list)
+        assert any(
+            'exited with code' in str(c.args) and 1 in c.args
+            for c in warn.call_args_list
+        )
 
     def test_stderr_debug_tail_on_close(self):
         session = _make_session()
@@ -264,14 +269,19 @@ class TestWaitForResponse:
 
     def test_collect_notifications_uri_mismatch_deferred(self):
         session = _make_session()
-        wrong_uri = {'jsonrpc': '2.0', 'method': 'textDocument/publishDiagnostics',
-                     'params': {'uri': 'file:///other.rs', 'diagnostics': []}}
+        wrong_uri = {
+            'jsonrpc': '2.0',
+            'method': 'textDocument/publishDiagnostics',
+            'params': {'uri': 'file:///other.rs', 'diagnostics': []},
+        }
         session._inbox.put(wrong_uri)
         msgs = session._collect_notifications(
             'textDocument/publishDiagnostics', timeout=0.05, uri='file:///x.rs'
         )
         assert msgs == []
-        assert session._inbox.get_nowait()['method'] == 'textDocument/publishDiagnostics'
+        assert (
+            session._inbox.get_nowait()['method'] == 'textDocument/publishDiagnostics'
+        )
 
 
 # ── ensure_initialized ───────────────────────────────────────────────
@@ -296,7 +306,9 @@ class TestEnsureInitialized:
             patch.object(logging.getLogger('app'), 'warning') as warn,
         ):
             assert session.ensure_initialized(timeout=0.5) is False
-        assert any('initialize write failed' in str(c.args) for c in warn.call_args_list)
+        assert any(
+            'initialize write failed' in str(c.args) for c in warn.call_args_list
+        )
 
     def test_initialize_timeout(self):
         session = _make_session()
@@ -331,7 +343,9 @@ class TestEnsureInitialized:
 
         with (
             patch.object(session, 'start', return_value=True),
-            patch.object(session, '_write_message', side_effect=[None, OSError('gone')]),
+            patch.object(
+                session, '_write_message', side_effect=[None, OSError('gone')]
+            ),
             patch.object(session, '_wait_for_response', return_value=response),
         ):
             assert session.ensure_initialized(timeout=0.5) is True
@@ -360,13 +374,17 @@ class TestRequest:
             patch.object(session, '_write_message'),
             patch.object(session, '_wait_for_response', return_value=expected),
         ):
-            result = session.request('textDocument/hover', {'position': {}}, timeout=0.5)
+            result = session.request(
+                'textDocument/hover', {'position': {}}, timeout=0.5
+            )
         assert result is expected
 
     def test_request_write_failure_returns_none(self):
         session = _make_session()
         with (
-            patch.object(session, '_write_message', side_effect=OSError('dead')) as write_mock,
+            patch.object(
+                session, '_write_message', side_effect=OSError('dead')
+            ) as write_mock,
             patch.object(session, '_wait_for_response') as wait_mock,
         ):
             assert session.request('textDocument/hover', {}, timeout=0.5) is None

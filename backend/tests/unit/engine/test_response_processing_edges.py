@@ -90,7 +90,12 @@ class TestThinkingTags:
         assert rp.extract_redacted_thinking_inner(text) == 'one\n\ntwo'
 
     def test_extract_inner_ignores_empty_blocks(self):
-        assert rp.extract_redacted_thinking_inner('<redacted_thinking>  </redacted_thinking>') == ''
+        assert (
+            rp.extract_redacted_thinking_inner(
+                '<redacted_thinking>  </redacted_thinking>'
+            )
+            == ''
+        )
 
     def test_strip_tags_collapses_newlines(self):
         text = 'a\n\n\n\n<redacted_thinking>x</redacted_thinking>\n\n\n\nb\n'
@@ -142,15 +147,15 @@ class TestErrorsAndExtraction:
     def test_parse_tool_call_arguments_truncated_error_propagates(self):
         from backend.core.tools.tool_arguments_json import TruncatedToolArgumentsError
 
-        tc = SimpleNamespace(
-            function=SimpleNamespace(arguments='{"a": "unclosed')
-        )
+        tc = SimpleNamespace(function=SimpleNamespace(arguments='{"a": "unclosed'))
         with pytest.raises(TruncatedToolArgumentsError):
             rp.parse_tool_call_arguments(tc)
 
     def test_build_tool_call_metadata(self):
         md = rp.build_tool_call_metadata(
-            function_name='grep', tool_call_id='c1', response_obj=_response([], 'ok'),
+            function_name='grep',
+            tool_call_id='c1',
+            response_obj=_response([], 'ok'),
             total_calls_in_response=1,
         )
         assert md.function_name == 'grep'
@@ -165,14 +170,22 @@ class TestArgumentsFromToolCallMetadata:
         assert rp.arguments_from_tool_call_metadata(None) == {}
 
     def test_no_model_response(self):
-        assert rp.arguments_from_tool_call_metadata(
-            SimpleNamespace(tool_call_id='c1', model_response=None)
-        ) == {}
+        assert (
+            rp.arguments_from_tool_call_metadata(
+                SimpleNamespace(tool_call_id='c1', model_response=None)
+            )
+            == {}
+        )
 
     def test_no_choices(self):
-        assert rp.arguments_from_tool_call_metadata(
-            SimpleNamespace(tool_call_id='c1', model_response=SimpleNamespace(choices=None))
-        ) == {}
+        assert (
+            rp.arguments_from_tool_call_metadata(
+                SimpleNamespace(
+                    tool_call_id='c1', model_response=SimpleNamespace(choices=None)
+                )
+            )
+            == {}
+        )
 
     def test_choices_via_dict(self):
         md = SimpleNamespace(tool_call_id='c1', model_response={'choices': []})
@@ -191,29 +204,44 @@ class TestArgumentsFromToolCallMetadata:
     def test_tool_calls_with_matching_id(self):
         resp = {
             'choices': [
-                {'message': {'tool_calls': [
-                    {'id': 'c2', 'function': {'name': 'grep', 'arguments': '{"p": "x"}'}},
-                ]}}
+                {
+                    'message': {
+                        'tool_calls': [
+                            {
+                                'id': 'c2',
+                                'function': {'name': 'grep', 'arguments': '{"p": "x"}'},
+                            },
+                        ]
+                    }
+                }
             ]
         }
         md = SimpleNamespace(tool_call_id='c1', model_response=resp)
         assert rp.arguments_from_tool_call_metadata(md) == {}
 
     def test_tool_calls_object_with_matching_id(self):
-        tc = SimpleNamespace(id='c1', function={'name': 'grep', 'arguments': '{"p": "x"}'})
-        resp = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(tool_calls=[tc]))])
+        tc = SimpleNamespace(
+            id='c1', function={'name': 'grep', 'arguments': '{"p": "x"}'}
+        )
+        resp = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(tool_calls=[tc]))]
+        )
         md = SimpleNamespace(tool_call_id='c1', model_response=resp)
         assert rp.arguments_from_tool_call_metadata(md) == {'p': 'x'}
 
     def test_non_dict_function_skipped(self):
         tc = SimpleNamespace(id='c1', function='not-a-dict')
-        resp = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(tool_calls=[tc]))])
+        resp = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(tool_calls=[tc]))]
+        )
         md = SimpleNamespace(tool_call_id='c1', model_response=resp)
         assert rp.arguments_from_tool_call_metadata(md) == {}
 
     def test_parse_error_returns_empty(self):
         tc = SimpleNamespace(id='c1', function={'name': 'grep', 'arguments': '[1, 2]'})
-        resp = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(tool_calls=[tc]))])
+        resp = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(tool_calls=[tc]))]
+        )
         md = SimpleNamespace(tool_call_id='c1', model_response=resp)
         assert rp.arguments_from_tool_call_metadata(md) == {}
 
@@ -240,9 +268,12 @@ class TestContentCoercion:
         assert rp._raw_message_content_text(42) == ''
 
     def test_coerce_strips_thinking_tags(self):
-        assert rp._coerce_message_content_text(
-            '<redacted_thinking>t</redacted_thinking> body'
-        ) == 'body'
+        assert (
+            rp._coerce_message_content_text(
+                '<redacted_thinking>t</redacted_thinking> body'
+            )
+            == 'body'
+        )
 
     def test_coerce_visible_redacts_markers(self):
         with patch(
@@ -322,7 +353,10 @@ class TestProcessToolCalls:
             return action
 
         rp.process_tool_calls(
-            msg, _response(), lambda tc, args: MessageAction(content='', thought=''), rp.extract_thought_from_message,
+            msg,
+            _response(),
+            lambda tc, args: MessageAction(content='', thought=''),
+            rp.extract_thought_from_message,
             combine,
         )
         assert combined == []
@@ -332,8 +366,11 @@ class TestProcessToolCalls:
         msg = _message([call])
         with patch.object(_APP_LOGGER, 'info', side_effect=RuntimeError('log boom')):
             actions = rp.process_tool_calls(
-                msg, _response(), lambda tc, args: MessageAction(content='', thought=''),
-                rp.extract_thought_from_message, lambda a, t: a,
+                msg,
+                _response(),
+                lambda tc, args: MessageAction(content='', thought=''),
+                rp.extract_thought_from_message,
+                lambda a, t: a,
             )
         assert len(actions) == 1
 
@@ -446,11 +483,7 @@ class TestCommonResponseToActions:
         assert created[0][1] == {'pattern': 'x'}
 
     def test_xml_supersedes_native(self):
-        content = (
-            '<function=edit_file>'
-            '<parameter=path>/tmp/a.py</parameter>'
-            '</function>'
-        )
+        content = '<function=edit_file><parameter=path>/tmp/a.py</parameter></function>'
         native = [_tool_call('edit_file', '{"path": "/tmp/a.py"}', 'n1')]
         created: list = []
 
@@ -483,7 +516,12 @@ class TestCommonResponseToActions:
     def test_deduplicate_noop_combos(self):
         native = [_tool_call('grep')]
         assert rp._deduplicate_xml_native_calls(native, [], None) == native
-        assert rp._deduplicate_xml_native_calls([], [_tool_call('grep')], frozenset({'grep'})) == []
+        assert (
+            rp._deduplicate_xml_native_calls(
+                [], [_tool_call('grep')], frozenset({'grep'})
+            )
+            == []
+        )
 
     def test_enforce_xml_compliance_if_needed_skips_without_native(self):
         rp._enforce_xml_compliance_if_needed([], frozenset({'edit_file'}))  # no-op
@@ -501,8 +539,12 @@ class TestCommonResponseToActions:
         calls = [_tool_call('grep', '{}', 'c1')]
         msg = _message(calls)
         actions = rp._build_tool_actions(
-            msg, _response(), calls, lambda tc, args: MessageAction(content='', thought=''),
-            lambda a, t: a, ['mcp_grep'],
+            msg,
+            _response(),
+            calls,
+            lambda tc, args: MessageAction(content='', thought=''),
+            lambda a, t: a,
+            ['mcp_grep'],
         )
         assert len(actions) == 1
         assert calls[0]._mcp_tool_names == ['mcp_grep']
@@ -540,9 +582,12 @@ class TestXmlParsing:
     def test_filter_native_none_superseded(self):
         native = [_tool_call('grep')]
         xml = [_tool_call('edit_file', '{}')]
-        assert rp._filter_native_tool_calls_superseded_by_xml(
-            native, xml, frozenset({'edit_file'})
-        ) == native
+        assert (
+            rp._filter_native_tool_calls_superseded_by_xml(
+                native, xml, frozenset({'edit_file'})
+            )
+            == native
+        )
 
     def test_text_marker_extraction_early_return(self):
         assert rp._extract_text_marker_tool_calls_from_content('') == []
@@ -553,9 +598,12 @@ class TestXmlParsing:
             'backend.cli.display.tool_call_display.extract_tool_calls_from_text_markers',
             return_value=[{'id': 'm1', 'function': {}}],
         ):
-            assert rp._extract_text_marker_tool_calls_from_content(
-                '[tool_call] name: grep'
-            ) == []
+            assert (
+                rp._extract_text_marker_tool_calls_from_content(
+                    '[tool_call] name: grep'
+                )
+                == []
+            )
 
     def test_enforce_xml_compliance_non_matching_name(self):
         rp._enforce_xml_compliance([_tool_call('grep', '{}')], frozenset({'edit_file'}))
@@ -630,15 +678,24 @@ class TestXmlParsing:
             raise ValueError('bad body')
 
         with patch.object(_APP_LOGGER, 'warning') as warn:
-            params: dict[str, str] = rp._extract_xml_params('body', 'edit_file', False, boom)
+            params: dict[str, str] = rp._extract_xml_params(
+                'body', 'edit_file', False, boom
+            )
         assert 'Malformed parameters' in params['__xml_syntax_error__']
-        assert any('Failed to parse parameters' in str(c.args) for c in warn.call_args_list)
+        assert any(
+            'Failed to parse parameters' in str(c.args) for c in warn.call_args_list
+        )
 
     def test_extract_xml_calls_empty(self):
-        assert rp._extract_xml_tool_calls_from_content('', frozenset({'edit_file'})) == []
-        assert rp._extract_xml_tool_calls_from_content(
-            'no function block', frozenset({'edit_file'})
-        ) == []
+        assert (
+            rp._extract_xml_tool_calls_from_content('', frozenset({'edit_file'})) == []
+        )
+        assert (
+            rp._extract_xml_tool_calls_from_content(
+                'no function block', frozenset({'edit_file'})
+            )
+            == []
+        )
 
     def test_extract_xml_calls_unknown_tool_skipped(self):
         out = rp._extract_xml_tool_calls_from_content(
@@ -674,9 +731,7 @@ class TestXmlParsing:
             '<parameter=new_string>hi</parameter>'
             '</function> done'
         )
-        out = rp._extract_xml_tool_calls_from_content(
-            content, frozenset({'edit_file'})
-        )
+        out = rp._extract_xml_tool_calls_from_content(content, frozenset({'edit_file'}))
         assert len(out) == 1
         assert out[0].id == 'xml_toolu_00'
         assert out[0].function.name == 'edit_file'
@@ -712,9 +767,13 @@ class TestRemainingBranches:
     def test_arguments_non_dict_function_dict_style(self):
         resp: dict = {
             'choices': [
-                {'message': {'tool_calls': [
-                    {'id': 'c1', 'function': 'plain-string'},
-                ]}}
+                {
+                    'message': {
+                        'tool_calls': [
+                            {'id': 'c1', 'function': 'plain-string'},
+                        ]
+                    }
+                }
             ]
         }
         md = SimpleNamespace(tool_call_id='c1', model_response=resp)
@@ -723,9 +782,12 @@ class TestRemainingBranches:
     def test_filter_native_superseded_empty_returns_early(self):
         native = [_tool_call('grep')]
         xml = [_tool_call('other_tool', '{}')]  # not in xml_tool_names
-        assert rp._filter_native_tool_calls_superseded_by_xml(
-            native, xml, frozenset({'edit_file'})
-        ) == native
+        assert (
+            rp._filter_native_tool_calls_superseded_by_xml(
+                native, xml, frozenset({'edit_file'})
+            )
+            == native
+        )
 
     def test_common_path_param_default(self):
         assert rp.get_common_path_param()['description'] == (

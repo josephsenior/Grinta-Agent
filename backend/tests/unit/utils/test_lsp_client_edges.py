@@ -112,8 +112,13 @@ class TestClientHelpers:
                 'backend.utils.lsp.lsp_project_routing.resolve_language_key',
                 return_value='python',
             ),
-            patch('backend.utils.runtime_detect.CANONICAL_LSP_SERVERS', {'python': spec}),
-            patch('backend.utils.runtime_detect.detect_lsp_servers', return_value={spec.name: tool}),
+            patch(
+                'backend.utils.runtime_detect.CANONICAL_LSP_SERVERS', {'python': spec}
+            ),
+            patch(
+                'backend.utils.runtime_detect.detect_lsp_servers',
+                return_value={spec.name: tool},
+            ),
         ):
             res = client._unavailable('/x.py')
         assert not res.available
@@ -154,7 +159,9 @@ class TestClientHelpers:
     def test_error_from_response_variants(self):
         client = lc.LspClient()
         assert client._error_from_response({'error': {'message': 'nope'}}) == 'nope'
-        assert client._error_from_response({'error': {'code': -1}}) == 'LSP error code -1'
+        assert (
+            client._error_from_response({'error': {'code': -1}}) == 'LSP error code -1'
+        )
         assert client._error_from_response({'error': {}}) == 'LSP error (no message)'
         assert client._error_from_response({'error': 'string'}) is None
 
@@ -182,7 +189,8 @@ class TestOneShotRpc:
         result.stdout = _encoded({'jsonrpc': '2.0', 'id': 1, 'result': {'ok': 1}})
         with patch.object(lc, '_run_lsp_subprocess', return_value=result) as runner:
             parsed, started, snippet = client._rpc(
-                [{'jsonrpc': '2.0', 'id': 1, 'result': {}}], ['pyright'],
+                [{'jsonrpc': '2.0', 'id': 1, 'result': {}}],
+                ['pyright'],
                 process_timeout=5.0,
             )
         assert started is True
@@ -196,7 +204,9 @@ class TestOneShotRpc:
         result.timed_out = True
         result.stderr = 'timeout stderr tail'
         with patch.object(lc, '_run_lsp_subprocess', return_value=result):
-            parsed, started, snippet = client._rpc([{}], ['pyright'], process_timeout=5.0)
+            parsed, started, snippet = client._rpc(
+                [{}], ['pyright'], process_timeout=5.0
+            )
         assert parsed == []
         assert started is False
         assert snippet == 'timeout stderr tail'
@@ -209,7 +219,9 @@ class TestOneShotRpc:
         result.returncode = 3
         result.stdout = b''
         with patch.object(lc, '_run_lsp_subprocess', return_value=result):
-            parsed, started, snippet = client._rpc([{}], ['pyright'], process_timeout=5.0)
+            parsed, started, snippet = client._rpc(
+                [{}], ['pyright'], process_timeout=5.0
+            )
         assert parsed == []
         assert started is False
         assert snippet == 'server crashed'
@@ -222,7 +234,9 @@ class TestOneShotRpc:
         result.returncode = 0
         result.stdout = b''
         with patch.object(lc, '_run_lsp_subprocess', return_value=result):
-            parsed, started, snippet = client._rpc([{}], ['pyright'], process_timeout=5.0)
+            parsed, started, snippet = client._rpc(
+                [{}], ['pyright'], process_timeout=5.0
+            )
         assert parsed == []
         assert started is False
         assert snippet == ''
@@ -233,7 +247,9 @@ class TestOneShotRpc:
             patch.object(lc, '_run_lsp_subprocess', side_effect=TimeoutError('slow')),
             patch.object(logging.getLogger('app'), 'warning') as warn,
         ):
-            parsed, started, snippet = client._rpc([{}], ['pyright'], process_timeout=5.0)
+            parsed, started, snippet = client._rpc(
+                [{}], ['pyright'], process_timeout=5.0
+            )
         assert parsed == []
         assert started is False
         assert any('timed out' in str(c.args) for c in warn.call_args_list)
@@ -241,10 +257,14 @@ class TestOneShotRpc:
     def test_generic_error_path(self):
         client = lc.LspClient()
         with (
-            patch.object(lc, '_run_lsp_subprocess', side_effect=OSError('spawn failed')),
+            patch.object(
+                lc, '_run_lsp_subprocess', side_effect=OSError('spawn failed')
+            ),
             patch.object(logging.getLogger('app'), 'warning') as warn,
         ):
-            parsed, started, snippet = client._rpc([{}], ['pyright'], process_timeout=5.0)
+            parsed, started, snippet = client._rpc(
+                [{}], ['pyright'], process_timeout=5.0
+            )
         assert parsed == []
         assert started is False
         assert any('failed' in str(c.args) for c in warn.call_args_list)
@@ -297,14 +317,28 @@ class TestQueryDispatch:
             patch.object(client, '_get_context', return_value=CTX),
             patch.object(client, '_resolve_timeout', return_value=5.0),
             patch.object(client, '_use_session', return_value=(None, True)),
-            patch.object(client, '_rpc', return_value=(
-                [{'method': 'textDocument/publishDiagnostics', 'params': {
-                    'uri': uri, 'diagnostics': [
-                        {'range': {'start': {'line': 3, 'character': 1}}, 'message': 'bad'}
-                    ]}}],
-                True,
-                '',
-            )),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [
+                        {
+                            'method': 'textDocument/publishDiagnostics',
+                            'params': {
+                                'uri': uri,
+                                'diagnostics': [
+                                    {
+                                        'range': {'start': {'line': 3, 'character': 1}},
+                                        'message': 'bad',
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                    True,
+                    '',
+                ),
+            ),
         ):
             res = client.query('diagnostics', pyfile)
         assert res.available
@@ -329,11 +363,21 @@ class TestQueryDispatch:
             patch.object(client, '_get_context', return_value=CTX),
             patch.object(client, '_resolve_timeout', return_value=5.0),
             patch.object(client, '_use_session', return_value=(None, True)),
-            patch.object(client, '_rpc', return_value=(
-                [{'jsonrpc': '2.0', 'id': 10, 'result': {'contents': 'doc string'}}],
-                True,
-                '',
-            )),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [
+                        {
+                            'jsonrpc': '2.0',
+                            'id': 10,
+                            'result': {'contents': 'doc string'},
+                        }
+                    ],
+                    True,
+                    '',
+                ),
+            ),
         ):
             res = client.query('hover', pyfile, 2, 3)
         assert res.available
@@ -345,11 +389,21 @@ class TestQueryDispatch:
             patch.object(client, '_get_context', return_value=CTX),
             patch.object(client, '_resolve_timeout', return_value=5.0),
             patch.object(client, '_use_session', return_value=(None, True)),
-            patch.object(client, '_rpc', return_value=(
-                [{'jsonrpc': '2.0', 'id': 10, 'error': {'code': -1, 'message': 'nope'}}],
-                True,
-                '',
-            )),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [
+                        {
+                            'jsonrpc': '2.0',
+                            'id': 10,
+                            'error': {'code': -1, 'message': 'nope'},
+                        }
+                    ],
+                    True,
+                    '',
+                ),
+            ),
         ):
             res = client.query('hover', pyfile, 2, 3)
         assert not res.available
@@ -361,13 +415,27 @@ class TestQueryDispatch:
             patch.object(client, '_get_context', return_value=CTX),
             patch.object(client, '_resolve_timeout', return_value=5.0),
             patch.object(client, '_use_session', return_value=(None, True)),
-            patch.object(client, '_rpc', return_value=(
-                [{'jsonrpc': '2.0', 'id': 20, 'result': [
-                    {'name': 'main', 'kind': 12, 'range': {'start': {'line': 2}}}
-                ]}],
-                True,
-                '',
-            )),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [
+                        {
+                            'jsonrpc': '2.0',
+                            'id': 20,
+                            'result': [
+                                {
+                                    'name': 'main',
+                                    'kind': 12,
+                                    'range': {'start': {'line': 2}},
+                                }
+                            ],
+                        }
+                    ],
+                    True,
+                    '',
+                ),
+            ),
         ):
             res = client.query('list_symbols', pyfile)
         assert res.available
@@ -392,11 +460,15 @@ class TestQueryDispatch:
             patch.object(client, '_get_context', return_value=CTX),
             patch.object(client, '_resolve_timeout', return_value=5.0),
             patch.object(client, '_use_session', return_value=(None, True)),
-            patch.object(client, '_rpc', return_value=(
-                [{'jsonrpc': '2.0', 'id': 10, 'result': [loc]}],
-                True,
-                '',
-            )),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [{'jsonrpc': '2.0', 'id': 10, 'result': [loc]}],
+                    True,
+                    '',
+                ),
+            ),
         ):
             res = client.query('find_definition', pyfile, 2, 3)
         assert res.available
@@ -420,10 +492,16 @@ class TestQueryDispatch:
             patch.object(client, '_get_context', return_value=CTX),
             patch.object(client, '_resolve_timeout', return_value=5.0),
             patch.object(client, '_use_session', return_value=(None, True)),
-            patch.object(client, '_collect_diagnostics_for_code_action', return_value=[]),
-            patch.object(client, '_execute_code_action_request', return_value=lc.LspResult(
-                available=True, code_actions=[lc.LspCodeAction(title='Fix it')]
-            )),
+            patch.object(
+                client, '_collect_diagnostics_for_code_action', return_value=[]
+            ),
+            patch.object(
+                client,
+                '_execute_code_action_request',
+                return_value=lc.LspResult(
+                    available=True, code_actions=[lc.LspCodeAction(title='Fix it')]
+                ),
+            ),
         ):
             res = client.query('code_action', pyfile, 2, 3)
         assert res.available
@@ -435,10 +513,14 @@ class TestQueryDispatch:
             patch.object(client, '_get_context', return_value=CTX),
             patch.object(client, '_resolve_timeout', return_value=5.0),
             patch.object(client, '_use_session', return_value=(None, True)),
-            patch.object(client, '_collect_diagnostics_for_code_action', return_value=[]),
-            patch.object(client, '_execute_code_action_request', return_value=lc.LspResult(
-                available=False, error='failed to start'
-            )),
+            patch.object(
+                client, '_collect_diagnostics_for_code_action', return_value=[]
+            ),
+            patch.object(
+                client,
+                '_execute_code_action_request',
+                return_value=lc.LspResult(available=False, error='failed to start'),
+            ),
         ):
             res = client.query('code_action', pyfile, 2, 3)
         assert not res.available
@@ -451,8 +533,12 @@ class TestParsing:
     def test_parse_code_action_items(self):
         client = lc.LspClient()
         result = [
-            {'title': 'Fix', 'kind': 'quickfix', 'isPreferred': True,
-             'diagnostics': [{'message': 'unused'}]},
+            {
+                'title': 'Fix',
+                'kind': 'quickfix',
+                'isPreferred': True,
+                'diagnostics': [{'message': 'unused'}],
+            },
             {'title': 'Fix'},  # duplicate title -> skipped
             'not-a-dict',  # skipped
             {'title': '   '},  # blank title -> skipped
@@ -492,45 +578,69 @@ class TestParsing:
         client = lc.LspClient()
         empty = client._parse_location_response(None)
         assert empty.available is True and empty.locations == []
-        single = client._parse_location_response({
-            'uri': 'file:///app/t.py', 'range': {'start': {'line': 0}}})
+        single = client._parse_location_response(
+            {'uri': 'file:///app/t.py', 'range': {'start': {'line': 0}}}
+        )
         assert single.locations[0].line == 1
-        multi = client._parse_location_response([{
-            'uri': 'file:///app/t.py', 'range': {'start': {'line': 0}}}])
+        multi = client._parse_location_response(
+            [{'uri': 'file:///app/t.py', 'range': {'start': {'line': 0}}}]
+        )
         assert len(multi.locations) == 1
 
     def test_path_from_file_uri(self):
         assert lc.LspClient._path_from_file_uri('http://x/y') == 'http://x/y'
-        assert lc.LspClient._path_from_file_uri('file://server/share/f.py') == '//server/share/f.py'
-        assert lc.LspClient._path_from_file_uri('file:///home/a%20b.py') == '/home/a b.py'
-        assert lc.LspClient._path_from_file_uri('file:///c:/Windows/x.py') == 'c:/Windows/x.py'
+        assert (
+            lc.LspClient._path_from_file_uri('file://server/share/f.py')
+            == '//server/share/f.py'
+        )
+        assert (
+            lc.LspClient._path_from_file_uri('file:///home/a%20b.py') == '/home/a b.py'
+        )
+        assert (
+            lc.LspClient._path_from_file_uri('file:///c:/Windows/x.py')
+            == 'c:/Windows/x.py'
+        )
 
     def test_build_code_action_range_and_diags(self):
         client = lc.LspClient()
         source = 'a\nb\nc\n'
-        diags = [{
-            'range': {'start': {'line': 0}, 'end': {'line': 0}},
-            'message': 'line 1 issue',
-        }]
+        diags = [
+            {
+                'range': {'start': {'line': 0}, 'end': {'line': 0}},
+                'message': 'line 1 issue',
+            }
+        ]
         full, all_diags = client._build_code_action_range_and_diags(source, diags, 0, 0)
         assert full['start'] == {'line': 0, 'character': 0}
         assert full['end'] == {'line': 3, 'character': 0}
         assert all_diags == diags
-        ranged, relevant = client._build_code_action_range_and_diags(source, diags, 0, 5)
+        ranged, relevant = client._build_code_action_range_and_diags(
+            source, diags, 0, 5
+        )
         assert relevant == diags  # diag contains point
-        ranged2, fallback = client._build_code_action_range_and_diags(source, diags, 2, 5)
+        ranged2, fallback = client._build_code_action_range_and_diags(
+            source, diags, 2, 5
+        )
         assert fallback == diags  # no diag at point -> falls back to all
 
     def test_collect_diagnostics_for_code_action(self):
         client = lc.LspClient()
         diag = {'range': {'start': {'line': 0}}, 'message': 'err'}
         with (
-            patch.object(client, '_rpc', return_value=(
-                [{'method': 'textDocument/publishDiagnostics', 'params': {
-                    'uri': URI, 'diagnostics': [diag]}}],
-                True,
-                '',
-            )),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [
+                        {
+                            'method': 'textDocument/publishDiagnostics',
+                            'params': {'uri': URI, 'diagnostics': [diag]},
+                        }
+                    ],
+                    True,
+                    '',
+                ),
+            ),
             patch.object(client, '_build_init_msgs', return_value=[]),
         ):
             got = client._collect_diagnostics_for_code_action(
@@ -552,13 +662,21 @@ class TestParsing:
     def test_execute_code_action_request(self):
         client = lc.LspClient()
         with (
-            patch.object(client, '_rpc', return_value=(
-                [{'jsonrpc': '2.0', 'id': 30, 'result': [
-                    {'title': 'Organize', 'kind': 'source'}]
-                }],
-                True,
-                '',
-            )),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [
+                        {
+                            'jsonrpc': '2.0',
+                            'id': 30,
+                            'result': [{'title': 'Organize', 'kind': 'source'}],
+                        }
+                    ],
+                    True,
+                    '',
+                ),
+            ),
             patch.object(client, '_build_init_msgs', return_value=[]),
         ):
             res = client._execute_code_action_request(
@@ -570,11 +688,21 @@ class TestParsing:
     def test_execute_code_action_request_error(self):
         client = lc.LspClient()
         with (
-            patch.object(client, '_rpc', return_value=(
-                [{'jsonrpc': '2.0', 'id': 30, 'error': {'code': -1, 'message': 'denied'}}],
-                True,
-                '',
-            )),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [
+                        {
+                            'jsonrpc': '2.0',
+                            'id': 30,
+                            'error': {'code': -1, 'message': 'denied'},
+                        }
+                    ],
+                    True,
+                    '',
+                ),
+            ),
             patch.object(client, '_build_init_msgs', return_value=[]),
         ):
             res = client._execute_code_action_request(
@@ -586,7 +714,9 @@ class TestParsing:
     def test_execute_code_action_request_no_match(self):
         client = lc.LspClient()
         with (
-            patch.object(client, '_rpc', return_value=([{'id': 99, 'result': []}], True, '')),
+            patch.object(
+                client, '_rpc', return_value=([{'id': 99, 'result': []}], True, '')
+            ),
             patch.object(client, '_build_init_msgs', return_value=[]),
         ):
             res = client._execute_code_action_request(
@@ -597,11 +727,14 @@ class TestParsing:
     def test_parse_document_symbols_non_list_and_location(self):
         client = lc.LspClient()
         assert client._parse_document_symbols('not-a-list', '') == []
-        result = [{
-            'name': 'f', 'kind': 12,
-            'location': {'uri': URI, 'range': {'start': {'line': 4}}},
-            'children': 'not-a-list',  # skipped by walk guard
-        }]
+        result = [
+            {
+                'name': 'f',
+                'kind': 12,
+                'location': {'uri': URI, 'range': {'start': {'line': 4}}},
+                'children': 'not-a-list',  # skipped by walk guard
+            }
+        ]
         symbols = client._parse_document_symbols(result, '')
         assert symbols[0].line == 5
         filtered = client._parse_document_symbols(result, 'nomatch')
@@ -639,9 +772,13 @@ class TestSessionPathsAndHelpers:
         client = lc.LspClient()
         with (
             patch.object(client, '_get_context', return_value=None),
-            patch.object(client, '_unavailable', return_value=lc.LspResult(
-                available=False, error='No language server available'
-            )),
+            patch.object(
+                client,
+                '_unavailable',
+                return_value=lc.LspResult(
+                    available=False, error='No language server available'
+                ),
+            ),
         ):
             res = client._query_diagnostics('/x.py', URI, SRC)
         assert not res.available
@@ -717,9 +854,13 @@ class TestSessionPathsAndHelpers:
         client = lc.LspClient()
         with (
             patch.object(client, '_get_context', return_value=None),
-            patch.object(client, '_unavailable', return_value=lc.LspResult(
-                available=False, error='No language server available'
-            )),
+            patch.object(
+                client,
+                '_unavailable',
+                return_value=lc.LspResult(
+                    available=False, error='No language server available'
+                ),
+            ),
         ):
             res = client._query_code_actions('/x.py', URI, SRC, 0, 0)
         assert not res.available
@@ -798,9 +939,13 @@ class TestSessionPathsAndHelpers:
         client = lc.LspClient()
         with (
             patch.object(client, '_get_context', return_value=None),
-            patch.object(client, '_unavailable', return_value=lc.LspResult(
-                available=False, error='No language server available'
-            )),
+            patch.object(
+                client,
+                '_unavailable',
+                return_value=lc.LspResult(
+                    available=False, error='No language server available'
+                ),
+            ),
         ):
             assert not client._query_document_symbols('/x.py', URI, SRC, '').available
 
@@ -810,8 +955,15 @@ class TestSessionPathsAndHelpers:
             patch.object(client, '_get_context', return_value=CTX),
             patch.object(client, '_resolve_timeout', return_value=5.0),
             patch.object(client, '_use_session', return_value=(None, True)),
-            patch.object(client, '_rpc', return_value=(
-                [{'jsonrpc': '2.0', 'id': 20, 'error': {'message': 'bad'}}], True, '')),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [{'jsonrpc': '2.0', 'id': 20, 'error': {'message': 'bad'}}],
+                    True,
+                    '',
+                ),
+            ),
         ):
             res = client._query_document_symbols(pyfile, Path(pyfile).as_uri(), SRC, '')
         assert 'bad' in res.error
@@ -826,7 +978,9 @@ class TestSessionPathsAndHelpers:
 
     def test_parse_document_symbols_skips_non_dict(self):
         client = lc.LspClient()
-        symbols = client._parse_document_symbols(['nope', {'name': 'f', 'kind': 12}], '')
+        symbols = client._parse_document_symbols(
+            ['nope', {'name': 'f', 'kind': 12}], ''
+        )
         assert [s.name for s in symbols] == ['f']
 
     def test_query_hover_session_path(self, pyfile):
@@ -891,9 +1045,13 @@ class TestSessionPathsAndHelpers:
         client = lc.LspClient()
         with (
             patch.object(client, '_get_context', return_value=None),
-            patch.object(client, '_unavailable', return_value=lc.LspResult(
-                available=False, error='No language server available'
-            )),
+            patch.object(
+                client,
+                '_unavailable',
+                return_value=lc.LspResult(
+                    available=False, error='No language server available'
+                ),
+            ),
         ):
             assert not client._query_hover('/x.py', URI, SRC, 0, 0).available
 
@@ -920,8 +1078,8 @@ class TestSessionPathsAndHelpers:
         client = lc.LspClient()
         session = MagicMock()
         session.supports.return_value = True
-        session.request.return_value = {'result': [{
-            'uri': 'file:///app/t.py', 'range': {'start': {'line': 0}}}]
+        session.request.return_value = {
+            'result': [{'uri': 'file:///app/t.py', 'range': {'start': {'line': 0}}}]
         }
         with (
             patch.object(client, '_get_context', return_value=CTX),
@@ -1006,9 +1164,13 @@ class TestSessionPathsAndHelpers:
         client = lc.LspClient()
         with (
             patch.object(client, '_get_context', return_value=None),
-            patch.object(client, '_unavailable', return_value=lc.LspResult(
-                available=False, error='No language server available'
-            )),
+            patch.object(
+                client,
+                '_unavailable',
+                return_value=lc.LspResult(
+                    available=False, error='No language server available'
+                ),
+            ),
         ):
             assert not client._query_locations(
                 'find_definition', '/x.py', URI, SRC, 0, 0
@@ -1017,8 +1179,15 @@ class TestSessionPathsAndHelpers:
     def test_try_lsp_locations_error_and_no_match(self):
         client = lc.LspClient()
         with (
-            patch.object(client, '_rpc', return_value=(
-                [{'jsonrpc': '2.0', 'id': 10, 'error': {'message': 'bad'}}], True, '')),
+            patch.object(
+                client,
+                '_rpc',
+                return_value=(
+                    [{'jsonrpc': '2.0', 'id': 10, 'error': {'message': 'bad'}}],
+                    True,
+                    '',
+                ),
+            ),
             patch.object(client, '_build_init_msgs', return_value=[]),
         ):
             res, started = client._try_lsp_locations(

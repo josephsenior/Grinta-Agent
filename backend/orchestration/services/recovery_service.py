@@ -290,10 +290,17 @@ class RecoveryService:
         # For context window errors, attempt aggressive compaction before giving up.
         if isinstance(exc, (ContextWindowExceededError, LLMContextWindowExceedError)):
             if await self._attempt_aggressive_compaction(controller):
-                self._emit_intervention('context_compaction_requested', exc, outcome='scheduled')
+                self._emit_intervention(
+                    'context_compaction_requested', exc, outcome='scheduled'
+                )
                 return True
         await self._set_awaiting_user_input_if_allowed(controller)
-        self._emit_intervention('hard_stop', exc, failure_category=self._error_category_for(exc), outcome='awaiting_user')
+        self._emit_intervention(
+            'hard_stop',
+            exc,
+            failure_category=self._error_category_for(exc),
+            outcome='awaiting_user',
+        )
         return True
 
     async def _attempt_aggressive_compaction(self, controller) -> bool:

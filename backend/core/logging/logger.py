@@ -536,6 +536,7 @@ def finalize_session_logging_audit(log_dir: str | None = None) -> None:
     # Flush the asynchronous JSONL writer before deriving evidence/audit files.
     try:
         from backend.core.logging.session_event_logger import get_session_event_logger
+
         get_session_event_logger().flush()
     except Exception:
         pass

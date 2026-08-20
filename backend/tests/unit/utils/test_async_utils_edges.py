@@ -115,7 +115,9 @@ class TestWarnIfOnLoopThread:
         async def probe():
             _warn_if_on_loop_thread(probe)
 
-        with caplog.at_level('WARNING', logger='backend.utils.async_helpers.async_utils'):
+        with caplog.at_level(
+            'WARNING', logger='backend.utils.async_helpers.async_utils'
+        ):
             await probe()
         assert any('BRIDGE_ON_LOOP' in r.message for r in caplog.records)
         assert any('<unknown>' in r.message for r in caplog.records)
@@ -125,7 +127,9 @@ class TestWarnIfOnLoopThread:
         async def probe():
             _warn_if_on_loop_thread(probe)
 
-        with caplog.at_level('WARNING', logger='backend.utils.async_helpers.async_utils'):
+        with caplog.at_level(
+            'WARNING', logger='backend.utils.async_helpers.async_utils'
+        ):
             await probe()
         assert any('BRIDGE_ON_LOOP' in r.message for r in caplog.records)
         assert any('.py:' in r.message for r in caplog.records)
@@ -166,7 +170,9 @@ class TestCancelPendingTasksBounded:
             task = loop.create_task(stubborn())
             loop.run_until_complete(asyncio.sleep(0.05))
 
-            with caplog.at_level('WARNING', logger='backend.utils.async_helpers.async_utils'):
+            with caplog.at_level(
+                'WARNING', logger='backend.utils.async_helpers.async_utils'
+            ):
                 _cancel_pending_tasks_bounded(loop, timeout_sec=0.05)
 
             assert not task.done()
@@ -228,7 +234,9 @@ class TestCallAsyncFromSyncFinalize:
             return 'ok'
 
         monkeypatch.setattr(async_utils, '_LOOP_FINALIZE_WAIT_SEC', 0.05)
-        assert call_async_from_sync(spawns_residual_and_slow_asyncgen, timeout=15) == 'ok'
+        assert (
+            call_async_from_sync(spawns_residual_and_slow_asyncgen, timeout=15) == 'ok'
+        )
         try:
             asyncio.run(holder['gen'].aclose())
         except BaseException:

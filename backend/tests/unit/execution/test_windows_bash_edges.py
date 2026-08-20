@@ -49,9 +49,7 @@ def mock_cancellation() -> MagicMock:
 
 
 @pytest.fixture
-def session(
-    tmp_path, mock_cancellation: MagicMock
-) -> WindowsPowershellSession:
+def session(tmp_path, mock_cancellation: MagicMock) -> WindowsPowershellSession:
     return WindowsPowershellSession(
         work_dir=str(tmp_path),
         cancellation_service=cast('TaskCancellationService', mock_cancellation),
@@ -84,7 +82,9 @@ class TestFindPowershellExecutable:
     @patch('backend.execution.utils.shell.windows_bash.subprocess.run')
     def test_returns_pwsh_first(self, mock_run: MagicMock) -> None:
         mock_run.return_value = subprocess.CompletedProcess(['pwsh'], 0)
-        with patch('backend.execution.utils.shell.windows_bash.logger.info') as mock_info:
+        with patch(
+            'backend.execution.utils.shell.windows_bash.logger.info'
+        ) as mock_info:
             assert _find_powershell_executable() == 'pwsh'
         assert mock_info.call_args.args[0] == 'Found PowerShell 7 (pwsh.exe)'
 
@@ -148,7 +148,9 @@ class TestSessionLifecycle:
         self, tmp_path, mock_cancellation: MagicMock
     ) -> None:
         work_dir = tmp_path / 'deep' / 'nested'
-        with patch('backend.execution.utils.shell.windows_bash.logger.info') as mock_info:
+        with patch(
+            'backend.execution.utils.shell.windows_bash.logger.info'
+        ) as mock_info:
             WindowsPowershellSession(
                 work_dir=str(work_dir),
                 cancellation_service=cast('TaskCancellationService', mock_cancellation),
@@ -168,14 +170,20 @@ class TestSessionLifecycle:
                 'backend.execution.utils.shell.windows_bash._find_powershell_executable',
                 side_effect=RuntimeError('no pwsh'),
             ),
-            patch('backend.execution.utils.shell.windows_bash.logger.error') as mock_err,
-            pytest.raises(RuntimeError, match='Failed to initialize PowerShell session'),
+            patch(
+                'backend.execution.utils.shell.windows_bash.logger.error'
+            ) as mock_err,
+            pytest.raises(
+                RuntimeError, match='Failed to initialize PowerShell session'
+            ),
         ):
             WindowsPowershellSession(
                 work_dir=str(tmp_path),
                 cancellation_service=cast('TaskCancellationService', mock_cancellation),
             )
-        assert mock_err.call_args.args[0] == 'Failed to initialize PowerShell session: %s'
+        assert (
+            mock_err.call_args.args[0] == 'Failed to initialize PowerShell session: %s'
+        )
 
     def test_initialize_raises_when_not_initialized(self) -> None:
         uninit = WindowsPowershellSession.__new__(WindowsPowershellSession)
@@ -184,7 +192,9 @@ class TestSessionLifecycle:
             uninit.initialize()
 
     def test_write_input_logs_warning(self, session: WindowsPowershellSession) -> None:
-        with patch('backend.execution.utils.shell.windows_bash.logger.warning') as mock_warn:
+        with patch(
+            'backend.execution.utils.shell.windows_bash.logger.warning'
+        ) as mock_warn:
             session.write_input('data')
         assert (
             mock_warn.call_args.args[0]
@@ -193,7 +203,9 @@ class TestSessionLifecycle:
 
 
 class TestRunBackgroundablePath:
-    def test_no_pending_bg_returns_none(self, session: WindowsPowershellSession) -> None:
+    def test_no_pending_bg_returns_none(
+        self, session: WindowsPowershellSession
+    ) -> None:
         assert session._pending_bg_id is None
         with patch.object(session, '_run_backgroundable') as mock_rb:
             assert session._run_backgroundable_path(MagicMock(pid=1), None, 'x') is None
@@ -204,7 +216,9 @@ class TestRunBackgroundablePath:
     ) -> None:
         proc = MagicMock(pid=42)
         session._pending_bg_id = 'bg-1'
-        with patch.object(session, '_run_backgroundable', return_value=('o', 'e', 0)) as mock_rb:
+        with patch.object(
+            session, '_run_backgroundable', return_value=('o', 'e', 0)
+        ) as mock_rb:
             result = session._run_backgroundable_path(proc, 5, 'echo hi')
         assert result == ('o', 'e', 0)
         mock_rb.assert_called_once_with(proc, 5, 'bg-1', blocking=False)
@@ -239,11 +253,15 @@ class TestSpawnTrackingResult:
     ) -> None:
         proc = MagicMock(pid=100)
         stdout = 'hello\n___GRINTA_SPAWNED___100,200___END___\n'
-        with patch('backend.execution.utils.shell.windows_bash.logger.info') as mock_info:
+        with patch(
+            'backend.execution.utils.shell.windows_bash.logger.info'
+        ) as mock_info:
             result = session._handle_spawn_tracking_result(proc, stdout)
         assert result == 'hello\n'
         session._cancellation.register_pid.assert_called_once_with(200)
-        assert mock_info.call_args.args[0].startswith('Start-Process wrapper registered')
+        assert mock_info.call_args.args[0].startswith(
+            'Start-Process wrapper registered'
+        )
 
     def test_no_pids_no_registration(self, session: WindowsPowershellSession) -> None:
         proc = MagicMock(pid=100)
@@ -254,7 +272,9 @@ class TestSpawnTrackingResult:
 
 class TestRunStandardCommand:
     @patch('backend.execution.utils.shell.windows_bash.bounded_communicate')
-    def test_happy_path(self, mock_bc: MagicMock, session: WindowsPowershellSession) -> None:
+    def test_happy_path(
+        self, mock_bc: MagicMock, session: WindowsPowershellSession
+    ) -> None:
         proc = MagicMock(pid=42)
         mock_bc.return_value = BoundedResult(
             stdout='out', stderr='err', returncode=0, truncated=False, timed_out=False
@@ -265,7 +285,9 @@ class TestRunStandardCommand:
         assert mock_bc.call_args.kwargs['stdin_data'] is None
 
     @patch('backend.execution.utils.shell.windows_bash.bounded_communicate')
-    def test_with_stdin(self, mock_bc: MagicMock, session: WindowsPowershellSession) -> None:
+    def test_with_stdin(
+        self, mock_bc: MagicMock, session: WindowsPowershellSession
+    ) -> None:
         proc = MagicMock(pid=42)
         mock_bc.return_value = BoundedResult(
             stdout='out', stderr='', returncode=0, truncated=False, timed_out=False
@@ -317,7 +339,10 @@ class TestRunCommand:
     @patch('backend.execution.utils.shell.windows_bash.bounded_communicate')
     @patch('backend.execution.utils.shell.windows_bash.subprocess.Popen')
     def test_happy_path(
-        self, mock_popen: MagicMock, mock_bc: MagicMock, session: WindowsPowershellSession
+        self,
+        mock_popen: MagicMock,
+        mock_bc: MagicMock,
+        session: WindowsPowershellSession,
     ) -> None:
         proc = MagicMock(pid=7)
         mock_popen.return_value = proc
@@ -338,7 +363,11 @@ class TestRunCommand:
     @patch('backend.execution.utils.shell.windows_bash.bounded_communicate')
     @patch('backend.execution.utils.shell.windows_bash.subprocess.Popen')
     def test_falls_back_to_work_dir_when_cwd_missing(
-        self, mock_popen: MagicMock, mock_bc: MagicMock, tmp_path, session: WindowsPowershellSession
+        self,
+        mock_popen: MagicMock,
+        mock_bc: MagicMock,
+        tmp_path,
+        session: WindowsPowershellSession,
     ) -> None:
         mock_popen.return_value = MagicMock(pid=7)
         mock_bc.return_value = BoundedResult(
@@ -351,7 +380,10 @@ class TestRunCommand:
     @patch('backend.execution.utils.shell.windows_bash.bounded_communicate')
     @patch('backend.execution.utils.shell.windows_bash.subprocess.Popen')
     def test_stdin_pipe_when_input_given(
-        self, mock_popen: MagicMock, mock_bc: MagicMock, session: WindowsPowershellSession
+        self,
+        mock_popen: MagicMock,
+        mock_bc: MagicMock,
+        session: WindowsPowershellSession,
     ) -> None:
         mock_popen.return_value = MagicMock(pid=7)
         mock_bc.return_value = BoundedResult(
@@ -361,7 +393,9 @@ class TestRunCommand:
         assert mock_popen.call_args.kwargs['stdin'] is subprocess.PIPE
 
     @patch('backend.execution.utils.shell.windows_bash.subprocess.Popen')
-    def test_timeout_returns_124(self, mock_popen: MagicMock, session: WindowsPowershellSession) -> None:
+    def test_timeout_returns_124(
+        self, mock_popen: MagicMock, session: WindowsPowershellSession
+    ) -> None:
         mock_popen.side_effect = subprocess.TimeoutExpired('pwsh', 5)
         out, err, code = session._run_command('echo hi', timeout=5)
         assert (out, err, code) == ('', 'Command timed out after 5 seconds', 124)
@@ -374,11 +408,18 @@ class TestRunCommand:
         out, err, code = session._run_command('echo hi')
         assert (out, err, code) == ('', 'boom', 1)
 
-    def test_wraps_start_process_command(self, session: WindowsPowershellSession) -> None:
+    def test_wraps_start_process_command(
+        self, session: WindowsPowershellSession
+    ) -> None:
         proc = MagicMock(pid=7)
         with (
-            patch.object(session, '_run_standard_command', return_value=('o', 'e', 0)) as mock_std,
-            patch('backend.execution.utils.shell.windows_bash.subprocess.Popen', return_value=proc) as mock_popen,
+            patch.object(
+                session, '_run_standard_command', return_value=('o', 'e', 0)
+            ) as mock_std,
+            patch(
+                'backend.execution.utils.shell.windows_bash.subprocess.Popen',
+                return_value=proc,
+            ) as mock_popen,
         ):
             session._run_command('Start-Process notepad')
         assert mock_std.call_args.args[3] == 'Start-Process notepad'
@@ -394,7 +435,10 @@ class TestRunCommand:
         with (
             patch.object(session, '_run_backgroundable', return_value=('o', 'e', 0)),
             patch.object(session, '_run_standard_command') as mock_std,
-            patch('backend.execution.utils.shell.windows_bash.subprocess.Popen', return_value=proc),
+            patch(
+                'backend.execution.utils.shell.windows_bash.subprocess.Popen',
+                return_value=proc,
+            ),
         ):
             out, err, code = session._run_command('echo hi')
         assert (out, err, code) == ('o', 'e', 0)
@@ -413,7 +457,10 @@ class TestExecute:
     @patch('backend.execution.utils.shell.windows_bash.bounded_communicate')
     @patch('backend.execution.utils.shell.windows_bash.subprocess.Popen')
     def test_foreground_with_stdin(
-        self, mock_popen: MagicMock, mock_bc: MagicMock, session: WindowsPowershellSession
+        self,
+        mock_popen: MagicMock,
+        mock_bc: MagicMock,
+        session: WindowsPowershellSession,
     ) -> None:
         mock_popen.return_value = MagicMock(pid=7)
         mock_bc.return_value = BoundedResult(
@@ -428,8 +475,12 @@ class TestExecute:
     def test_background_success(self, session: WindowsPowershellSession) -> None:
         action = CmdRunAction(command='sleep 5 &')
         with (
-            patch.object(session, '_run_command', return_value=('123', '', 0)) as mock_rc,
-            patch('backend.execution.utils.shell.windows_bash.logger.info') as mock_info,
+            patch.object(
+                session, '_run_command', return_value=('123', '', 0)
+            ) as mock_rc,
+            patch(
+                'backend.execution.utils.shell.windows_bash.logger.info'
+            ) as mock_info,
         ):
             result = session.execute(action)
         assert isinstance(result, CmdOutputObservation)
@@ -450,7 +501,9 @@ class TestExecute:
                 '_run_command',
                 side_effect=[('', 'failed', 1), ('ran normally', '', 0)],
             ),
-            patch('backend.execution.utils.shell.windows_bash.logger.warning') as mock_warn,
+            patch(
+                'backend.execution.utils.shell.windows_bash.logger.warning'
+            ) as mock_warn,
         ):
             result = session.execute(action)
         assert isinstance(result, CmdOutputObservation)
@@ -473,7 +526,9 @@ class TestCwdAndErrorHandlers:
         self, session: WindowsPowershellSession
     ) -> None:
         proc = MagicMock()
-        with patch('backend.execution.utils.shell.windows_bash.logger.warning') as mock_warn:
+        with patch(
+            'backend.execution.utils.shell.windows_bash.logger.warning'
+        ) as mock_warn:
             out, err, code = session._handle_timeout_exception(proc, 5, 'cmd')
         assert (out, err, code) == ('', 'Command timed out after 5 seconds', 124)
         proc.kill.assert_called_once()
@@ -498,7 +553,9 @@ class TestCwdAndErrorHandlers:
         self, session: WindowsPowershellSession
     ) -> None:
         proc = MagicMock()
-        with patch('backend.execution.utils.shell.windows_bash.logger.error') as mock_err:
+        with patch(
+            'backend.execution.utils.shell.windows_bash.logger.error'
+        ) as mock_err:
             out, err, code = session._handle_run_exception(proc, RuntimeError('boom'))
         assert (out, err, code) == ('', 'boom', 1)
         proc.kill.assert_called_once()
@@ -512,9 +569,7 @@ class TestCwdAndErrorHandlers:
         out, _err, code = session._handle_run_exception(proc, ValueError('x'))
         assert code == 1
 
-    def test_run_exception_no_process(
-        self, session: WindowsPowershellSession
-    ) -> None:
+    def test_run_exception_no_process(self, session: WindowsPowershellSession) -> None:
         out, err, code = session._handle_run_exception(None, RuntimeError('boom'))
         assert (out, err, code) == ('', 'boom', 1)
 

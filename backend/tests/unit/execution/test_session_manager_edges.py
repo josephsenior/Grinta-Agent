@@ -37,7 +37,9 @@ class TestToolRegistryFallback:
             return real_import(name, *args, **kwargs)
 
         monkeypatch.setattr(builtins, '__import__', raiser)
-        with patch('backend.execution.utils.shell.session_manager.logger.warning') as mock_warn:
+        with patch(
+            'backend.execution.utils.shell.session_manager.logger.warning'
+        ) as mock_warn:
             m = SessionManager(
                 work_dir=str(tmp_path),
                 username='tester',
@@ -60,12 +62,19 @@ class TestToolRegistryFallback:
 
 
 class TestCreateSession:
-    def test_generates_session_id(self, mgr: SessionManager, tmp_path, monkeypatch) -> None:
+    def test_generates_session_id(
+        self, mgr: SessionManager, tmp_path, monkeypatch
+    ) -> None:
         monkeypatch.delenv('NO_CHANGE_TIMEOUT_SECONDS', raising=False)
         session = MagicMock()
         with (
-            patch('backend.execution.utils.shell.session_manager.uuid.uuid4', return_value='uuid-1'),
-            patch('backend.utils.stdio_restore.real_stdio_for_subprocess') as mock_stdio,
+            patch(
+                'backend.execution.utils.shell.session_manager.uuid.uuid4',
+                return_value='uuid-1',
+            ),
+            patch(
+                'backend.utils.stdio_restore.real_stdio_for_subprocess'
+            ) as mock_stdio,
             patch(
                 'backend.execution.utils.shell.session_manager.create_shell_session',
                 return_value=session,
@@ -119,7 +128,9 @@ class TestCreateSession:
                 'backend.execution.utils.shell.session_manager.create_shell_session',
                 side_effect=RuntimeError('boom'),
             ),
-            patch('backend.execution.utils.shell.session_manager.logger.error') as mock_err,
+            patch(
+                'backend.execution.utils.shell.session_manager.logger.error'
+            ) as mock_err,
             pytest.raises(RuntimeError, match='boom'),
         ):
             mgr.create_session()
@@ -161,7 +172,9 @@ class TestCloseSession:
     def test_close_detached_error_logged(self) -> None:
         bad = MagicMock()
         bad.close.side_effect = RuntimeError('boom')
-        with patch('backend.execution.utils.shell.session_manager.logger.error') as mock_err:
+        with patch(
+            'backend.execution.utils.shell.session_manager.logger.error'
+        ) as mock_err:
             SessionManager._close_detached_session('s1', bad)
         assert mock_err.call_args.args[0] == 'Error closing session %s: %s'
 
@@ -219,7 +232,9 @@ class TestCleanupIdleSessions:
         )
         with (
             patch('time.time', return_value=now),
-            patch('backend.execution.utils.shell.session_manager.logger.info') as mock_info,
+            patch(
+                'backend.execution.utils.shell.session_manager.logger.info'
+            ) as mock_info,
         ):
             closed = mgr.cleanup_idle_sessions(max_idle_seconds=100)
         assert closed == ['bg-dead']
@@ -230,11 +245,12 @@ class TestCleanupIdleSessions:
         assert 'bg-no-last' in mgr.sessions
         idle_dead.close.assert_called_once()
         default.close.assert_not_called()
-        assert mock_info.call_args.args[0] == 'cleanup_idle_sessions: closed idle session %s'
+        assert (
+            mock_info.call_args.args[0]
+            == 'cleanup_idle_sessions: closed idle session %s'
+        )
 
-    def test_require_exited_false_closes_running(
-        self, mgr: SessionManager
-    ) -> None:
+    def test_require_exited_false_closes_running(self, mgr: SessionManager) -> None:
         now = 1_000_000.0
         idle_running = SimpleNamespace(
             _last_interaction_at=0.0,
@@ -243,10 +259,15 @@ class TestCleanupIdleSessions:
         )
         mgr.sessions = cast(
             'dict[str, UnifiedShellSession]',
-            {'default': SimpleNamespace(_last_interaction_at=0.0), 'bg-r': idle_running},
+            {
+                'default': SimpleNamespace(_last_interaction_at=0.0),
+                'bg-r': idle_running,
+            },
         )
         with patch('time.time', return_value=now):
-            closed = mgr.cleanup_idle_sessions(max_idle_seconds=100, require_exited=False)
+            closed = mgr.cleanup_idle_sessions(
+                max_idle_seconds=100, require_exited=False
+            )
         assert closed == ['bg-r']
         idle_running.close.assert_called_once()
 
@@ -263,10 +284,14 @@ class TestCleanupIdleSessions:
         with (
             patch.object(mgr, 'close_session', side_effect=RuntimeError('boom')),
             patch('time.time', return_value=1_000_000.0),
-            patch('backend.execution.utils.shell.session_manager.logger.warning') as mock_warn,
+            patch(
+                'backend.execution.utils.shell.session_manager.logger.warning'
+            ) as mock_warn,
         ):
             assert mgr.cleanup_idle_sessions() == []
-        assert mock_warn.call_args.args[0] == 'cleanup_idle_sessions: failed to close %s'
+        assert (
+            mock_warn.call_args.args[0] == 'cleanup_idle_sessions: failed to close %s'
+        )
 
 
 class TestDefaultSessionAlive:
@@ -306,12 +331,17 @@ class TestEnsureDefaultSession:
         fresh = MagicMock()
         with (
             patch.object(mgr, 'create_session', return_value=fresh) as mock_create,
-            patch('backend.execution.utils.shell.session_manager.logger.info') as mock_info,
+            patch(
+                'backend.execution.utils.shell.session_manager.logger.info'
+            ) as mock_info,
         ):
             result = mgr.ensure_default_session(foo='bar')
         assert result is fresh
         mock_create.assert_called_once_with('default', foo='bar')
-        assert mock_info.call_args.args[0] == 'ensure_default_session: replaced dead default session'
+        assert (
+            mock_info.call_args.args[0]
+            == 'ensure_default_session: replaced dead default session'
+        )
 
     def test_close_failure_debug_logged(self, mgr: SessionManager) -> None:
         dead = SimpleNamespace(
@@ -322,7 +352,9 @@ class TestEnsureDefaultSession:
         with (
             patch.object(mgr, 'close_session', side_effect=RuntimeError('boom')),
             patch.object(mgr, 'create_session', return_value=fresh),
-            patch('backend.execution.utils.shell.session_manager.logger.debug') as mock_debug,
+            patch(
+                'backend.execution.utils.shell.session_manager.logger.debug'
+            ) as mock_debug,
         ):
             assert mgr.ensure_default_session() is fresh
         assert mock_debug.call_args.args[0] == 'ensure_default_session: close failed'

@@ -135,7 +135,9 @@ class TestEnhancedInit:
             ),
         ):
             store = EnhancedVectorStore(
-                collection_name='demo', enable_reranking=True, warm_embeddings_in_background=False
+                collection_name='demo',
+                enable_reranking=True,
+                warm_embeddings_in_background=False,
             )
         assert store.reranker is fake_ranker
         store.shutdown()
@@ -154,7 +156,9 @@ class TestEnhancedInit:
             ),
         ):
             store = EnhancedVectorStore(
-                collection_name='demo', enable_reranking=True, warm_embeddings_in_background=False
+                collection_name='demo',
+                enable_reranking=True,
+                warm_embeddings_in_background=False,
             )
         assert store.reranker is None
         store.shutdown()
@@ -217,7 +221,11 @@ class TestEnhancedAdd:
     def test_add_batch_default_metadatas(self) -> None:
         store = make_store()
         store.add_batch(
-            ['s1', 's2'], ['user', 'user'], [None, None], [None, None], ['a', 'b'],
+            ['s1', 's2'],
+            ['user', 'user'],
+            [None, None],
+            [None, None],
+            ['a', 'b'],
             tenant_id='sess',
         )
         store.backend.add_batch.assert_called_once()
@@ -338,12 +346,16 @@ class TestFinalizeHybrid:
 class TestTryCachedSearch:
     def test_no_cache(self) -> None:
         store = make_store()
-        assert store._try_cached_search('q', 5, None, time.time(), tenant_id='t') is None
+        assert (
+            store._try_cached_search('q', 5, None, time.time(), tenant_id='t') is None
+        )
 
     def test_cache_miss(self) -> None:
         store = make_store()
         store.cache = QueryCache()
-        assert store._try_cached_search('q', 5, None, time.time(), tenant_id='t') is None
+        assert (
+            store._try_cached_search('q', 5, None, time.time(), tenant_id='t') is None
+        )
 
     def test_cache_hit(self) -> None:
         store = make_store()
@@ -363,7 +375,9 @@ class TestParallelSearch:
         )
         assert semantic == [{'step_id': 'a'}]
         assert lexical == [{'step_id': 'b'}]
-        store.backend.search.assert_called_once_with('q', k=10, filter_metadata={TENANT_METADATA_KEY: 't'})
+        store.backend.search.assert_called_once_with(
+            'q', k=10, filter_metadata={TENANT_METADATA_KEY: 't'}
+        )
         shutdown_pool(store)
 
     def test_semantic_failure_falls_back_to_lexical(self) -> None:
@@ -419,9 +433,7 @@ class TestSearch:
         ]
         store.bm25_backend.search.return_value = []
         results = store.search('q', tenant_id='t')
-        assert results == [
-            {'step_id': 'a', TENANT_METADATA_KEY: 't', 'score': 0.9}
-        ]
+        assert results == [{'step_id': 'a', TENANT_METADATA_KEY: 't', 'score': 0.9}]
         assert store.cache.get('q', tenant_id='t') == results
         shutdown_pool(store)
 
@@ -486,9 +498,12 @@ class TestDelete:
         store = make_store()
         store.backend.delete_by_ids.side_effect = RuntimeError('boom')
         store.bm25_backend.delete_by_ids.side_effect = RuntimeError('boom')
-        assert store._delete_backends_in_parallel(
-            store.backend.delete_by_ids, store.bm25_backend.delete_by_ids, ['a']
-        ) == 0
+        assert (
+            store._delete_backends_in_parallel(
+                store.backend.delete_by_ids, store.bm25_backend.delete_by_ids, ['a']
+            )
+            == 0
+        )
         shutdown_pool(store)
 
 
@@ -528,9 +543,7 @@ class TestApplyFilters:
             {'step_id': '2', TENANT_METADATA_KEY: 't2'},
             {'step_id': '3'},
         ]
-        filtered = EnhancedVectorStore._apply_filters(
-            results, 5, None, tenant_id='t1'
-        )
+        filtered = EnhancedVectorStore._apply_filters(results, 5, None, tenant_id='t1')
         assert [r['step_id'] for r in filtered] == ['1', '3']
 
     def test_empty_results(self) -> None:

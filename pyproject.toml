@@ -39,62 +39,60 @@ classifiers = [
 ]
 dependencies = [
   "aiohttp>=3.14.3",
-  "anthropic>=0.122.0,<1",
+  "anthropic>=0.122,<1",
   "anyio>=4.14.2,<5",
   "bashlex>=0.18,<0.19",
-  "binaryornot>=0.6.0,<0.7",
-  "chardet>=7.6.0,<8",
+  "binaryornot>=0.6,<0.7",
+  "chardet>=7.6,<8",
   "charset-normalizer>=3.5.1,<4",
   "fastmcp>=3.4.7,<4",
   "google-genai>=2.18.1",
   "httpx>=0.28.1,<1",
   "json-repair>=0.63.2,<1",
-  "libtmux>=0.62.0,<0.63",
-"mcp>=2.0.0,<3",
-  "openai>=3.1.0,<4",
-  "orjson>=3.12.0,<4",
+  "libtmux>=0.62,<0.63",
+  "mcp>=2,<3",
+  "openai>=3.1,<4",
+  "orjson>=3.12,<4",
   "pathspec>=1.1.1,<2",
   "prompt-toolkit>=3.0.53,<4",
   "psutil>=7.2.2,<8",
   "ptyprocess>=0.7,<1; sys_platform!='win32'",
   "pyfiglet>=1.0.4",
-  "pygit2>=1.20.0,<2",
-  # Use the standalone repository until ShadowGit is published on PyPI.
-  "shadowgit @ git+https://github.com/josephsenior/ShadowGit.git@114704ea6a79a58862c1f90f51bee6d8f6305c3a",
+  "pygit2>=1.20,<2",
   "pylatexenc>=2.11,<3",
   "pypdf>=6.16.1,<7",
-  "pyperclip>=1.11.0,<2",
-  "python-docx>=1.2.0,<2",
+  "pyperclip>=1.11,<2",
+  "python-docx>=1.2,<2",
   "python-dotenv>=1.2.2,<2",
-  "python-frontmatter>=1.3.0,<2",
-  "python-json-logger>=4.2.0,<5",
+  "python-frontmatter>=1.3,<2",
+  "python-json-logger>=4.2,<5",
   "python-pptx>=1.0.2,<2",
   "pywinpty>=3.0.5,<4; sys_platform=='win32'",
   "rapidfuzz>=3.14.5,<4",
   "requests>=2.34.2,<3",
-  "rich>=15.0.0,<16",
+  "rich>=15,<16",
   "ripgrep==15.1; sys_platform!='win32'",
+  # Use the standalone repository until ShadowGit is published on PyPI.
+  "shadowgit @ git+https://github.com/josephsenior/ShadowGit.git@114704ea6a79a58862c1f90f51bee6d8f6305c3a",
   "tenacity>=9.1.4,<10",
-  "termcolor>=3.3.0,<4",
+  "termcolor>=3.3,<4",
   "textual>=8.2.8,<9",
-  "tree-sitter>=0.26.0,<0.27",
+  "tree-sitter>=0.26,<0.27",
   "tree-sitter-language-pack>=1.14.3,<1.15",
   "truststore>=0.10.4,<1",
   "urllib3>=2.7,<3",
 ]
-
 optional-dependencies.all = [
   "chromadb>=1.5.9,<2",
-  "fastembed>=0.8.0,<1",
+  "fastembed>=0.8,<1",
   "flashrank>=0.2.10,<1",
 ]
 optional-dependencies.rag = [
   "chromadb>=1.5.9,<2",
-  "fastembed>=0.8.0,<1",
+  "fastembed>=0.8,<1",
   "flashrank>=0.2.10,<1",
 ]
 urls = { Homepage = "https://github.com/josephsenior/Grinta-Coding-Agent", Repository = "https://github.com/josephsenior/Grinta-Coding-Agent", Documentation = "https://github.com/josephsenior/Grinta-Coding-Agent/tree/main/docs", Changelog = "https://github.com/josephsenior/Grinta-Coding-Agent/blob/main/CHANGELOG.md", Issues = "https://github.com/josephsenior/Grinta-Coding-Agent/issues", Discussions = "https://github.com/josephsenior/Grinta-Coding-Agent/discussions" }
-
 # User-installable extras. Base install includes PDF/DOCX/PPTX/LaTeX parsers.
 # pip install "grinta[rag]" — long-term semantic memory (Chroma + ONNX embeddings)
 # pip install "grinta[all]" — rag
@@ -110,11 +108,11 @@ scripts.grinta = "launch.entry:main"
 [dependency-groups]
 dev = [
   "bandit>=1.9.4",
-  "build>=1.5.0",
+  "build>=1.5",
   "debugpy>=1.8.21,<2",
-  "grpcio>=1.83.0",
-  "grpcio-tools>=1.83.0",
-"mutmut>=3.0.0",
+  "grpcio>=1.83",
+  "grpcio-tools>=1.83",
+  "mutmut>=3",
   "mypy==2.3.1",
   "pip-audit>=2.10.1",
   "pre-commit==4.6.2",
@@ -122,7 +120,7 @@ dev = [
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4,<2",
   "ruff==0.16.3",
-  "tiktoken>=0.13.0",
+  "tiktoken>=0.13",
   "types-pyyaml>=6.0.12.20260815",
   "types-requests>=2.33.0.20260712",
   "types-setuptools>=84.0.0.20260812",
@@ -132,71 +130,77 @@ dev = [
 test = [
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4,<2",
-  "pytest-cov>=7.1.0,<8",
+  "pytest-cov>=7.1,<8",
   "pytest-timeout>=2.4",
   "pytest-xdist>=3.8,<4",
   "requests>=2.34.2,<3",
 ]
 
-[tool.hatch.build]
-exclude = [
+[tool.hatch]
+version.path = "backend/__init__.py"
+# shadowgit is a direct git reference until it is published on PyPI.
+metadata.allow-direct-references = true
+build.exclude = [
   "/backend/.grinta/**",
   "/backend/conftest.py",
   "/backend/scripts/refactor/**",
   "/backend/tests/**",
   "/docs/assets/**",
-  "/traces/**",
   "/rustup-init.exe",
+  "/traces/**",
 ]
-
-[tool.hatch.metadata]
-# shadowgit is a direct git reference until it is published on PyPI.
-allow-direct-references = true
-
-[tool.hatch.build.targets.wheel]
-packages = [
+build.targets.wheel.packages = [
   "backend",
   "launch",
 ]
-
-[tool.hatch.build.targets.sdist]
-include = [
+build.targets.sdist.include = [
   "/backend",
-  "/launch",
-  "/docs",
-  "/packaging",
-  "/scripts",
-  "/README.md",
-  "/SHOWCASE.md",
   "/CHANGELOG.md",
   "/CITATION.cff",
-  "/LICENSE",
-  "/SECURITY.md",
-  "/CONTRIBUTING.md",
   "/CODE_OF_CONDUCT.md",
+  "/CONTRIBUTING.md",
+  "/docs",
   "/GOVERNANCE.md",
-  "/SUPPORT.md",
+  "/launch",
+  "/LICENSE",
   "/MANIFEST.in",
-  "/pyproject.toml",
   "/mypy.ini",
-  "/pytest.ini",
-  "/rigour.yml",
+  "/packaging",
   "/pydoc-markdown.yml",
+  "/pyproject.toml",
+  "/pytest.ini",
+  "/README.md",
+  "/rigour.yml",
+  "/scripts",
+  "/SECURITY.md",
+  "/SHOWCASE.md",
+  "/SUPPORT.md",
 ]
-exclude = [
-  "**/__pycache__",
+build.targets.sdist.exclude = [
   "**/*.pyc",
-  "**/.pytest_cache",
   "**/.mypy_cache",
+  "**/.pytest_cache",
   "**/.ruff_cache",
-  "backend/tests",
+  "**/__pycache__",
   "backend/conftest.py",
   "backend/scripts/refactor",
+  "backend/tests",
   "scripts/__pycache__",
 ]
 
-[tool.hatch.version]
-path = "backend/__init__.py"
+[tool.uv]
+constraint-dependencies = [
+  "pypdf>=6.12.0",
+  "transformers<4.47.0",
+]
+override-dependencies = [
+  "aiohttp>=3.14.3",
+  # fastmcp-slim (client/server) requires mcp<2.0; Grinta's MCP code and
+  # error handling use the 1.x API (McpError, Tool.input_schema). Keep mcp
+  # on 1.x until both move to the 2.x API in lockstep.
+  "mcp>=1.28.1,<2",
+  "pypdf>=6.12.0",
+]
 
 [tool.ruff]
 format.quote-style = "single"
@@ -248,41 +252,25 @@ lint.per-file-ignores."packaging/vulture_whitelist.py" = [ "F821" ]
 lint.flake8-bugbear.extend-immutable-calls = [ "Depends" ]
 lint.flake8-quotes.docstring-quotes = "double"
 lint.flake8-quotes.inline-quotes = "single"
+# Use a project-local environment only: prefer `python scripts/bootstrap_env.py base`
+# (or another named profile) in this repo, then `uv run …`.
+# Avoid `pip install` into the global Python alongside unrelated agent stacks; that causes resolver conflicts.
 lint.pydocstyle.convention = "google"
 
-[tool.coverage.run]
-source = [
-  "backend",
+[tool.vulture]
+# Find dead code: `uv run vulture` (optionally: `--min-confidence 100`).
+paths = [ "backend", "launch", "packaging/vulture_whitelist.py" ]
+exclude = [
+  "**/__pycache__",
+  "backend/conftest.py",
+  "backend/evaluation",
+  "backend/tests",
 ]
-omit = [
-  "*/tests/*",
-  "*/test_*.py",
-  "*/__pycache__/*",
-]
-
-[tool.coverage.paths]
-source = [
-  "backend",
-  "/home/runner/work/Grinta-Coding-Agent/Grinta-Coding-Agent/backend",
-  "D:\\a\\Grinta-Coding-Agent\\Grinta-Coding-Agent\\backend",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-  "pragma: no cover",
-  "def __repr__",
-  "raise AssertionError",
-  "raise NotImplementedError",
-  "if __name__ == .__main__.:",
-  "if TYPE_CHECKING:",
-  "@abstractmethod",
-]
-precision = 2
-show_missing = true
-skip_covered = true
-fail_under = 74
+min_confidence = 90
+sort_by_size = true
 
 [tool.bandit]
+exclude_dirs = [ "backend/tests", "tests" ]
 # Security scanning configuration
 # B101: assert used — acceptable in tests and internal assertions
 # B103: set_bad_file_permissions — chmod calls are intentional for file operations
@@ -308,40 +296,37 @@ skips = [
   "B108",
   "B110",
   "B112",
+  "B310",
   "B404",
   "B603",
   "B607",
-  "B310",
   "B608",
 ]
-exclude_dirs = [ "backend/tests", "tests" ]
 
-# Use a project-local environment only: prefer `python scripts/bootstrap_env.py base`
-# (or another named profile) in this repo, then `uv run …`.
-# Avoid `pip install` into the global Python alongside unrelated agent stacks; that causes resolver conflicts.
-
-[tool.vulture]
-# Find dead code: `uv run vulture` (optionally: `--min-confidence 100`).
-paths = [ "backend", "launch", "packaging/vulture_whitelist.py" ]
-exclude = [
-  "backend/evaluation",
-  "backend/tests",
-  "backend/conftest.py",
-  "**/__pycache__",
+[tool.coverage]
+run.source = [
+  "backend",
 ]
-min_confidence = 90
-sort_by_size = true
-
-[tool.uv]
-constraint-dependencies = [
-  "transformers<4.47.0",
-  "pypdf>=6.12.0",
+run.omit = [
+  "*/__pycache__/*",
+  "*/test_*.py",
+  "*/tests/*",
 ]
-override-dependencies = [
-  "aiohttp>=3.14.3",
-  # fastmcp-slim (client/server) requires mcp<2.0; Grinta's MCP code and
-  # error handling use the 1.x API (McpError, Tool.input_schema). Keep mcp
-  # on 1.x until both move to the 2.x API in lockstep.
-  "mcp>=1.28.1,<2",
-  "pypdf>=6.12.0",
+paths.source = [
+  "backend",
+  "/home/runner/work/Grinta-Coding-Agent/Grinta-Coding-Agent/backend",
+  "D:\\a\\Grinta-Coding-Agent\\Grinta-Coding-Agent\\backend",
 ]
+report.fail_under = 74
+report.precision = 2
+report.exclude_lines = [
+  "@abstractmethod",
+  "def __repr__",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+  "pragma: no cover",
+  "raise AssertionError",
+  "raise NotImplementedError",
+]
+report.skip_covered = true
+report.show_missing = true

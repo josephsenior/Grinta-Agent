@@ -241,7 +241,12 @@ class RollbackMiddleware(ToolInvocationMiddleware):
 
                 emit_execution_evidence(
                     EvidenceKind.CHECKPOINT,
-                    {'operation': 'create', 'checkpoint_id': checkpoint_id, 'action_id': getattr(ctx.action, 'id', None), 'reason': 'pre_mutation'},
+                    {
+                        'operation': 'create',
+                        'checkpoint_id': checkpoint_id,
+                        'action_id': getattr(ctx.action, 'id', None),
+                        'reason': 'pre_mutation',
+                    },
                     correlation=Correlation(action_id=getattr(ctx.action, 'id', None)),
                 )
             except Exception:
@@ -295,7 +300,11 @@ class RollbackMiddleware(ToolInvocationMiddleware):
 
             emit_execution_evidence(
                 EvidenceKind.CHECKPOINT,
-                {'operation': 'restore', 'checkpoint_id': checkpoint_id, 'outcome': 'success' if outcome else 'failed'},
+                {
+                    'operation': 'restore',
+                    'checkpoint_id': checkpoint_id,
+                    'outcome': 'success' if outcome else 'failed',
+                },
             )
         except Exception:
             logger.debug('Rollback evidence emission failed', exc_info=True)

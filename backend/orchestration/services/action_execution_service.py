@@ -501,8 +501,10 @@ class ActionExecutionService:
                 from backend.telemetry.evidence.emitter import emit_control_intervention
 
                 emit_control_intervention(
-                    'repair_retry_exhausted', exception=exc,
-                    attempt=identical_error_count, strategy='action_validation_repair',
+                    'repair_retry_exhausted',
+                    exception=exc,
+                    attempt=identical_error_count,
+                    strategy='action_validation_repair',
                     outcome='error_state',
                 )
             except Exception:
@@ -515,8 +517,10 @@ class ActionExecutionService:
                 from backend.telemetry.evidence.emitter import emit_control_intervention
 
                 emit_control_intervention(
-                    'repair_retry_scheduled', exception=exc,
-                    attempt=attempt + 1, strategy='action_validation_repair',
+                    'repair_retry_scheduled',
+                    exception=exc,
+                    attempt=attempt + 1,
+                    strategy='action_validation_repair',
                     outcome='scheduled',
                 )
             except Exception:
@@ -532,8 +536,10 @@ class ActionExecutionService:
             from backend.telemetry.evidence.emitter import emit_control_intervention
 
             emit_control_intervention(
-                'repair_retry_exhausted', exception=exc,
-                attempt=attempt, strategy='action_validation_repair',
+                'repair_retry_exhausted',
+                exception=exc,
+                attempt=attempt,
+                strategy='action_validation_repair',
                 outcome='error_state',
             )
         except Exception:

@@ -60,7 +60,9 @@ def make_sqlite_backend(tmp_path) -> SQLiteBM25Backend:
 class TestChromaInit:
     def test_raises_without_chromadb(self, tmp_path) -> None:
         with patch.dict(sys.modules, {'chromadb': None}):
-            with pytest.raises(RuntimeError, match='Vector memory requires the optional'):
+            with pytest.raises(
+                RuntimeError, match='Vector memory requires the optional'
+            ):
                 ChromaDBBackend(persist_directory=tmp_path)
 
     def test_recreates_on_model_change(self, chroma_env, tmp_path, monkeypatch) -> None:
@@ -111,7 +113,9 @@ class TestChromaModelLifecycle:
         backend._model = None
         backend._model_loader_thread = MagicMock()
         backend._model_loader_thread.is_alive.return_value = True
-        with patch('backend.context.vector_store._local_vector_store.threading.Thread') as thread_cls:
+        with patch(
+            'backend.context.vector_store._local_vector_store.threading.Thread'
+        ) as thread_cls:
             backend.warm_model_in_background()
             thread_cls.assert_not_called()
 
@@ -132,9 +136,7 @@ class TestChromaModelLifecycle:
     def test_load_model_early_return(self, chroma_env) -> None:
         backend = make_chroma_backend()
         backend._model = MagicMock()
-        with patch(
-            'backend.context.vector_store._local_vector_store.threading.Lock'
-        ):
+        with patch('backend.context.vector_store._local_vector_store.threading.Lock'):
             backend._load_model()
         assert backend._model is not None
 
@@ -234,7 +236,9 @@ class TestChromaSearch:
         backend.collection.count.return_value = 10
         children = {'ids': [['c1']]}
         backend.collection.query.return_value = children
-        assert backend._query_with_fallback('q', 2, {'is_child': True}, None) is children
+        assert (
+            backend._query_with_fallback('q', 2, {'is_child': True}, None) is children
+        )
         backend.collection.query.assert_called_once()
 
     def test_query_with_fallback_parents(self) -> None:
@@ -301,10 +305,24 @@ class TestChromaSearch:
         parent_texts: dict[str, str] = {}
         parent_metas: dict[str, dict] = {}
         backend._process_single_match(
-            'p1', {'is_child': True, 'parent_id': 'p1'}, 0.1, 't', parent_ids, scores, parent_texts, parent_metas
+            'p1',
+            {'is_child': True, 'parent_id': 'p1'},
+            0.1,
+            't',
+            parent_ids,
+            scores,
+            parent_texts,
+            parent_metas,
         )
         backend._process_single_match(
-            'p1', {'is_child': True, 'parent_id': 'p1'}, 0.05, 't', parent_ids, scores, parent_texts, parent_metas
+            'p1',
+            {'is_child': True, 'parent_id': 'p1'},
+            0.05,
+            't',
+            parent_ids,
+            scores,
+            parent_texts,
+            parent_metas,
         )
         assert parent_ids == ['p1']
         assert scores['p1'] == 0.95
@@ -322,7 +340,9 @@ class TestChromaSearch:
             'distances': [[0.1, 0.3]],
             'documents': [['child 1', 'child 2']],
         }
-        parent_ids, scores, parent_texts, parent_metas = backend._resolve_parent_matches(results)
+        parent_ids, scores, parent_texts, parent_metas = (
+            backend._resolve_parent_matches(results)
+        )
         assert parent_ids == ['p1', 'p2']
         assert scores['p1'] == 0.9
         assert scores['p2'] == 0.7
@@ -400,7 +420,12 @@ class TestChromaSearch:
     def test_search_falls_back_to_parents(self) -> None:
         backend = make_chroma_backend()
         backend.collection.count.return_value = 10
-        empty: dict = {'ids': [[]], 'metadatas': [[]], 'distances': [[]], 'documents': [[]]}
+        empty: dict = {
+            'ids': [[]],
+            'metadatas': [[]],
+            'distances': [[]],
+            'documents': [[]],
+        }
         parent_hit = {
             'ids': [['p1']],
             'metadatas': [[{'is_child': False, 'role': 'user'}]],
@@ -422,7 +447,12 @@ class TestChromaSearch:
     def test_search_no_results(self) -> None:
         backend = make_chroma_backend()
         backend.collection.count.return_value = 10
-        empty: dict = {'ids': [[]], 'metadatas': [[]], 'distances': [[]], 'documents': [[]]}
+        empty: dict = {
+            'ids': [[]],
+            'metadatas': [[]],
+            'distances': [[]],
+            'documents': [[]],
+        }
         backend.collection.query.return_value = empty
         assert backend.search('q') == []
 
@@ -558,10 +588,15 @@ class TestSQLiteBasics:
         assert results[0]['score'] == 0.5
 
     def test_build_fts_match_query(self) -> None:
-        assert SQLiteBM25Backend._build_fts_match_query('hello world') == '"hello" OR "world"'
+        assert (
+            SQLiteBM25Backend._build_fts_match_query('hello world')
+            == '"hello" OR "world"'
+        )
         assert SQLiteBM25Backend._build_fts_match_query('a b') is None
         assert SQLiteBM25Backend._build_fts_match_query('   ') is None
-        assert SQLiteBM25Backend._build_fts_match_query('say "hi"') == '"say" OR """hi"""'
+        assert (
+            SQLiteBM25Backend._build_fts_match_query('say "hi"') == '"say" OR """hi"""'
+        )
 
     def test_indexed_filter_clause(self) -> None:
         assert SQLiteBM25Backend._indexed_filter_clause(None) == ('', [])
@@ -582,7 +617,9 @@ class TestSQLiteBasics:
 class TestSQLiteAdd:
     def test_add_and_stats(self, tmp_path) -> None:
         backend = make_sqlite_backend(tmp_path)
-        backend.add('s1', 'user', 'hash1', 'rationale', 'apple banana', {'session_id': 'sess'})
+        backend.add(
+            's1', 'user', 'hash1', 'rationale', 'apple banana', {'session_id': 'sess'}
+        )
         assert backend.stats()['num_documents'] == 1
         assert backend.db_path.exists()
 
@@ -607,15 +644,25 @@ class TestSQLiteAdd:
 
     def test_add_batch_default_metadatas(self, tmp_path) -> None:
         backend = make_sqlite_backend(tmp_path)
-        backend.add_batch(['s1', 's2'], ['user', 'user'], [None, None], [None, None], ['apple', 'orange'])
+        backend.add_batch(
+            ['s1', 's2'],
+            ['user', 'user'],
+            [None, None],
+            [None, None],
+            ['apple', 'orange'],
+        )
         assert backend.stats()['num_documents'] == 2
 
 
 class TestSQLiteSearch:
     def test_search_basic(self, tmp_path) -> None:
         backend = make_sqlite_backend(tmp_path)
-        backend.add('s1', 'user', None, None, 'apple banana cherry', {'session_id': 'a'})
-        backend.add('s2', 'assistant', None, None, 'apple pie recipe', {'session_id': 'b'})
+        backend.add(
+            's1', 'user', None, None, 'apple banana cherry', {'session_id': 'a'}
+        )
+        backend.add(
+            's2', 'assistant', None, None, 'apple pie recipe', {'session_id': 'b'}
+        )
         results = backend.search('apple', k=2)
         assert len(results) == 2
 
@@ -661,7 +708,9 @@ class TestSQLiteDelete:
     def test_delete_by_metadata_mixed(self, tmp_path) -> None:
         backend = make_sqlite_backend(tmp_path)
         backend.add('s1', 'user', None, None, 'apple', {'session_id': 'a', 'kind': 'x'})
-        backend.add('s2', 'user', None, None, 'orange', {'session_id': 'a', 'kind': 'y'})
+        backend.add(
+            's2', 'user', None, None, 'orange', {'session_id': 'a', 'kind': 'y'}
+        )
         assert backend.delete_by_metadata({'session_id': 'a', 'kind': 'x'}) == 1
         assert backend.stats()['num_documents'] == 1
 

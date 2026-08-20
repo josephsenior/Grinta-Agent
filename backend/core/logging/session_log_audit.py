@@ -447,26 +447,31 @@ def _write_execution_evidence_section(summary: dict[str, Any] | None) -> str:
         if validator.get('enabled') is False:
             validator_text = 'disabled (advisory)'
         elif validator.get('passed') is not None:
-            validator_text = f"{'PASS' if validator['passed'] else 'FAIL'} (advisory)"
+            validator_text = f'{"PASS" if validator["passed"] else "FAIL"} (advisory)'
     last_test = verification.get('last_test_exit_code')
-    last_test_text = 'not recorded' if last_test is None else ('PASS' if last_test == 0 else f'FAIL ({last_test})')
+    last_test_text = (
+        'not recorded'
+        if last_test is None
+        else ('PASS' if last_test == 0 else f'FAIL ({last_test})')
+    )
     return (
         '\n\nEXECUTION EVIDENCE\n==================\n\n'
         f'Duration:                  {duration_text}\n'
-        f"Model turns:               {model.get('turns', 0)}\n"
-        f"Tool executions:           {tools.get('total', 0)}\n"
-        f"Tool failures:             {tools.get('failed', 0)}\n"
-        f"Control interventions:     {reliability.get('control_interventions', 0)}\n"
-        f"Recovery retries:          {reliability.get('retries', 0)}\n"
-        f"Context compactions:       {reliability.get('context_compactions', 0)}\n"
-        f"Checkpoints:               {reliability.get('checkpoints_created', 0)}\n"
-        f"Test runs:                 {verification.get('test_runs', 0)}\n"
+        f'Model turns:               {model.get("turns", 0)}\n'
+        f'Tool executions:           {tools.get("total", 0)}\n'
+        f'Tool failures:             {tools.get("failed", 0)}\n'
+        f'Control interventions:     {reliability.get("control_interventions", 0)}\n'
+        f'Recovery retries:          {reliability.get("retries", 0)}\n'
+        f'Context compactions:       {reliability.get("context_compactions", 0)}\n'
+        f'Checkpoints:               {reliability.get("checkpoints_created", 0)}\n'
+        f'Test runs:                 {verification.get("test_runs", 0)}\n'
         f'Last test result:          {last_test_text}\n'
-        f"Additional user inputs:    {run.get('additional_user_inputs', 'unknown')}\n\n"
+        f'Additional user inputs:    {run.get("additional_user_inputs", "unknown")}\n\n'
         'COMPLETION\n==========\n\n'
-        f"Agent state:               {run.get('final_agent_state') or 'not recorded'}\n"
+        f'Agent state:               {run.get("final_agent_state") or "not recorded"}\n'
         f'Current validator:         {validator_text}\n'
     )
+
 
 def generate_session_audit_artifacts(
     log_dir: str | Path,
