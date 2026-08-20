@@ -274,6 +274,13 @@ class RendererLiveMixin:
     def commit_live_thinking(self) -> None:
         """Freeze the current live thinking block at its transcript position."""
         display = self._tui._get_display()
+        # A streamed chunk may still be waiting on its throttled paint timer
+        # when a non-stream event (tool execution, user message, ...) freezes
+        # the thinking block. Flush it first so the frozen text is complete
+        # and no orphan widget is created when the timer fires afterwards.
+        deferred = getattr(self, '_deferred_stream_chunk', None)
+        if deferred is not None and not deferred.is_final:
+            self._flush_deferred_stream_chunk()
         if self._display_is_mock():
             if self._live_thinking_dirty:
                 if self._live_thinking.strip():

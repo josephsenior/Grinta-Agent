@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
@@ -80,14 +81,40 @@ async def test_thinking_stream_freezes_before_later_activity(
         renderer._process_event(
             StreamingChunkAction(thinking_accumulated='Second thought.')
         )
-        await pilot.pause()
 
         display = screen.query_one('#main-display')
-        visible = [
-            child
-            for child in display.children
-            if isinstance(child, (ThinkingIndicator, ShellCard))
-        ]
+
+        # Streaming chunks are paint-throttled through a ``call_later`` timer
+        # and appended widgets mount asynchronously, so a single
+        # ``pilot.pause()`` can race the mount. Poll until the transcript has
+        # settled before asserting.
+        async def _transcript_settled() -> list[Any]:
+            def _thinking_plain(widget: ThinkingIndicator) -> str:
+                try:
+                    return _plain_text(widget)
+                except Exception:
+                    return ''
+
+            for _ in range(200):
+                visible = [
+                    child
+                    for child in display.children
+                    if isinstance(child, (ThinkingIndicator, ShellCard))
+                ]
+                if (
+                    len(visible) == 3
+                    and 'Still thinking.' in _thinking_plain(visible[0])
+                    and 'Second thought.' in _thinking_plain(visible[2])
+                ):
+                    return visible
+                await pilot.pause()
+            return [
+                child
+                for child in display.children
+                if isinstance(child, (ThinkingIndicator, ShellCard))
+            ]
+
+        visible = await _transcript_settled()
 
         assert [type(child) for child in visible] == [
             ThinkingIndicator,
