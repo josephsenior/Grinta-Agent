@@ -39,12 +39,7 @@ jobs:
       - name: Compile backend (syntax gate)
         run: uv run python -m compileall backend
       - name: Run mutation testing
-        run: |
-          uv run mutmut run \
-            --paths-to-mutate=backend/utils/async_helpers,backend/utils/lsp,backend/engine/response_processing \
-            --runner="uv run pytest -p no:cacheprovider -q" \
-            --tests-dir=backend/tests/unit \
-            --timeout-factor=2.0
+        run: uv run mutmut run
       - name: Upload mutation results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:

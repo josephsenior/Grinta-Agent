@@ -50,7 +50,9 @@ dependencies = [
   "httpx>=0.28.1,<1",
   "json-repair>=0.63.2,<1",
   "libtmux>=0.62,<0.63",
-  "mcp>=2,<3",
+  # MCP protocol pinned to 1.x: Grinta's MCP code and error handling use the
+  # 1.x API (McpError, Tool.input_schema) and fastmcp-slim requires mcp<2.0.
+  "mcp>=1.28.1,<2",
   "openai>=3.1,<4",
   "orjson>=3.12,<4",
   "pathspec>=1.1.1,<2",
@@ -195,10 +197,6 @@ constraint-dependencies = [
 ]
 override-dependencies = [
   "aiohttp>=3.14.3",
-  # fastmcp-slim (client/server) requires mcp<2.0; Grinta's MCP code and
-  # error handling use the 1.x API (McpError, Tool.input_schema). Keep mcp
-  # on 1.x until both move to the 2.x API in lockstep.
-  "mcp>=1.28.1,<2",
   "pypdf>=6.12.0",
 ]
 
@@ -330,3 +328,13 @@ report.exclude_lines = [
 ]
 report.skip_covered = true
 report.show_missing = true
+
+[tool.mutmut]
+source_paths = [
+  "backend/utils/async_helpers",
+  "backend/utils/lsp",
+  "backend/engine/response_processing",
+]
+pytest_add_cli_args = [ "-p", "no:cacheprovider", "-q" ]
+pytest_add_cli_args_test_selection = [ "backend/tests/unit" ]
+timeout_multiplier = 2.0
