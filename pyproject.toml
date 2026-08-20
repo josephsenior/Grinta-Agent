@@ -335,6 +335,12 @@ source_paths = [
   "backend/utils/lsp",
   "backend/engine/response_processing",
 ]
+# mutmut 3.x runs pytest from inside the `mutants/` sandbox, so the whole
+# importable tree (and the paths pytest.ini ignores) must exist there too.
+also_copy = [
+  "backend",
+  "scripts/evals",
+]
 pytest_add_cli_args = [ "-p", "no:cacheprovider", "-q" ]
 pytest_add_cli_args_test_selection = [ "backend/tests/unit" ]
 timeout_multiplier = 2.0
