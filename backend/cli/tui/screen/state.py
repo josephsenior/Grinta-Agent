@@ -243,12 +243,12 @@ class ScreenStateMixin:
         if not self._hud_state_should_pulse(raw_state):
             if getattr(self, '_hud_pulse_frame', 0) != 0:
                 self._hud_pulse_frame = 0
-                self._render_hud_bar()
+                self._render_hud_status_label()
             return
         self._hud_pulse_frame = (int(getattr(self, '_hud_pulse_frame', 0)) + 1) % len(
             self._RUNNING_PULSE_BULLETS
         )
-        self._render_hud_bar()
+        self._render_hud_status_label()
 
     @staticmethod
     def _build_hud_line2_leading(ws_display: str) -> str:
@@ -426,7 +426,12 @@ class ScreenStateMixin:
         model = (
             get_current_model(self._config) or str(self._hud.state.model or '').strip()
         )
+        cache_key = (provider, model)
+        if cache_key == getattr(self, '_hud_model_entry_cache_key', None):
+            return getattr(self, '_hud_model_entry_cache_value', None)
         if not model or model == '(not set)':
+            self._hud_model_entry_cache_key = cache_key
+            self._hud_model_entry_cache_value = None
             return None
 
         fallback = None
@@ -437,11 +442,14 @@ class ScreenStateMixin:
                 fallback = candidate
                 break
 
-        return resolve_model_entry_for_capabilities(
+        entry = resolve_model_entry_for_capabilities(
             model,
             provider,
             fallback=fallback,
         )
+        self._hud_model_entry_cache_key = cache_key
+        self._hud_model_entry_cache_value = entry
+        return entry
 
     def _hud_reasoning_select_options(self) -> list[tuple[str, str]]:
         from backend.inference.reasoning import reasoning_effort_display_options
@@ -452,7 +460,9 @@ class ScreenStateMixin:
             return options
         return [('Default', '')]
 
-    def _current_reasoning_effort(self) -> str:
+    def _current_reasoning_effort(
+        self, options: list[tuple[str, str]] | None = None
+    ) -> str:
         from backend.cli.settings import get_persisted_reasoning_effort
 
         configured = get_persisted_reasoning_effort().strip().lower()
@@ -468,7 +478,9 @@ class ScreenStateMixin:
                 )
             except Exception:
                 configured = ''
-        allowed = {value for _label, value in self._hud_reasoning_select_options()}
+        if options is None:
+            options = self._hud_reasoning_select_options()
+        allowed = {value for _label, value in options}
         if configured == 'max' and 'max' not in allowed and 'xhigh' in allowed:
             configured = 'xhigh'
         return configured if configured in allowed else ''
@@ -477,7 +489,7 @@ class ScreenStateMixin:
         try:
             reasoning_select = hud_bar.query_one('#hud-reasoning', Select)
             options = self._hud_reasoning_select_options()
-            current = self._current_reasoning_effort()
+            current = self._current_reasoning_effort(options)
             values = {value for _label, value in options}
             if current not in values:
                 current = options[0][1]
@@ -514,6 +526,37 @@ class ScreenStateMixin:
         except Exception:
             pass
 
+    def _update_hud_label(self, hud_bar: HUD, selector: str, content: str) -> None:
+        """Update a HUD label only when its visible content changed.
+
+        Textual invalidates paint (and sometimes layout) on every ``update`` call.
+        The HUD timer runs continuously, so skipping identical writes prevents a
+        steady stream of no-op redraws while preserving every displayed field.
+        """
+        cache = getattr(self, '_hud_label_content_cache', None)
+        if not isinstance(cache, dict):
+            cache = {}
+            self._hud_label_content_cache = cache
+        if cache.get(selector) == content:
+            return
+        hud_bar.query_one(selector, Label).update(content)
+        cache[selector] = content
+
+    def _render_hud_status_label(self) -> None:
+        """Paint only the status label used by the running pulse timer."""
+        if getattr(self, '_is_unmounted', False):
+            return
+        hud = self._hud
+        raw_state = hud.state.agent_state_label or 'Ready'
+        display_state, state_color = self._resolve_state_display(raw_state)
+        display_state = self._append_turn_duration(display_state, raw_state)
+        line1 = self._build_hud_line1(display_state, state_color, raw_state=raw_state)
+        try:
+            hud_bar = self.query_one('#hud-bar', HUD)
+        except Exception:
+            return
+        self._update_hud_label(hud_bar, '#hud-line-1', line1)
+
     def _sync_hud_autonomy_visibility(self, hud_bar) -> None:
         try:
             current_mode = self._active_interaction_mode()
@@ -549,11 +592,11 @@ class ScreenStateMixin:
         line2 = token_display
 
         hud_bar = self.query_one('#hud-bar', HUD)
-        hud_bar.query_one('#hud-line-1', Label).update(line1)
-        hud_bar.query_one('#hud-model-name', Label).update(model_label)
-        hud_bar.query_one('#hud-line-2-ws', Label).update(line2_leading)
-        hud_bar.query_one('#hud-line-2', Label).update(line2)
-        hud_bar.query_one('#hud-line-1-help', Label).update(help_hint)
+        self._update_hud_label(hud_bar, '#hud-line-1', line1)
+        self._update_hud_label(hud_bar, '#hud-model-name', model_label)
+        self._update_hud_label(hud_bar, '#hud-line-2-ws', line2_leading)
+        self._update_hud_label(hud_bar, '#hud-line-2', line2)
+        self._update_hud_label(hud_bar, '#hud-line-1-help', help_hint)
         self._sync_hud_reasoning_select(hud_bar)
         self._sync_hud_autonomy_select(hud_bar, autonomy)
         self._sync_hud_mode_select(hud_bar)

@@ -14,6 +14,61 @@ from backend.tests.unit.cli.tui._shared import (
 )
 
 
+def test_hud_model_entry_resolution_is_cached_per_model(monkeypatch):
+    """Periodic HUD paints must not rebuild the provider catalog."""
+    from backend.cli.tui.screen.state import ScreenStateMixin
+
+    builds = []
+    entry = SimpleNamespace(name='model-a')
+
+    def build_entries(*, provider):
+        builds.append(provider)
+        return {provider: [entry]}
+
+    monkeypatch.setattr(
+        'backend.cli.settings.get_current_model',
+        lambda _config: _config.model,
+    )
+    monkeypatch.setattr(
+        'backend.inference.catalog.provider_catalog.build_model_entries_by_provider',
+        build_entries,
+    )
+    monkeypatch.setattr(
+        'backend.inference.capabilities.param_profiles.resolve_model_entry_for_capabilities',
+        lambda model, provider, *, fallback: fallback,
+    )
+    screen = ScreenStateMixin()
+    screen._config = SimpleNamespace(model='model-a')
+    screen._hud = SimpleNamespace(state=SimpleNamespace(model='model-a'))
+    screen._current_llm_provider = lambda: 'provider-a'
+
+    assert ScreenStateMixin._resolve_hud_model_entry(screen) is entry
+    assert ScreenStateMixin._resolve_hud_model_entry(screen) is entry
+    assert builds == ['provider-a']
+
+    screen._config.model = 'model-b'
+    ScreenStateMixin._resolve_hud_model_entry(screen)
+    assert builds == ['provider-a', 'provider-a']
+
+
+def test_hud_pulse_only_repaints_status_label():
+    """Animation ticks should not rebuild selects or the rest of the HUD."""
+    from backend.cli.tui.screen.state import ScreenStateMixin
+
+    calls = []
+    screen = ScreenStateMixin()
+    screen._is_unmounted = False
+    screen._hud = SimpleNamespace(state=SimpleNamespace(agent_state_label='Running'))
+    screen._hud_pulse_frame = 0
+    screen._render_hud_status_label = lambda: calls.append('status')
+    screen._render_hud_bar = lambda: calls.append('full')
+
+    ScreenStateMixin._tick_hud_running_pulse(screen)
+
+    assert calls == ['status']
+    assert screen._hud_pulse_frame == 1
+
+
 @pytest.mark.asyncio
 async def test_tui_hud_bar_shows_workspace_path(mock_config):
     console = RichConsole()
