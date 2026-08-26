@@ -893,30 +893,12 @@ def test_diff_view_trims_patch_context_to_two_lines() -> None:
     assert any(row.text == '…' for row in rows if row.kind == 'hdr')
 
 
-def test_syntax_line_text_keeps_colors_without_background() -> None:
-    from rich.style import Style
-    from rich.text import Text
+def test_diff_rows_use_a_single_semantic_color_per_line() -> None:
+    from backend.cli.theme.cards import DIFF_LINE_ADD_TEXT, DIFF_LINE_REM_TEXT
+    from backend.cli.tui.widgets.unified_diff_view import DiffViewRow, UnifiedDiffRow
 
-    from backend.cli.tui.widgets.unified_diff_view import (
-        _strip_text_backgrounds,
-        _syntax_line_text,
-    )
+    added = UnifiedDiffRow(DiffViewRow(None, 1, 'add', 'def foo():'), gutter_width=1)
+    removed = UnifiedDiffRow(DiffViewRow(1, None, 'rem', 'def bar():'), gutter_width=1)
 
-    tinted = Text('def foo():', style=Style(color='#7dcfff', bgcolor='#17233a'))
-    tinted.stylize(Style(color='#82aaff', bgcolor='#07101d'), 4, 7)
-    stripped = _strip_text_backgrounds(tinted)
-    assert stripped.plain == 'def foo():'
-    for span in stripped.spans:
-        style = span.style if isinstance(span.style, Style) else Style.parse(span.style)
-        assert style.bgcolor is None
-        assert style.color is not None
-
-    rendered = _syntax_line_text('def foo():', 'python')
-    assert 'foo' in rendered.plain
-    for span in rendered.spans:
-        style = (
-            span.style
-            if isinstance(span.style, Style)
-            else Style.parse(str(span.style))
-        )
-        assert style.bgcolor is None
+    assert added._render_code().style == DIFF_LINE_ADD_TEXT
+    assert removed._render_code().style == DIFF_LINE_REM_TEXT

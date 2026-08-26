@@ -6,24 +6,18 @@ import difflib
 import json
 import re
 from dataclasses import dataclass
-from pathlib import PurePath
 from typing import Any, Literal
 
-from rich.console import Console
-from rich.style import Style
 from rich.text import Text
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Static
 
 from backend.cli.theme.cards import (
     DIFF_HDR,
-    DIFF_INLINE_ADD,
-    DIFF_INLINE_REM,
     DIFF_LINE_ADD_TEXT,
     DIFF_LINE_CTX,
     DIFF_LINE_REM_TEXT,
 )
-from backend.cli.theme.syntax_theme import get_grinta_rich_syntax_theme
 
 DIFF_VIEW_PREFIX = '\x1fgrinta-diff-view\x1f'
 DIFF_VIEW_CONTEXT_LINES = 2
@@ -74,117 +68,6 @@ def decode_diff_view_payload(content: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return payload if isinstance(payload, dict) else None
-
-
-def _guess_language(path: str) -> str:
-    ext = PurePath(path).suffix.lower()
-    mapping = {
-        '.py': 'python',
-        '.rs': 'rust',
-        '.js': 'javascript',
-        '.jsx': 'jsx',
-        '.ts': 'typescript',
-        '.tsx': 'tsx',
-        '.json': 'json',
-        '.toml': 'toml',
-        '.yaml': 'yaml',
-        '.yml': 'yaml',
-        '.md': 'markdown',
-        '.sh': 'bash',
-        '.bash': 'bash',
-        '.go': 'go',
-        '.java': 'java',
-        '.rb': 'ruby',
-        '.css': 'css',
-        '.html': 'html',
-        '.sql': 'sql',
-        '.diff': 'diff',
-    }
-    return mapping.get(ext, 'text')
-
-
-def _strip_style_background(style: str | Style | None) -> str | Style | None:
-    """Remove Rich background colors so diff row CSS controls add/rem tint."""
-    if style is None:
-        return None
-    parsed = style if isinstance(style, Style) else Style.parse(str(style))
-    if not parsed.bgcolor:
-        return style
-    return Style(
-        color=parsed.color,
-        bgcolor=None,
-        bold=parsed.bold,
-        dim=parsed.dim,
-        italic=parsed.italic,
-        underline=parsed.underline,
-        strike=parsed.strike,
-        reverse=parsed.reverse,
-        blink=parsed.blink,
-        blink2=parsed.blink2,
-        conceal=parsed.conceal,
-        link=parsed.link,
-    )
-
-
-def _strip_text_backgrounds(text: Text) -> Text:
-    if not text:
-        return text
-    out = Text(
-        text.plain,
-        style=_strip_style_background(text.style) if text.style else None,
-    )
-    for span in text.spans:
-        out.stylize(_strip_style_background(span.style), span.start, span.end)
-    return out
-
-
-def _syntax_line_text(
-    line: str,
-    language: str,
-    *,
-    fallback_style: str = DIFF_LINE_CTX,
-) -> Text:
-    if not line.strip() or language == 'text':
-        return Text(line or ' ', style=fallback_style)
-    try:
-        from rich.syntax import Syntax
-
-        console = Console(force_terminal=True, color_system='truecolor', width=4096)
-        syntax = Syntax(
-            line,
-            language,
-            theme=get_grinta_rich_syntax_theme(),
-            background_color=None,
-            word_wrap=False,
-            padding=(0, 0),
-        )
-        rendered = Text()
-        for segment, style, _ in console.render(
-            syntax, console.options.update_width(4096)
-        ):
-            rendered.append(segment, style or fallback_style)
-        cleaned = _strip_text_backgrounds(rendered)
-        return cleaned or Text(line or ' ', style=fallback_style)
-    except Exception:
-        return Text(line or ' ', style=fallback_style)
-
-
-def _word_diff_overlay(base: Text, other: str, *, side: str) -> Text:
-    """Apply intra-line highlights for paired add/remove lines."""
-    if not other:
-        return base
-    matcher = difflib.SequenceMatcher(
-        lambda ch: ch in {' ', '\t'},
-        base.plain,
-        other,
-    )
-    highlight = DIFF_INLINE_REM if side == 'rem' else DIFF_INLINE_ADD
-    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if side == 'rem' and tag in {'delete', 'replace'}:
-            base.stylize(highlight, i1, i2)
-        elif side == 'add' and tag in {'insert', 'replace'}:
-            base.stylize(highlight, j1, j2)
-    return base
 
 
 def _limit_hunk_context(
@@ -447,7 +330,7 @@ def build_diff_view_rows(
 
 
 class UnifiedDiffRow(Horizontal):
-    """Single unified diff row with dual gutters and highlighted code."""
+    """Single unified diff row with dual gutters and semantic line colors."""
 
     DEFAULT_CSS = """
     UnifiedDiffRow {
@@ -477,13 +360,11 @@ class UnifiedDiffRow(Horizontal):
         row: DiffViewRow,
         *,
         gutter_width: int,
-        language: str,
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
         self._row = row
         self._gutter_width = gutter_width
-        self._language = language
 
     def _format_gutter(self, value: int | None) -> str:
         if value is None:
@@ -498,12 +379,7 @@ class UnifiedDiffRow(Horizontal):
             'add': DIFF_LINE_ADD_TEXT,
             'rem': DIFF_LINE_REM_TEXT,
         }.get(row.kind, DIFF_LINE_CTX)
-        base = _syntax_line_text(row.text, self._language, fallback_style=fallback)
-        if row.kind == 'rem' and row.pair_text is not None:
-            return _word_diff_overlay(base, row.pair_text, side='rem')
-        if row.kind == 'add' and row.pair_text is not None:
-            return _word_diff_overlay(base, row.pair_text, side='add')
-        return base
+        return Text(row.text or ' ', style=fallback)
 
     def compose(self):
         row = self._row
@@ -517,7 +393,7 @@ class UnifiedDiffRow(Horizontal):
 
 
 class UnifiedDiffView(VerticalScroll):
-    """Unified diff preview with gutters, syntax, and word highlights.
+    """Unified diff preview with gutters and semantic add/remove colors.
 
     Renders up to ``DIFF_VIEW_VISIBLE_LINES`` rows inline; longer diffs scroll
     inside this widget. Wheel events bubble to the transcript when the pointer
@@ -613,9 +489,8 @@ class UnifiedDiffView(VerticalScroll):
                 if value is not None:
                     gutter_width = max(gutter_width, len(str(value)))
 
-        language = _guess_language(self._path)
         for row in rows:
-            yield UnifiedDiffRow(row, gutter_width=gutter_width, language=language)
+            yield UnifiedDiffRow(row, gutter_width=gutter_width)
 
         total = 0
         if self._patch:
