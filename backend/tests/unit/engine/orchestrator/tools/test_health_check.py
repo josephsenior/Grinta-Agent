@@ -136,9 +136,10 @@ class TestRunProductionHealthCheck:
                 return_value=(True, 'AR OK'),
             ):
                 with pytest.raises(
-                    RuntimeError, match='Startup dependency check failed'
-                ):
+                    RuntimeError, match='Details: structure_editor: UE failed'
+                ) as exc_info:
                     run_production_health_check(raise_on_failure=True)
+        assert 'Startup dependency check failed' in str(exc_info.value)
 
     def test_critical_failure_no_raise_when_disabled(self):
         """Test critical failure returns result when raise_on_failure=False."""

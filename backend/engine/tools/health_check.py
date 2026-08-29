@@ -32,7 +32,8 @@ def check_structure_editor_dependencies() -> tuple[bool, str]:
     try:
         from tree_sitter_language_pack import get_language, get_parser
 
-        # Test basic functionality
+        # Test basic functionality. Keep logging outside this block so a logging
+        # sink failure cannot be misreported as a missing parser dependency.
         try:
             get_language('python')
             parser = get_parser('python')
@@ -41,16 +42,22 @@ def check_structure_editor_dependencies() -> tuple[bool, str]:
             code = b'def test(): pass'
             tree = parser.parse(code)
 
-            if tree.root_node.type == 'module':
-                logger.info('✅ Ultimate Editor: Tree-sitter is READY')
-                logger.info('   - Structure-aware editing: ENABLED')
-                logger.info('   - Language support: 40+ languages')
-                return True, 'Ultimate Editor fully operational'
-
-            return False, 'Tree-sitter parse test failed'
-
         except Exception as e:
-            return False, f'Tree-sitter functionality test failed: {e}'
+            return False, (
+                'Tree-sitter functionality test failed: '
+                f'{type(e).__name__}: {e}'
+            )
+
+        if tree.root_node.type != 'module':
+            return False, (
+                'Tree-sitter parse test failed: expected root node '
+                f"'module', got {tree.root_node.type!r}"
+            )
+
+        logger.info('✅ Ultimate Editor: Tree-sitter is READY')
+        logger.info('   - Structure-aware editing: ENABLED')
+        logger.info('   - Language support: 40+ languages')
+        return True, 'Ultimate Editor fully operational'
 
     except ImportError as e:
         error_msg = f"""
@@ -151,9 +158,14 @@ def run_production_health_check(raise_on_failure: bool = True) -> HealthCheckRes
         logger.error('=' * 60)
 
         if raise_on_failure:
+            failure_details = '; '.join(
+                f'{name}: {health_components[name]["message"]}'
+                for name in critical_failures
+            )
             raise RuntimeError(
                 f'Startup dependency check failed! Critical dependencies missing: {critical_failures}\n'
-                'Grinta cannot operate without Ultimate Editor (Tree-sitter).'
+                'Grinta cannot operate without Ultimate Editor (Tree-sitter).\n'
+                f'Details: {failure_details}'
             )
     else:
         results['overall_status'] = 'HEALTHY'
