@@ -58,6 +58,37 @@ def test_codex_executable_resolution_accepts_windows_desktop_install() -> None:
     ]
 
 
+def test_codex_app_server_uses_file_credential_store() -> None:
+    client = CodexResponsesClient()
+    process = MagicMock()
+    process.poll.return_value = None
+    process.stdin = MagicMock()
+    process.stdout = MagicMock()
+    process.stderr = MagicMock()
+
+    with (
+        patch(
+            'backend.inference.clients.codex_app_server._find_codex_executable',
+            return_value='codex',
+        ),
+        patch(
+            'backend.inference.clients.codex_app_server.subprocess.Popen',
+            return_value=process,
+        ) as popen,
+        patch.object(client, '_request', return_value={}),
+        patch.object(client, '_notify'),
+    ):
+        client._ensure_started()
+
+    assert popen.call_args.args[0] == [
+        'codex',
+        'app-server',
+        '--stdio',
+        '--config',
+        'cli_auth_credentials_store="file"',
+    ]
+
+
 def test_codex_model_list_uses_account_catalog() -> None:
     client = CodexResponsesClient()
     with (
@@ -88,6 +119,31 @@ def test_codex_model_list_uses_account_catalog() -> None:
             'gpt-5.4-mini',
         ]
         assert client._resolved_model_name() == 'gpt-5.6-luna'
+
+
+def test_codex_credentials_prefer_complete_auth_file(tmp_path) -> None:
+    auth_path = tmp_path / 'auth.json'
+    auth_path.write_text(
+        json.dumps(
+            {
+                'auth_mode': 'chatgpt',
+                'tokens': {
+                    'access_token': 'access-token',
+                    'account_id': 'account-id',
+                },
+            }
+        ),
+        encoding='utf-8',
+    )
+    client = CodexResponsesClient()
+
+    with (
+        patch.object(client, '_codex_home', return_value=tmp_path),
+        patch.object(client, '_ensure_started') as ensure_started,
+    ):
+        assert client._credentials() == ('access-token', 'account-id')
+
+    ensure_started.assert_not_called()
 
 
 def test_codex_payload_uses_grinta_instructions_and_native_tools() -> None:
@@ -212,7 +268,7 @@ def test_codex_one_shot_completion_consumes_required_response_stream() -> None:
     assert 'max_output_tokens' not in responses.create.call_args.kwargs
 
 
-def test_codex_credentials_are_refreshed_then_read_from_managed_store(
+def test_codex_complete_file_credentials_skip_broker_refresh(
     tmp_path,
 ) -> None:
     auth_path = tmp_path / 'auth.json'
@@ -235,7 +291,7 @@ def test_codex_credentials_are_refreshed_then_read_from_managed_store(
         patch.object(client, '_codex_home', return_value=tmp_path),
     ):
         assert client._credentials() == ('secret-access', 'account-1')
-    authenticate.assert_called_once_with()
+    authenticate.assert_not_called()
 
 
 class _CodexAsyncStream:

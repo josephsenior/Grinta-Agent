@@ -477,26 +477,40 @@ class CodexResponsesClient(DirectLLMClient):
 
     def _credentials(self) -> tuple[str, str]:
         with self._auth_lock:
+            auth_path = self._codex_home() / 'auth.json'
+            credentials = self._read_file_credentials(auth_path)
+            if credentials is not None:
+                return credentials
+
             self._ensure_started()
             self._ensure_authenticated_locked()
-            auth_path = self._codex_home() / 'auth.json'
-            try:
-                auth = json.loads(auth_path.read_text(encoding='utf-8'))
-            except (OSError, json.JSONDecodeError) as exc:
-                raise CodexAppServerError(
-                    'Codex signed in, but its OAuth credential store is not '
-                    f'readable at {auth_path}. Configure Codex to use its file '
-                    'credential store and sign in again.'
-                ) from exc
-            tokens = auth.get('tokens') or {}
-            access_token = str(tokens.get('access_token') or '').strip()
-            account_id = str(tokens.get('account_id') or '').strip()
-            if not access_token or not account_id:
-                raise CodexAppServerError(
-                    'Codex OAuth credentials are incomplete. Sign out of Codex '
-                    'and select the Codex provider in Grinta to sign in again.'
-                )
+            credentials = self._read_file_credentials(auth_path)
+            if credentials is not None:
+                return credentials
+            raise CodexAppServerError(
+                'Codex OAuth credentials are incomplete. Sign out of Codex '
+                'and select the Codex provider in Grinta to sign in again.'
+            )
+
+    @staticmethod
+    def _read_file_credentials(auth_path: Path) -> tuple[str, str] | None:
+        """Read a complete explicit OAuth record without consulting OS keyrings."""
+        if not auth_path.is_file():
+            return None
+        try:
+            auth = json.loads(auth_path.read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise CodexAppServerError(
+                'Codex OAuth credential store is not readable at '
+                f'{auth_path}. Configure Codex to use its file credential '
+                'store and sign in again.'
+            ) from exc
+        tokens = auth.get('tokens') or {}
+        access_token = str(tokens.get('access_token') or '').strip()
+        account_id = str(tokens.get('account_id') or '').strip()
+        if access_token and account_id:
             return access_token, account_id
+        return None
 
     def _ensure_authenticated_locked(self) -> None:
         account = self._request('account/read', {'refreshToken': True})
@@ -514,7 +528,13 @@ class CodexResponsesClient(DirectLLMClient):
                 'then select the Codex provider again.'
             )
         self._process = subprocess.Popen(
-            [executable, 'app-server', '--stdio'],
+            [
+                executable,
+                'app-server',
+                '--stdio',
+                '--config',
+                'cli_auth_credentials_store="file"',
+            ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
