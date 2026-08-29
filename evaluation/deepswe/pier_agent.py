@@ -105,7 +105,7 @@ class Grinta(BaseInstalledAgent):
         if self.allow_tree_sitter_bootstrap:
             # Unreported smoke compatibility only. Linux wheels for
             # tree-sitter-language-pack 1.14.3 lazily fetch parser assets.
-            domains.extend(['github.com', '.github.com', '.githubusercontent.com'])
+            domains.extend(['.github.com', '.githubusercontent.com'])
         return NetworkAllowlist(domains=domains)
 
     def install_spec(self) -> AgentInstallSpec:
