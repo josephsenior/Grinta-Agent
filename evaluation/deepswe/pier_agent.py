@@ -189,9 +189,11 @@ class Grinta(BaseInstalledAgent):
             # in the task container, then avoid its duplicate invocation during
             # Orchestrator construction. Reported runs leave this disabled.
             health_code = (
-                'from backend.engine.tools.health_check import '
-                'run_production_health_check; '
-                'run_production_health_check(raise_on_failure=True)'
+                'import json; '
+                'from backend.engine.tools.health_check import run_production_health_check; '
+                'result = run_production_health_check(raise_on_failure=False); '
+                'print(json.dumps(result, sort_keys=True)); '
+                "raise SystemExit(0 if result['overall_status'] == 'HEALTHY' else 1)"
             )
             health_command = (
                 'python_bin="$(head -n 1 "$(command -v grinta-deepswe)" | cut -c 3-)"; '
