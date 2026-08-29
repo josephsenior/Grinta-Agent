@@ -97,6 +97,11 @@ The `core.autocrlf=false` clone option is mandatory on Windows. DeepSWE's
 verifier entrypoints are Linux shell scripts; CRLF checkout conversion makes
 them fail before a reward file can be produced.
 
+Pier 0.3.1 also writes its generated Linux egress-proxy entrypoint with CRLF on
+Windows. The custom Grinta adapter installs a narrowly scoped host-side shim
+that normalizes only that generated `start-squid.sh` file to LF before Docker
+Compose starts it. The shim is inactive on non-Windows hosts.
+
 After the oracle passes, commit and push the Grinta benchmark adapter. Substitute
 that exact 40-character commit below. Then run one **unreported** Luna trial:
 

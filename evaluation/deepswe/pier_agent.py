@@ -8,7 +8,9 @@ normal runtime dependencies.
 from __future__ import annotations
 
 import json
+import os
 import shlex
+from functools import wraps
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -18,6 +20,39 @@ from pier.models.agent.context import AgentContext
 from pier.models.agent.install import AgentInstallSpec, InstallStep
 from pier.models.agent.network import NetworkAllowlist
 from pier.models.trial.paths import EnvironmentPaths
+
+from evaluation.deepswe.pier_compat import normalize_shell_script_lf
+
+
+def _install_windows_pier_proxy_lf_shim() -> None:
+    """Keep Pier 0.3.1's generated Linux proxy entrypoint executable on Windows."""
+    if os.name != 'nt':
+        return
+
+    # Pier imports this function directly into the Docker environment module, so
+    # patch that bound symbol rather than the definition in agent_setup.
+    from pier.environments.docker import docker as pier_docker
+
+    original = pier_docker.write_docker_proxy_compose
+    if getattr(original, '_grinta_windows_lf_shim', False):
+        return
+
+    @wraps(original)
+    def write_docker_proxy_compose_lf(*args: Any, **kwargs: Any) -> Path:
+        compose_path = original(*args, **kwargs)
+        proxy_dir = kwargs.get('proxy_dir')
+        if proxy_dir is None and len(args) >= 2:
+            proxy_dir = args[1]
+        if proxy_dir is None:
+            raise RuntimeError('Pier proxy directory was not supplied')
+        normalize_shell_script_lf(Path(proxy_dir) / 'start-squid.sh')
+        return compose_path
+
+    write_docker_proxy_compose_lf._grinta_windows_lf_shim = True  # type: ignore[attr-defined]
+    pier_docker.write_docker_proxy_compose = write_docker_proxy_compose_lf
+
+
+_install_windows_pier_proxy_lf_shim()
 
 
 def _auth_cache_path(raw_path: str) -> Path:
