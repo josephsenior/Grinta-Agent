@@ -7,6 +7,7 @@ from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 from backend.core.errors import LLMNoResponseError
+from backend.inference.exceptions import RateLimitError, RateLimitKind
 from backend.inference.retry_mixin import RetryMixin
 
 
@@ -164,6 +165,25 @@ class TestRetryMixin(TestCase):
 
         with self.assertRaises(TypeError):
             test_function()
+
+    def test_subscription_usage_quota_is_not_retried(self):
+        calls = 0
+        decorator = self.mixin.retry_decorator(
+            num_retries=6, retry_exceptions=(RateLimitError,)
+        )
+
+        @decorator
+        def test_function():
+            nonlocal calls
+            calls += 1
+            raise RateLimitError(
+                'usage_limit_reached', kind=RateLimitKind.USAGE_QUOTA
+            )
+
+        with self.assertRaises(RateLimitError):
+            test_function()
+
+        self.assertEqual(calls, 1)
 
     @patch('backend.inference.retry_mixin.logger')
     def test_before_sleep_with_llm_no_response_error_temp_zero(self, mock_logger):

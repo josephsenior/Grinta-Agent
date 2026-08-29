@@ -22,6 +22,27 @@ from typing import Any, Sequence
 
 _DEFAULT_CONFIG = Path(__file__).with_name('config.json')
 _SUBSCRIPTION_MODEL_PREFIX = 'codex/'
+_QUOTA_ERROR_CATEGORY = 'daily_quota'
+
+
+class SubscriptionUsageLimitError(RuntimeError):
+    """The ChatGPT subscription cannot serve another model turn yet."""
+
+
+def _find_subscription_usage_limit(state: Any) -> str | None:
+    for event in reversed(getattr(state, 'history', []) or []):
+        if getattr(event, 'error_category', None) == _QUOTA_ERROR_CATEGORY:
+            return str(getattr(event, 'content', '') or 'Subscription usage limit reached')
+    return None
+
+
+def _benchmark_user_response(state: Any) -> str:
+    """Continue autonomous work, except when subscription capacity is exhausted."""
+    if _find_subscription_usage_limit(state):
+        return '/exit'
+    from backend.app.main import auto_continue_response
+
+    return auto_continue_response(state)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -175,14 +196,14 @@ def _load_config(
 
 
 async def _run(config: Any, instruction: str) -> Any:
-    from backend.app.main import auto_continue_response, run_controller
+    from backend.app.main import run_controller
     from backend.ledger.action import MessageAction
 
     return await run_controller(
         config_=config,
         initial_action=MessageAction(content=instruction),
         headless_mode=True,
-        fake_user_response_fn=auto_continue_response,
+        fake_user_response_fn=_benchmark_user_response,
     )
 
 
@@ -258,6 +279,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.reasoning_effort,
         )
         state = asyncio.run(_run(config, instruction))
+        usage_limit = _find_subscription_usage_limit(state)
+        if usage_limit:
+            raise SubscriptionUsageLimitError(usage_limit)
         metrics = _extract_metrics(state)
         patch = _capture_patch(workspace, baseline_commit)
         patch_path.write_text(patch, encoding='utf-8')
@@ -273,9 +297,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             }
         )
     except Exception as exc:
+        run_status = (
+            'capacity_error'
+            if isinstance(exc, SubscriptionUsageLimitError)
+            else 'harness_error'
+        )
         manifest.update(
             {
-                'run_status': 'harness_error',
+                'run_status': run_status,
                 'run_started_at': run_started_at,
                 'duration_seconds': round(time.monotonic() - started, 3),
                 'error_type': type(exc).__name__,

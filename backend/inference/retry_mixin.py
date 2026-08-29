@@ -33,6 +33,7 @@ _KIND_WAIT_BOUNDS: dict[RateLimitKind, tuple[float, float]] = {
     RateLimitKind.TPM: (5.0, 90.0),
     RateLimitKind.RPM: (2.0, 30.0),
     RateLimitKind.RPD: (30.0, 300.0),
+    RateLimitKind.USAGE_QUOTA: (30.0, 300.0),
     RateLimitKind.CONCURRENCY: (1.0, 15.0),
     RateLimitKind.UNKNOWN: (3.0, 30.0),
 }
@@ -189,6 +190,14 @@ class RetryMixin:
                     exc = state.outcome.exception() if state.outcome else None
                 except Exception:
                     exc = None
+                # Account/subscription capacity does not recover within a model
+                # call. Retrying only consumes agent iterations and obscures the
+                # benchmark outcome, so surface it after the first response.
+                if (
+                    isinstance(exc, RateLimitError)
+                    and exc.kind is RateLimitKind.USAGE_QUOTA
+                ):
+                    return True
                 has_hint = (
                     isinstance(exc, RateLimitError)
                     and exc.retry_after is not None

@@ -6,8 +6,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from evaluation.deepswe.run_grinta import (
+    _benchmark_user_response,
     _capture_patch,
     _extract_metrics,
+    _find_subscription_usage_limit,
     _load_instruction,
     _parser,
     _validate_subscription_model,
@@ -115,3 +117,13 @@ def test_subscription_protocol_rejects_usage_billed_provider() -> None:
         assert 'subscription-only' in str(exc)
     else:
         raise AssertionError('usage-billed OpenAI API transport was accepted')
+
+
+def test_benchmark_exits_instead_of_restarting_after_subscription_quota() -> None:
+    quota = SimpleNamespace(
+        error_category='daily_quota', content='Subscription usage limit reached'
+    )
+    state = SimpleNamespace(history=[quota])
+
+    assert _find_subscription_usage_limit(state) == quota.content
+    assert _benchmark_user_response(state) == '/exit'

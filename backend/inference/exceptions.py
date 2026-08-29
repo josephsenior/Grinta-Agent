@@ -20,6 +20,7 @@ class RateLimitKind(str, Enum):
     RPM = 'rpm'
     TPM = 'tpm'
     RPD = 'rpd'
+    USAGE_QUOTA = 'usage_quota'
     CONCURRENCY = 'concurrency'
     UNKNOWN = 'unknown'
 

@@ -119,6 +119,8 @@ def _format_rate_limit_text(exc: Exception, rate_kind, retry_after) -> str:
     base_text = str(exc) if exc.args else 'Rate limit exceeded'
     base_text = re.sub(r'https?://\S+', '[link]', base_text)
 
+    if kind_value == RateLimitKind.USAGE_QUOTA.value:
+        return '⚠️ ChatGPT subscription usage limit reached.'
     if kind_value == RateLimitKind.RPD.value:
         return (
             '⚠️ Daily quota exhausted. Your free-tier limit has been reached for today.'
@@ -136,6 +138,10 @@ def _format_rate_limit_guidance(rate_kind, retry_after) -> str:
 
     kind_value = getattr(rate_kind, 'value', str(rate_kind)) if rate_kind else None
 
+    if kind_value == RateLimitKind.USAGE_QUOTA.value:
+        if retry_after:
+            return f'Wait about {retry_after:.0f}s for the subscription limit to reset.'
+        return 'Wait for the ChatGPT subscription usage limit to reset.'
     if kind_value == RateLimitKind.RPD.value:
         return (
             '🎯 Next steps: '

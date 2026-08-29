@@ -21,6 +21,7 @@ from backend.inference.exceptions import (
     InternalServerError,
     NotFoundError,
     RateLimitError,
+    RateLimitKind,
     ServiceUnavailableError,
     Timeout,
 )
@@ -127,6 +128,18 @@ class TestRecoveryService:
 
         ctrl.retry_service.schedule_retry_after_failure.assert_awaited_once()
         mock_context.set_agent_state.assert_awaited_once_with(AgentState.RATE_LIMITED)
+
+    @pytest.mark.asyncio
+    async def test_subscription_usage_quota_is_not_queued(self, mock_context, ctrl):
+        svc = RecoveryService(mock_context)
+        await svc.react_to_exception(
+            RateLimitError('usage_limit_reached', kind=RateLimitKind.USAGE_QUOTA)
+        )
+
+        ctrl.retry_service.schedule_retry_after_failure.assert_not_awaited()
+        mock_context.set_agent_state.assert_awaited_once_with(
+            AgentState.AWAITING_USER_INPUT
+        )
 
     @pytest.mark.asyncio
     async def test_rate_limit_error_message_is_compact(self, mock_context, ctrl):

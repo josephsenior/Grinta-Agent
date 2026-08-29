@@ -34,6 +34,11 @@ _RPD_HINTS = (
     'daily quota',
     'daily limit',
 )
+_USAGE_QUOTA_HINTS = (
+    'usage_limit_reached',
+    'usage limit has been reached',
+    'usage limit reached',
+)
 _CONCURRENCY_HINTS = (
     'concurrent',
     'concurrency',
@@ -125,6 +130,9 @@ def _parse_reset_seconds(value: str | None) -> float | None:
 
 def _classify_message(text: str) -> RateLimitKind:
     lowered = text.lower()
+    for hint in _USAGE_QUOTA_HINTS:
+        if hint in lowered:
+            return RateLimitKind.USAGE_QUOTA
     for hint in _TPM_HINTS:
         if hint in lowered:
             return RateLimitKind.TPM

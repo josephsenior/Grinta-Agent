@@ -256,7 +256,10 @@ class RecoveryService:
         )
 
         if isinstance(exc, (RateLimitError, ServiceUnavailableError)):
-            if isinstance(exc, RateLimitError) and exc.kind == RateLimitKind.RPD:
+            if isinstance(exc, RateLimitError) and exc.kind in (
+                RateLimitKind.RPD,
+                RateLimitKind.USAGE_QUOTA,
+            ):
                 return ERROR_CATEGORY_DAILY_QUOTA
             return ERROR_CATEGORY_RATE_LIMIT
         if isinstance(exc, AuthenticationError):
@@ -417,8 +420,8 @@ class RecoveryService:
             return False
 
         if isinstance(exc, RateLimitError):
-            if exc.kind == RateLimitKind.RPD:
-                logger.warning('Daily quota exhausted.')
+            if exc.kind in (RateLimitKind.RPD, RateLimitKind.USAGE_QUOTA):
+                logger.warning('Provider usage quota exhausted.')
                 await self._set_awaiting_user_input_if_allowed(controller)
                 return True
 
