@@ -32,10 +32,15 @@ For CI gates and layer-boundary checks, see [`backend/scripts/`](../backend/scri
 
 ## Evals
 
-| Script | Purpose |
+The current external benchmark integration lives under
+[`evaluation/deepswe/`](../evaluation/deepswe/). The older qualitative eval-pack
+runners depended on a removed internal module and are retained under
+`evals/quarantine/` for historical reference only.
+
+| Artifact | Purpose |
 | --- | --- |
-| [`evals/run_realworld_task.py`](evals/run_realworld_task.py) | Run one task from the agent comparison pack headlessly with `settings.bench.json` overrides. |
-| [`evals/score_agent_eval_pack.py`](evals/score_agent_eval_pack.py) | Score or template-fill results from [`evals/agent_comparison_pack.json`](evals/agent_comparison_pack.json). |
+| [`../evaluation/deepswe/run_grinta.py`](../evaluation/deepswe/run_grinta.py) | Run normal headless Grinta in one externally prepared DeepSWE task workspace and capture auditable artifacts. |
+| [`../evaluation/deepswe/config.json`](../evaluation/deepswe/config.json) | Frozen preliminary DeepSWE configuration overlay. |
 | [`evals/agent_comparison_pack.json`](evals/agent_comparison_pack.json) | Vendor-neutral eval task definitions. |
 | [`evals/grinta_results.template.json`](evals/grinta_results.template.json) | Blank results template for manual scoring. |
 

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "status": "preliminary_frozen",
+  "benchmark": {
+    "name": "DeepSWE",
+    "release": "v1.1",
+    "repository_revision": "0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea",
+    "runner": "datacurve-pier",
+    "subset_size": 20,
+    "sample_seed": 0,
+    "attempts_per_task": 1,
+    "concurrency": 1,
+    "human_intervention": 0
+  },
+  "reported_run": {
+    "agent_harness": "grinta",
+    "model": "codex/gpt-5.6-sol",
+    "model_transport": "grinta_codex_app_server_client",
+    "reasoning_effort": "xhigh",
+    "authentication": "chatgpt_subscription",
+    "usage_billed_api": false,
+    "allow_model_fallback": false
+  },
+  "smoke_run": {
+    "agent_harness": "grinta",
+    "model": "codex/gpt-5.6-luna",
+    "reasoning_effort": "low",
+    "reported": false
+  },
+  "runtime": {
+    "pier_version": "0.3.1",
+    "pier_repository_revision": "df89f994623a0a6a57229103b6fe910766693c30",
+    "codex_cli_version": "0.150.1",
+    "benchmark_checkout_line_endings": "LF",
+    "agent_timeout_multiplier": 2,
+    "grinta_config": "config.json"
+  },
+  "failure_policy": {
+    "plan_limit": "infrastructure_capacity_failure",
+    "provider_auth": "infrastructure_auth_failure",
+    "agent_timeout": "task_failure",
+    "context_limit": "task_failure",
+    "verdict_authority": "external_deepswe_verifier"
+  }
+}

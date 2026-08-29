@@ -1,0 +1,170 @@
+"""DataCurve Pier adapter for subscription-authenticated Grinta.
+
+Load with ``--agent-import-path evaluation.deepswe.pier_agent:Grinta``. Pier is
+an optional benchmark dependency and is intentionally not added to Grinta's
+normal runtime dependencies.
+"""
+
+from __future__ import annotations
+
+import json
+import shlex
+from pathlib import Path, PurePosixPath
+from typing import Any
+
+from pier.agents.installed.base import BaseInstalledAgent
+from pier.environments.base import BaseEnvironment
+from pier.models.agent.context import AgentContext
+from pier.models.agent.install import AgentInstallSpec, InstallStep
+from pier.models.agent.network import NetworkAllowlist
+from pier.models.trial.paths import EnvironmentPaths
+
+
+def _auth_cache_path(raw_path: str) -> Path:
+    """Resolve a host credential path before any container operation."""
+    path = Path(raw_path).expanduser()
+    if not path.is_file():
+        raise ValueError(f'CODEX_AUTH_JSON_PATH does not exist: {path}')
+    return path
+
+
+class Grinta(BaseInstalledAgent):
+    """Install and run one exact Grinta revision inside a Pier task container."""
+
+    SUPPORTS_ATIF = False
+    _REMOTE_CODEX_HOME = PurePosixPath('/tmp/grinta-codex-home')
+    _REMOTE_SECRETS = PurePosixPath('/tmp/grinta-secrets')
+
+    def __init__(
+        self,
+        *args: Any,
+        grinta_commit: str,
+        grinta_repo: str = 'https://github.com/josephsenior/Grinta-Coding-Agent.git',
+        reasoning_effort: str = 'xhigh',
+        codex_version: str = '0.150.1',
+        **kwargs: Any,
+    ) -> None:
+        if len(grinta_commit) != 40 or any(c not in '0123456789abcdef' for c in grinta_commit):
+            raise ValueError('grinta_commit must be an exact lowercase 40-character SHA')
+        if reasoning_effort not in {'low', 'medium', 'high', 'xhigh', 'max'}:
+            raise ValueError(f'Unsupported reasoning effort: {reasoning_effort}')
+        self.grinta_commit = grinta_commit
+        self.grinta_repo = grinta_repo
+        self.reasoning_effort = reasoning_effort
+        self.codex_version = codex_version
+        kwargs.setdefault('version', grinta_commit)
+        super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def name() -> str:
+        return 'grinta'
+
+    def network_allowlist(self) -> NetworkAllowlist:
+        # ChatGPT-authenticated Codex traffic; task browsing/package installs are
+        # disabled in Grinta's frozen benchmark config.
+        return NetworkAllowlist(domains=['.chatgpt.com', '.openai.com'])
+
+    def install_spec(self) -> AgentInstallSpec:
+        quoted_repo = shlex.quote(f'git+{self.grinta_repo}@{self.grinta_commit}')
+        root_install = (
+            'if command -v apt-get >/dev/null; then '
+            'apt-get update && apt-get install -y ca-certificates curl git; '
+            'elif command -v apk >/dev/null; then apk add --no-cache ca-certificates curl git; '
+            'elif command -v yum >/dev/null; then yum install -y ca-certificates curl git; '
+            'else echo "A supported package manager is required" >&2; exit 1; fi'
+        )
+        agent_install = (
+            'set -euo pipefail; '
+            'curl -LsSf https://astral.sh/uv/install.sh | sh; '
+            'export PATH="$HOME/.local/bin:$PATH"; '
+            f'uv tool install --python 3.12 --force {quoted_repo}; '
+            'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash; '
+            'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; '
+            'nvm install 22; '
+            f'npm install -g @openai/codex@{shlex.quote(self.codex_version)}; '
+            'grinta-deepswe --help >/dev/null; codex --version'
+        )
+        return AgentInstallSpec(
+            agent_name=self.name(),
+            version=self.grinta_commit,
+            steps=[
+                InstallStep(user='root', run=root_install),
+                InstallStep(user='agent', run=agent_install),
+            ],
+        )
+
+    def get_version_command(self) -> str:
+        return 'grinta --version 2>/dev/null || true'
+
+    def populate_context_post_run(self, context: AgentContext) -> None:
+        manifest_path = self.logs_dir / 'manifest.json'
+        if not manifest_path.is_file():
+            return
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError):
+            return
+        agent = manifest.get('agent') or {}
+        context.n_agent_steps = agent.get('turn_count')
+        context.metadata = {
+            'grinta_run_status': manifest.get('run_status'),
+            'authentication': 'chatgpt_subscription',
+            'usage_billed_api': False,
+            'api_equivalent_cost_usd': agent.get('cost_usd'),
+        }
+
+    async def run(
+        self,
+        instruction: str,
+        environment: BaseEnvironment,
+        context: AgentContext,
+    ) -> None:
+        del context  # Pier calls populate_context_post_run after this method.
+        if not self.model_name or not self.model_name.startswith('codex/'):
+            raise ValueError('model_name must use the subscription-backed codex/ transport')
+        raw_auth_path = self._get_env('CODEX_AUTH_JSON_PATH')
+        if not raw_auth_path:
+            raise ValueError(
+                'CODEX_AUTH_JSON_PATH is required; pass the local Codex auth cache '
+                'through Pier without copying it into the repository'
+            )
+        auth_path = _auth_cache_path(raw_auth_path)
+
+        remote_auth = (self._REMOTE_SECRETS / 'auth.json').as_posix()
+        remote_home = self._REMOTE_CODEX_HOME.as_posix()
+        await self.exec_as_agent(
+            environment,
+            f'mkdir -p {shlex.quote(remote_home)} {shlex.quote(self._REMOTE_SECRETS.as_posix())} '
+            f'{shlex.quote(EnvironmentPaths.agent_dir.as_posix())}',
+        )
+        await environment.upload_file(auth_path, remote_auth)
+        if environment.default_user is not None:
+            await self.exec_as_root(
+                environment,
+                f'chown {environment.default_user} {shlex.quote(remote_auth)}',
+            )
+
+        env = {'CODEX_HOME': remote_home}
+        setup = f'ln -sf {shlex.quote(remote_auth)} {shlex.quote(remote_home + "/auth.json")}'
+        await self.exec_as_agent(environment, setup, env=env)
+        command = (
+            'grinta-deepswe '
+            '--workspace . '
+            f'--instruction {shlex.quote(instruction)} '
+            '--task-id pier-trial '
+            f'--grinta-commit {self.grinta_commit} '
+            f'--model {shlex.quote(self.model_name)} '
+            f'--reasoning-effort {shlex.quote(self.reasoning_effort)} '
+            f'--output-dir {shlex.quote(EnvironmentPaths.agent_dir.as_posix())}'
+        )
+        try:
+            await self.exec_as_agent(environment, command, env=env)
+        finally:
+            # The host auth cache is never copied into trial artifacts.
+            await environment.exec(
+                command=(
+                    f'rm -rf {shlex.quote(self._REMOTE_SECRETS.as_posix())} '
+                    f'{shlex.quote(remote_home)}'
+                ),
+                env=env,
+            )

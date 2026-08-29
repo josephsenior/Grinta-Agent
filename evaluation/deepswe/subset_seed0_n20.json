@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "benchmark": "DeepSWE v1.1",
+  "deep_swe_revision": "0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea",
+  "pier_version": "0.3.1",
+  "selection": {
+    "method": "Pier DatasetConfig sampling",
+    "sample_seed": 0,
+    "n_tasks": 20,
+    "source_task_count": 113
+  },
+  "task_ids": [
+    "true-myth-iterable-collection-combinators",
+    "testem-per-launcher-reports",
+    "tengo-callable-instance-isolation",
+    "adaptix-name-mapping-aliases",
+    "igel-persist-feature-schema",
+    "koota-query-predicates",
+    "opa-template-string-reconstruction",
+    "dynamodb-toolbox-conditional-attribute-requirements",
+    "fd-deterministic-multi-key-sorting",
+    "eicrud-keyset-pagination-cursor",
+    "valibot-recursive-schema-composition",
+    "sqlfmt-create-table-ddl-formatting",
+    "dynamodb-toolbox-lazy-recursive-schemas",
+    "optique-conditional-option-dependencies",
+    "langchain-request-coalescing",
+    "claude-code-by-agents-recursive-delegation",
+    "kysely-window-grouping-helpers",
+    "fastapi-implicit-head-options",
+    "actionlint-action-pinning-lint",
+    "koota-deferred-mutation-buffer"
+  ]
+}

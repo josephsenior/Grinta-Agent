@@ -106,6 +106,7 @@ urls = { Homepage = "https://github.com/josephsenior/Grinta-Coding-Agent", Repos
 # The adapter in backend/execution/browser stays dormant with lazy imports and
 # can be revived once browser-use adopts sane pinning. See docs/ for details.
 scripts.grinta = "launch.entry:main"
+scripts.grinta-deepswe = "evaluation.deepswe.run_grinta:main"
 
 [dependency-groups]
 dev = [
@@ -153,6 +154,7 @@ build.exclude = [
 ]
 build.targets.wheel.packages = [
   "backend",
+  "evaluation",
   "launch",
 ]
 build.targets.sdist.include = [
@@ -162,6 +164,7 @@ build.targets.sdist.include = [
   "/CODE_OF_CONDUCT.md",
   "/CONTRIBUTING.md",
   "/docs",
+  "/evaluation",
   "/GOVERNANCE.md",
   "/launch",
   "/LICENSE",

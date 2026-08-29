@@ -83,3 +83,9 @@ grinta_raft.mp4
 docs/assets/grinta-demo.mp4
 docs/assets/grinta-demo-preview.webp
 traces/**/session.zip
+
+# Generated benchmark artifacts (protocol/configuration stays tracked)
+/evaluation/deepswe/artifacts/
+/evaluation/deepswe/.secrets/
+/evaluation/deepswe/jobs/
+/evaluation/deepswe/.work/

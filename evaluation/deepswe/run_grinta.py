@@ -1,0 +1,299 @@
+"""Run normal headless Grinta in one externally prepared benchmark workspace.
+
+This module deliberately does not score the result. DeepSWE's external verifier is
+the sole source of PASS/FAIL; Grinta's terminal state is retained only as a
+diagnostic signal.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, Sequence
+
+_DEFAULT_CONFIG = Path(__file__).with_name('config.json')
+_SUBSCRIPTION_MODEL_PREFIX = 'codex/'
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description='Run Grinta once in a prepared DeepSWE/Pier task workspace.'
+    )
+    parser.add_argument('--workspace', required=True, help='Prepared task repository')
+    task = parser.add_mutually_exclusive_group(required=True)
+    task.add_argument('--instruction-file', help='UTF-8 task instruction file')
+    task.add_argument('--instruction', help='Task instruction text')
+    parser.add_argument(
+        '--model',
+        default='codex/gpt-5.6-sol',
+        help='Exact provider/model identifier recorded and used for this run',
+    )
+    parser.add_argument(
+        '--reasoning-effort',
+        default='xhigh',
+        choices=('low', 'medium', 'high', 'xhigh', 'max'),
+        help='Frozen reasoning effort (default: xhigh)',
+    )
+    parser.add_argument('--task-id', required=True, help='DeepSWE task identifier')
+    parser.add_argument(
+        '--grinta-commit',
+        required=True,
+        help='Exact Grinta Git commit used to build/install the benchmark agent',
+    )
+    parser.add_argument(
+        '--output-dir', required=True, help='Directory for patch, trace, and manifest'
+    )
+    parser.add_argument(
+        '--config', default=str(_DEFAULT_CONFIG), help='Frozen benchmark overlay JSON'
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Validate and print the resolved protocol',
+    )
+    return parser
+
+
+def _run_git(workspace: Path, *args: str, env: dict[str, str] | None = None) -> str:
+    completed = subprocess.run(
+        ['git', *args],
+        cwd=workspace,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+        errors='replace',
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise RuntimeError(f'git {" ".join(args)} failed: {detail}')
+    return completed.stdout
+
+
+def _git_identity(repo: Path) -> str:
+    return _run_git(repo, 'rev-parse', 'HEAD').strip()
+
+
+def _sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def _capture_patch(workspace: Path, baseline_commit: str) -> str:
+    """Capture tracked, untracked, staged, and agent-committed changes.
+
+    A temporary index gives Git a view of the final worktree without changing the
+    task repository's real index. Comparing that index to the initial commit also
+    includes changes if the agent created commits during its run.
+    """
+    with tempfile.TemporaryDirectory(prefix='grinta-benchmark-index-') as tmp:
+        index_path = Path(tmp) / 'index'
+        env = dict(os.environ)
+        env['GIT_INDEX_FILE'] = str(index_path)
+        _run_git(workspace, 'read-tree', baseline_commit, env=env)
+        _run_git(workspace, 'add', '-A', '--', '.', env=env)
+        return _run_git(
+            workspace,
+            'diff',
+            '--cached',
+            '--binary',
+            '--no-ext-diff',
+            baseline_commit,
+            env=env,
+        )
+
+
+def _load_instruction(args: argparse.Namespace) -> str:
+    if args.instruction_file:
+        value = Path(args.instruction_file).read_text(encoding='utf-8')
+    else:
+        value = str(args.instruction)
+    value = value.strip()
+    if not value:
+        raise ValueError('task instruction must not be empty')
+    return value
+
+
+def _extract_metrics(state: Any) -> dict[str, Any]:
+    if state is None:
+        return {'agent_state': None, 'turn_count': None, 'cost_usd': None}
+    turns = getattr(getattr(state, 'iteration_flag', None), 'current_value', None)
+    stats = getattr(state, 'conversation_stats', None)
+    metrics = stats.get_combined_metrics() if stats is not None else None
+    cost = getattr(metrics, 'accumulated_cost', None) if metrics is not None else None
+    terminal_state = getattr(state, 'agent_state', None)
+    return {
+        'agent_state': str(terminal_state) if terminal_state is not None else None,
+        'turn_count': turns,
+        'cost_usd': cost,
+    }
+
+
+def _validate_subscription_model(model: str) -> None:
+    if not model.startswith(_SUBSCRIPTION_MODEL_PREFIX):
+        raise ValueError(
+            'This protocol is subscription-only: model must use the codex/ transport, '
+            'not a usage-billed API provider.'
+        )
+
+
+def _load_config(
+    config_path: Path,
+    workspace: Path,
+    trajectory_path: Path,
+    model: str,
+    reasoning_effort: str,
+):
+    from backend.core.config.config_loader import (
+        finalize_config,
+        load_app_config,
+        load_from_json,
+    )
+
+    config = load_app_config(set_logging_levels=False)
+    load_from_json(config, str(config_path))
+    config.project_root = str(workspace)
+    config.save_trajectory_path = str(trajectory_path)
+    config.save_screenshots_in_trajectory = False
+    llm = config.get_llm_config()
+    llm.model = model
+    llm.reasoning_effort = reasoning_effort
+    # Catalog prices are useful for comparison but are not the user's actual
+    # subscription charge. Never stop a Plus-backed run on a synthetic USD cap.
+    config.max_budget_per_task = None
+    finalize_config(config)
+    return config
+
+
+async def _run(config: Any, instruction: str) -> Any:
+    from backend.app.main import auto_continue_response, run_controller
+    from backend.ledger.action import MessageAction
+
+    return await run_controller(
+        config_=config,
+        initial_action=MessageAction(content=instruction),
+        headless_mode=True,
+        fake_user_response_fn=auto_continue_response,
+    )
+
+
+def _manifest_base(
+    *,
+    args: argparse.Namespace,
+    workspace: Path,
+    config_path: Path,
+    instruction: str,
+    baseline_commit: str,
+) -> dict[str, Any]:
+    return {
+        'schema_version': 1,
+        'benchmark': 'DeepSWE v1.1',
+        'task_id': args.task_id,
+        'model': args.model,
+        'reasoning_effort': args.reasoning_effort,
+        'authentication': 'chatgpt_subscription',
+        'usage_billed_api': False,
+        'cost_semantics': 'api_equivalent_estimate_not_actual_subscription_charge',
+        'workspace': str(workspace),
+        'task_baseline_commit': baseline_commit,
+        'grinta_commit': args.grinta_commit,
+        'config_path': str(config_path),
+        'config_sha256': _sha256_bytes(config_path.read_bytes()),
+        'instruction_sha256': _sha256_bytes(instruction.encode('utf-8')),
+        'human_intervention': 0,
+        'verdict': None,
+        'verdict_source': 'external_deepswe_verifier',
+    }
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    workspace = Path(args.workspace).resolve()
+    config_path = Path(args.config).resolve()
+    output_dir = Path(args.output_dir).resolve()
+    if not workspace.is_dir():
+        raise SystemExit(f'Workspace does not exist: {workspace}')
+    if not config_path.is_file():
+        raise SystemExit(f'Benchmark config does not exist: {config_path}')
+    try:
+        _validate_subscription_model(args.model)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    instruction = _load_instruction(args)
+    baseline_commit = _git_identity(workspace)
+    manifest = _manifest_base(
+        args=args,
+        workspace=workspace,
+        config_path=config_path,
+        instruction=instruction,
+        baseline_commit=baseline_commit,
+    )
+    if args.dry_run:
+        print(json.dumps(manifest, indent=2, sort_keys=True))
+        return 0
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    trajectory_path = output_dir / 'trajectory.json'
+    patch_path = output_dir / 'model.patch'
+    manifest_path = output_dir / 'manifest.json'
+    started = time.monotonic()
+    run_started_at = datetime.now(UTC).isoformat()
+
+    try:
+        config = _load_config(
+            config_path,
+            workspace,
+            trajectory_path,
+            args.model,
+            args.reasoning_effort,
+        )
+        state = asyncio.run(_run(config, instruction))
+        metrics = _extract_metrics(state)
+        patch = _capture_patch(workspace, baseline_commit)
+        patch_path.write_text(patch, encoding='utf-8')
+        manifest.update(
+            {
+                'run_status': 'completed',
+                'run_started_at': run_started_at,
+                'duration_seconds': round(time.monotonic() - started, 3),
+                'agent': metrics,
+                'patch_path': str(patch_path),
+                'patch_sha256': _sha256_bytes(patch.encode('utf-8')),
+                'trajectory_path': str(trajectory_path),
+            }
+        )
+    except Exception as exc:
+        manifest.update(
+            {
+                'run_status': 'harness_error',
+                'run_started_at': run_started_at,
+                'duration_seconds': round(time.monotonic() - started, 3),
+                'error_type': type(exc).__name__,
+                'error': str(exc),
+            }
+        )
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+        )
+        print(f'Grinta benchmark run failed; see {manifest_path}', file=sys.stderr)
+        return 1
+
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+    )
+    print(f'Run completed; external verification required: {manifest_path}')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

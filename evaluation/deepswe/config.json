@@ -1,0 +1,35 @@
+{
+  "llm_provider": "codex",
+  "llm_model": "codex/gpt-5.6-sol",
+  "llm_reasoning_effort": "xhigh",
+  "pending_action_timeout": 900,
+  "max_iterations": 100,
+  "max_budget_per_task": null,
+  "log_level": "INFO",
+  "security": {
+    "execution_profile": "standard",
+    "enforce_security": true,
+    "block_high_risk": false,
+    "allow_network_commands": false,
+    "allow_package_installs": false,
+    "allow_background_processes": false,
+    "allow_sensitive_path_access": false,
+    "allow_read_outside_workspace": false
+  },
+  "mcp_config": {
+    "enabled": false,
+    "servers": []
+  },
+  "agent": {
+    "Orchestrator": {
+      "autonomy_level": "full",
+      "mode": "agent",
+      "enable_browsing": false,
+      "enable_web": false,
+      "enable_mcp": false,
+      "enable_swarming": false,
+      "enable_vector_memory": false,
+      "enable_hybrid_retrieval": false
+    }
+  }
+}

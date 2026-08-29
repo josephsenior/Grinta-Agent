@@ -72,6 +72,12 @@ flowchart TD
 
 The `SessionOrchestrator` coordinates model intent, the safety and validation pipeline, local execution, and observations. A durable event stream records the session while completion gates reduce premature “done” states. Read the [architecture guide](docs/ARCHITECTURE.md) for the full component map and [reliability guide](docs/RELIABILITY.md) for recovery behavior.
 
+## Evaluation
+
+Grinta's first reproducible external evaluation is being prepared on **DeepSWE v1.1**, an original long-horizon software-engineering benchmark with behavioral verifiers. The checked-in adapter runs normal headless Grinta in an isolated task workspace, captures its patch and complete trajectory, and leaves PASS/FAIL exclusively to the benchmark verifier.
+
+[Read the preliminary protocol and run a smoke task →](evaluation/deepswe/README.md)
+
 ## Product philosophy
 
 This table describes Grinta's design commitments—not an unverified performance ranking against other agents.
