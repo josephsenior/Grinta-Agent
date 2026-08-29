@@ -77,6 +77,7 @@ class Grinta(BaseInstalledAgent):
         grinta_repo: str = 'https://github.com/josephsenior/Grinta-Coding-Agent.git',
         reasoning_effort: str = 'xhigh',
         codex_version: str = '0.150.1',
+        prevalidate_startup_health: bool = False,
         **kwargs: Any,
     ) -> None:
         if len(grinta_commit) != 40 or any(c not in '0123456789abcdef' for c in grinta_commit):
@@ -87,6 +88,7 @@ class Grinta(BaseInstalledAgent):
         self.grinta_repo = grinta_repo
         self.reasoning_effort = reasoning_effort
         self.codex_version = codex_version
+        self.prevalidate_startup_health = prevalidate_startup_health
         kwargs.setdefault('version', grinta_commit)
         super().__init__(*args, **kwargs)
 
@@ -182,6 +184,21 @@ class Grinta(BaseInstalledAgent):
         env = {'CODEX_HOME': remote_home}
         setup = f'ln -sf {shlex.quote(remote_auth)} {shlex.quote(remote_home + "/auth.json")}'
         await self.exec_as_agent(environment, setup, env=env)
+        if self.prevalidate_startup_health:
+            # Smoke-only compatibility mode: validate the real production check
+            # in the task container, then avoid its duplicate invocation during
+            # Orchestrator construction. Reported runs leave this disabled.
+            health_code = (
+                'from backend.engine.tools.health_check import '
+                'run_production_health_check; '
+                'run_production_health_check(raise_on_failure=True)'
+            )
+            health_command = (
+                'python_bin="$(head -n 1 "$(command -v grinta-deepswe)" | cut -c 3-)"; '
+                f'"$python_bin" -c {shlex.quote(health_code)}'
+            )
+            await self.exec_as_agent(environment, health_command, env=env)
+            env['GRINTA_SKIP_STARTUP_HEALTH_CHECK'] = '1'
         command = (
             'grinta-deepswe '
             '--workspace . '

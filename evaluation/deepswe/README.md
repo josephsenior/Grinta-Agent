@@ -121,6 +121,12 @@ The adapter installs the exact Grinta revision and Codex CLI version inside the
 task image, invokes normal headless Grinta, and writes `manifest.json`,
 `model.patch`, and `trajectory.json` under Pier's agent artifacts.
 
+For an unreported smoke run only, `--agent-kwarg
+prevalidate_startup_health=true` runs Grinta's production dependency check as a
+separate command in the task container, then suppresses its duplicate execution
+during Orchestrator construction. This is useful for diagnosing container-only
+startup interactions. Never use it for a reported run; its default is `false`.
+
 ## Reported deterministic subset
 
 Only after the oracle and one Luna smoke trial succeed:
