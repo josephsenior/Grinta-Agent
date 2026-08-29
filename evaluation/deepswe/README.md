@@ -127,6 +127,13 @@ separate command in the task container, then suppresses its duplicate execution
 during Orchestrator construction. This is useful for diagnosing container-only
 startup interactions. Never use it for a reported run; its default is `false`.
 
+Linux parser assets are prefetched into the task image during agent installation
+so reported runs remain network-isolated. A cached legacy image can be exercised
+with `--agent-kwarg allow_tree_sitter_bootstrap=true` for an unreported smoke
+run; this temporarily adds GitHub release hosts to Pier's proxy allowlist while
+Grinta's frozen security policy continues to block agent-initiated network and
+package-install commands. Never enable this compatibility flag in reported runs.
+
 ## Reported deterministic subset
 
 Only after the oracle and one Luna smoke trial succeed:

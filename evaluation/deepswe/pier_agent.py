@@ -78,6 +78,7 @@ class Grinta(BaseInstalledAgent):
         reasoning_effort: str = 'xhigh',
         codex_version: str = '0.150.1',
         prevalidate_startup_health: bool = False,
+        allow_tree_sitter_bootstrap: bool = False,
         **kwargs: Any,
     ) -> None:
         if len(grinta_commit) != 40 or any(c not in '0123456789abcdef' for c in grinta_commit):
@@ -89,6 +90,7 @@ class Grinta(BaseInstalledAgent):
         self.reasoning_effort = reasoning_effort
         self.codex_version = codex_version
         self.prevalidate_startup_health = prevalidate_startup_health
+        self.allow_tree_sitter_bootstrap = allow_tree_sitter_bootstrap
         kwargs.setdefault('version', grinta_commit)
         super().__init__(*args, **kwargs)
 
@@ -99,7 +101,12 @@ class Grinta(BaseInstalledAgent):
     def network_allowlist(self) -> NetworkAllowlist:
         # ChatGPT-authenticated Codex traffic; task browsing/package installs are
         # disabled in Grinta's frozen benchmark config.
-        return NetworkAllowlist(domains=['.chatgpt.com', '.openai.com'])
+        domains = ['.chatgpt.com', '.openai.com']
+        if self.allow_tree_sitter_bootstrap:
+            # Unreported smoke compatibility only. Linux wheels for
+            # tree-sitter-language-pack 1.14.3 lazily fetch parser assets.
+            domains.extend(['github.com', '.github.com', '.githubusercontent.com'])
+        return NetworkAllowlist(domains=domains)
 
     def install_spec(self) -> AgentInstallSpec:
         quoted_repo = shlex.quote(f'git+{self.grinta_repo}@{self.grinta_commit}')
@@ -110,11 +117,22 @@ class Grinta(BaseInstalledAgent):
             'elif command -v yum >/dev/null; then yum install -y ca-certificates curl git; '
             'else echo "A supported package manager is required" >&2; exit 1; fi'
         )
+        parser_prefetch = ''
+        if not self.allow_tree_sitter_bootstrap:
+            parser_prefetch = (
+                'grinta_python="$(head -n 1 "$(command -v grinta-deepswe)" | cut -c 3-)"; '
+                '"$grinta_python" -c "from backend.utils.treesitter._tse_languages import '
+                'LANGUAGE_EXTENSIONS; from tree_sitter_language_pack import manifest_languages, '
+                'prefetch; available=set(manifest_languages()); '
+                "requested=set(LANGUAGE_EXTENSIONS.values()) | {'python'}; "
+                'prefetch(sorted(requested & available))"; '
+            )
         agent_install = (
             'set -euo pipefail; '
             'curl -LsSf https://astral.sh/uv/install.sh | sh; '
             'export PATH="$HOME/.local/bin:$PATH"; '
             f'uv tool install --python 3.12 --force {quoted_repo}; '
+            f'{parser_prefetch}'
             'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash; '
             'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; '
             'nvm install 22; '
