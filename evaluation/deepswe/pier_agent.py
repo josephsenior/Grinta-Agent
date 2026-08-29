@@ -21,7 +21,10 @@ from pier.models.agent.install import AgentInstallSpec, InstallStep
 from pier.models.agent.network import NetworkAllowlist
 from pier.models.trial.paths import EnvironmentPaths
 
-from evaluation.deepswe.pier_compat import normalize_shell_script_lf
+from evaluation.deepswe.pier_compat import (
+    codex_npm_install_args,
+    normalize_shell_script_lf,
+)
 
 
 def _install_windows_pier_proxy_lf_shim() -> None:
@@ -110,6 +113,7 @@ class Grinta(BaseInstalledAgent):
 
     def install_spec(self) -> AgentInstallSpec:
         quoted_repo = shlex.quote(f'git+{self.grinta_repo}@{self.grinta_commit}')
+        codex_npm_args = codex_npm_install_args(self.codex_version)
         root_install = (
             'if command -v apt-get >/dev/null; then '
             'apt-get update && apt-get install -y ca-certificates curl git; '
@@ -133,25 +137,30 @@ class Grinta(BaseInstalledAgent):
                 'ln -sf "$(command -v codex)" /usr/local/bin/codex; '
                 'ln -sf "$(command -v node)" /usr/local/bin/node; '
             )
-        agent_install = (
+        grinta_install = (
             'set -euo pipefail; '
             'curl -LsSf https://astral.sh/uv/install.sh | sh; '
             'export PATH="$HOME/.local/bin:$PATH"; '
             f'uv tool install --python 3.12 --force {quoted_repo}; '
             f'{parser_prefetch}'
+            'grinta-deepswe --help >/dev/null'
+        )
+        codex_install = (
+            'set -euo pipefail; '
             'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash; '
             'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; '
             'nvm install 22; '
-            f'npm install -g @openai/codex@{shlex.quote(self.codex_version)}; '
+            f'npm install -g {codex_npm_args}; '
             f'{system_runtime_links}'
-            'grinta-deepswe --help >/dev/null; codex --version'
+            'codex --version'
         )
         return AgentInstallSpec(
             agent_name=self.name(),
             version=self.grinta_commit,
             steps=[
                 InstallStep(user='root', run=root_install),
-                InstallStep(user='agent', run=agent_install),
+                InstallStep(user='agent', run=grinta_install),
+                InstallStep(user='agent', run=codex_install),
             ],
         )
 
