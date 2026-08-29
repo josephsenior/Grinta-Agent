@@ -208,7 +208,10 @@ class Grinta(BaseInstalledAgent):
 
         env = {
             'CODEX_HOME': remote_home,
-            'PATH': '/tmp/grinta-bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+            'PATH': (
+                '/tmp/grinta-bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:'
+                '/usr/sbin:/usr/bin:/sbin:/bin'
+            ),
         }
         setup = f'ln -sf {shlex.quote(remote_auth)} {shlex.quote(remote_home + "/auth.json")}'
         await self.exec_as_agent(environment, setup, env=env)
