@@ -127,6 +127,12 @@ class Grinta(BaseInstalledAgent):
                 "requested=set(LANGUAGE_EXTENSIONS.values()) | {'python'}; "
                 'prefetch(sorted(requested & available))"; '
             )
+        system_runtime_links = ''
+        if not self.allow_tree_sitter_bootstrap:
+            system_runtime_links = (
+                'ln -sf "$(command -v codex)" /usr/local/bin/codex; '
+                'ln -sf "$(command -v node)" /usr/local/bin/node; '
+            )
         agent_install = (
             'set -euo pipefail; '
             'curl -LsSf https://astral.sh/uv/install.sh | sh; '
@@ -137,6 +143,7 @@ class Grinta(BaseInstalledAgent):
             'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; '
             'nvm install 22; '
             f'npm install -g @openai/codex@{shlex.quote(self.codex_version)}; '
+            f'{system_runtime_links}'
             'grinta-deepswe --help >/dev/null; codex --version'
         )
         return AgentInstallSpec(
@@ -199,9 +206,20 @@ class Grinta(BaseInstalledAgent):
                 f'chown {environment.default_user} {shlex.quote(remote_auth)}',
             )
 
-        env = {'CODEX_HOME': remote_home}
+        env = {
+            'CODEX_HOME': remote_home,
+            'PATH': '/tmp/grinta-bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+        }
         setup = f'ln -sf {shlex.quote(remote_auth)} {shlex.quote(remote_home + "/auth.json")}'
         await self.exec_as_agent(environment, setup, env=env)
+        runtime_setup = (
+            'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; nvm use 22 >/dev/null; '
+            'mkdir -p /tmp/grinta-bin; '
+            'ln -sf "$(command -v codex)" /tmp/grinta-bin/codex; '
+            'ln -sf "$(command -v node)" /tmp/grinta-bin/node; '
+            '/tmp/grinta-bin/codex --version >/dev/null'
+        )
+        await self.exec_as_agent(environment, runtime_setup, env=env)
         if self.prevalidate_startup_health:
             # Smoke-only compatibility mode: validate the real production check
             # in the task container, then avoid its duplicate invocation during
