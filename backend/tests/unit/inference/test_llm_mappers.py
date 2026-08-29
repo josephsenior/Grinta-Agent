@@ -516,6 +516,17 @@ class TestMapProviderException:
         assert isinstance(result, ContextWindowExceededError)
         assert result.model == 'test-model'
 
+    def test_codex_login_url_maps_to_authentication_error(self):
+        exc = RuntimeError(
+            'Open this URL to sign in with ChatGPT, then retry: '
+            'https://auth.openai.com/oauth/authorize'
+        )
+
+        result = _map_provider_exception(exc, model='gpt-5.6-luna')
+
+        assert isinstance(result, AuthenticationError)
+        assert result.model == 'gpt-5.6-luna'
+
     def test_generic_fallback(self):
         """Test fallback to APIError for unknown exceptions."""
         exc = Exception('Unknown error')

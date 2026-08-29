@@ -186,6 +186,13 @@ def _try_heuristic_exception_mapping(
 ) -> Exception | None:
     """Map by heuristic string checks. Returns None if no match."""
     if (
+        'open this url to sign in with chatgpt' in exc_str
+        or 'chatgpt sign-in did not complete' in exc_str
+        or 'codex oauth credentials are incomplete' in exc_str
+        or 'codex signed in, but its oauth credential store is not readable' in exc_str
+    ):
+        return AuthenticationError(_safe_exception_text(exc), model=model)
+    if (
         'content_filter' in exc_str
         or 'content policy' in exc_str
         or 'safety' in exc_str

@@ -23,10 +23,15 @@ from typing import Any, Sequence
 _DEFAULT_CONFIG = Path(__file__).with_name('config.json')
 _SUBSCRIPTION_MODEL_PREFIX = 'codex/'
 _QUOTA_ERROR_CATEGORY = 'daily_quota'
+_AUTH_ERROR_CATEGORY = 'auth'
 
 
 class SubscriptionUsageLimitError(RuntimeError):
     """The ChatGPT subscription cannot serve another model turn yet."""
+
+
+class BenchmarkAuthenticationError(RuntimeError):
+    """The benchmark cannot continue without renewed ChatGPT authentication."""
 
 
 def _find_subscription_usage_limit(state: Any) -> str | None:
@@ -36,9 +41,16 @@ def _find_subscription_usage_limit(state: Any) -> str | None:
     return None
 
 
+def _find_authentication_error(state: Any) -> str | None:
+    for event in reversed(getattr(state, 'history', []) or []):
+        if getattr(event, 'error_category', None) == _AUTH_ERROR_CATEGORY:
+            return str(getattr(event, 'content', '') or 'ChatGPT authentication required')
+    return None
+
+
 def _benchmark_user_response(state: Any) -> str:
     """Continue autonomous work, except when subscription capacity is exhausted."""
-    if _find_subscription_usage_limit(state):
+    if _find_subscription_usage_limit(state) or _find_authentication_error(state):
         return '/exit'
     from backend.app.main import auto_continue_response
 
@@ -282,6 +294,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         usage_limit = _find_subscription_usage_limit(state)
         if usage_limit:
             raise SubscriptionUsageLimitError(usage_limit)
+        auth_error = _find_authentication_error(state)
+        if auth_error:
+            raise BenchmarkAuthenticationError(auth_error)
         metrics = _extract_metrics(state)
         patch = _capture_patch(workspace, baseline_commit)
         patch_path.write_text(patch, encoding='utf-8')
@@ -297,11 +312,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             }
         )
     except Exception as exc:
-        run_status = (
-            'capacity_error'
-            if isinstance(exc, SubscriptionUsageLimitError)
-            else 'harness_error'
-        )
+        if isinstance(exc, SubscriptionUsageLimitError):
+            run_status = 'capacity_error'
+        elif isinstance(exc, BenchmarkAuthenticationError):
+            run_status = 'authentication_error'
+        else:
+            run_status = 'harness_error'
         manifest.update(
             {
                 'run_status': run_status,

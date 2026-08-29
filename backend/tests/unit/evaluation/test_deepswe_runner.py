@@ -9,6 +9,7 @@ from evaluation.deepswe.run_grinta import (
     _benchmark_user_response,
     _capture_patch,
     _extract_metrics,
+    _find_authentication_error,
     _find_subscription_usage_limit,
     _load_instruction,
     _parser,
@@ -126,4 +127,12 @@ def test_benchmark_exits_instead_of_restarting_after_subscription_quota() -> Non
     state = SimpleNamespace(history=[quota])
 
     assert _find_subscription_usage_limit(state) == quota.content
+    assert _benchmark_user_response(state) == '/exit'
+
+
+def test_benchmark_exits_instead_of_restarting_after_authentication_error() -> None:
+    auth = SimpleNamespace(error_category='auth', content='ChatGPT sign-in required')
+    state = SimpleNamespace(history=[auth])
+
+    assert _find_authentication_error(state) == auth.content
     assert _benchmark_user_response(state) == '/exit'
