@@ -96,11 +96,17 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _run_git(workspace: Path, *args: str, env: dict[str, str] | None = None) -> str:
+def _run_git(
+    workspace: Path,
+    *args: str,
+    env: dict[str, str] | None = None,
+    input_text: str | None = None,
+) -> str:
     completed = subprocess.run(
         ['git', *args],
         cwd=workspace,
         env=env,
+        input=input_text,
         check=False,
         capture_output=True,
         text=True,
@@ -143,6 +149,85 @@ def _capture_patch(workspace: Path, baseline_commit: str) -> str:
             baseline_commit,
             env=env,
         )
+
+
+def _materialize_submission_head(
+    workspace: Path, baseline_commit: str, patch: str
+) -> dict[str, Any]:
+    """Make an uncommitted benchmark result visible to a ``HEAD`` collector.
+
+    DeepSWE's task hook collects ``baseline..HEAD`` even though coding harnesses
+    naturally produce a final filesystem state.  If the agent already created a
+    commit, it remains authoritative.  Otherwise, create a synthetic commit from
+    the exact patch captured with a temporary index.  This runs only inside the
+    disposable benchmark workspace; normal Grinta sessions never commit files.
+    """
+    committed_patch = _run_git(
+        workspace,
+        'diff',
+        '--binary',
+        '--no-ext-diff',
+        baseline_commit,
+        'HEAD',
+    )
+    if committed_patch.strip():
+        return {
+            'mode': 'agent_commit',
+            'head': _git_identity(workspace),
+            'synthetic_commit': False,
+        }
+    if not patch.strip():
+        return {
+            'mode': 'no_changes',
+            'head': _git_identity(workspace),
+            'synthetic_commit': False,
+        }
+
+    with tempfile.TemporaryDirectory(prefix='grinta-submission-index-') as tmp:
+        index_path = Path(tmp) / 'index'
+        env = dict(os.environ)
+        env.update(
+            {
+                'GIT_INDEX_FILE': str(index_path),
+                'GIT_AUTHOR_NAME': 'Grinta Benchmark Packager',
+                'GIT_AUTHOR_EMAIL': 'grinta-benchmark@localhost',
+                'GIT_COMMITTER_NAME': 'Grinta Benchmark Packager',
+                'GIT_COMMITTER_EMAIL': 'grinta-benchmark@localhost',
+            }
+        )
+        _run_git(workspace, 'read-tree', baseline_commit, env=env)
+        # Populate the synthetic tree from the same final worktree used by
+        # _capture_patch.  This avoids platform-specific ``git apply --cached``
+        # index/worktree consistency checks (notably with Windows line endings).
+        _run_git(workspace, 'add', '-A', '--', '.', env=env)
+        tree = _run_git(workspace, 'write-tree', env=env).strip()
+        commit = _run_git(
+            workspace,
+            'commit-tree',
+            tree,
+            '-p',
+            baseline_commit,
+            '-m',
+            'package Grinta benchmark submission',
+            env=env,
+        ).strip()
+
+    _run_git(workspace, 'update-ref', 'HEAD', commit)
+    materialized = _run_git(
+        workspace,
+        'diff',
+        '--binary',
+        '--no-ext-diff',
+        baseline_commit,
+        'HEAD',
+    )
+    if materialized != patch:
+        raise RuntimeError('Synthetic submission commit does not match captured patch')
+    return {
+        'mode': 'synthetic_commit',
+        'head': commit,
+        'synthetic_commit': True,
+    }
 
 
 def _load_instruction(args: argparse.Namespace) -> str:
@@ -300,6 +385,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         metrics = _extract_metrics(state)
         patch = _capture_patch(workspace, baseline_commit)
         patch_path.write_text(patch, encoding='utf-8')
+        submission_packaging = _materialize_submission_head(
+            workspace, baseline_commit, patch
+        )
         manifest.update(
             {
                 'run_status': 'completed',
@@ -309,6 +397,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 'patch_path': str(patch_path),
                 'patch_sha256': _sha256_bytes(patch.encode('utf-8')),
                 'trajectory_path': str(trajectory_path),
+                'submission_packaging': submission_packaging,
             }
         )
     except Exception as exc:

@@ -12,6 +12,7 @@ from evaluation.deepswe.run_grinta import (
     _find_authentication_error,
     _find_subscription_usage_limit,
     _load_instruction,
+    _materialize_submission_head,
     _parser,
     _validate_subscription_model,
 )
@@ -58,6 +59,84 @@ def test_capture_patch_includes_tracked_untracked_and_committed_changes(
         capture_output=True,
         text=True,
     ).stdout.splitlines() == ['?? untracked.txt']
+
+
+def test_materialize_submission_head_packages_uncommitted_workspace(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / 'repo'
+    repo.mkdir()
+    _git(repo, 'init')
+    _git(repo, 'config', 'user.email', 'benchmark@example.invalid')
+    _git(repo, 'config', 'user.name', 'Benchmark Test')
+    tracked = repo / 'tracked.txt'
+    tracked.write_text('before\n', encoding='utf-8')
+    _git(repo, 'add', 'tracked.txt')
+    _git(repo, 'commit', '-m', 'baseline')
+    baseline = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    tracked.write_text('after\n', encoding='utf-8')
+    (repo / 'new.txt').write_text('new\n', encoding='utf-8')
+    patch = _capture_patch(repo, baseline)
+
+    result = _materialize_submission_head(repo, baseline, patch)
+
+    assert result['mode'] == 'synthetic_commit'
+    assert result['synthetic_commit'] is True
+    assert result['head'] != baseline
+    committed = subprocess.run(
+        ['git', 'diff', '--binary', '--no-ext-diff', baseline, 'HEAD'],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert committed == patch
+
+
+def test_materialize_submission_head_preserves_agent_commit(tmp_path: Path) -> None:
+    repo = tmp_path / 'repo'
+    repo.mkdir()
+    _git(repo, 'init')
+    _git(repo, 'config', 'user.email', 'benchmark@example.invalid')
+    _git(repo, 'config', 'user.name', 'Benchmark Test')
+    tracked = repo / 'tracked.txt'
+    tracked.write_text('before\n', encoding='utf-8')
+    _git(repo, 'add', 'tracked.txt')
+    _git(repo, 'commit', '-m', 'baseline')
+    baseline = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    tracked.write_text('after\n', encoding='utf-8')
+    _git(repo, 'add', 'tracked.txt')
+    _git(repo, 'commit', '-m', 'agent commit')
+    agent_head = subprocess.run(
+        ['git', 'rev-parse', 'HEAD'],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    patch = _capture_patch(repo, baseline)
+
+    result = _materialize_submission_head(repo, baseline, patch)
+
+    assert result == {
+        'mode': 'agent_commit',
+        'head': agent_head,
+        'synthetic_commit': False,
+    }
 
 
 def test_extract_metrics_does_not_infer_a_verdict() -> None:

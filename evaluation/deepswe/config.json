@@ -3,7 +3,6 @@
   "llm_model": "codex/gpt-5.6-sol",
   "llm_reasoning_effort": "xhigh",
   "pending_action_timeout": 900,
-  "max_iterations": 100,
   "max_budget_per_task": null,
   "log_level": "INFO",
   "security": {

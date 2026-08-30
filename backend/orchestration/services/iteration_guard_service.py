@@ -23,6 +23,7 @@ class IterationGuardService:
 
     def __init__(self, context: OrchestrationContext) -> None:
         self._context = context
+        self._graceful_shutdown_scheduled = False
 
     async def run_control_flags(self) -> None:
         """Run controller control flags with limit/error handling."""
@@ -78,6 +79,17 @@ class IterationGuardService:
     def _schedule_graceful_shutdown(self, reason: str) -> None:
         from backend.utils.async_helpers.async_utils import create_tracked_task
 
+        # Limit handling can be reached again by an observation emitted from the
+        # final LLM turn.  Mark shutdown synchronously, before scheduling the
+        # coroutine, so concurrent recovery paths cannot enqueue a second final
+        # turn or trigger headless auto-continuation.
+        if self._graceful_shutdown_scheduled:
+            logger.debug('Graceful shutdown already scheduled; ignoring duplicate')
+            return
+        self._graceful_shutdown_scheduled = True
+        controller = self._context.get_controller()
+        setattr(controller.state, 'graceful_shutdown_mode', True)
+
         create_tracked_task(
             self._graceful_shutdown(reason=reason),
             name='graceful-shutdown',
@@ -88,8 +100,7 @@ class IterationGuardService:
         controller = self._context.get_controller()
 
         logger.info('Initiating graceful shutdown: %s', reason)
-        if not hasattr(controller.state, 'graceful_shutdown_mode'):
-            setattr(controller.state, 'graceful_shutdown_mode', True)
+        setattr(controller.state, 'graceful_shutdown_mode', True)
 
         summary_msg = MessageAction(
             content=(

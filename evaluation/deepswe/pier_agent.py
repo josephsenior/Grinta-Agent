@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from pier.agents.installed.base import BaseInstalledAgent
+from pier.agents.installed.codex import Codex as PierCodex
 from pier.environments.base import BaseEnvironment
 from pier.models.agent.context import AgentContext
 from pier.models.agent.install import AgentInstallSpec, InstallStep
@@ -293,3 +294,45 @@ class Grinta(BaseInstalledAgent):
                 ),
                 env=env,
             )
+
+
+class CodexCli(PierCodex):
+    """Pier's native Codex CLI with ChatGPT-subscription network policy.
+
+    Pier's stock adapter defaults its egress policy to ``api.openai.com``.
+    Subscription-authenticated Codex uses the ChatGPT Codex endpoint instead,
+    so this thin adapter changes only the allowlist while retaining Pier's
+    native CLI lifecycle, trajectory parser, and auth-file handling.
+    """
+
+    def network_allowlist(self) -> NetworkAllowlist:
+        domains = ['.chatgpt.com', '.openai.com']
+        for key in ('OPENAI_BASE_URL', 'OPENAI_BASE_API'):
+            value = self._get_env(key)
+            if value:
+                domains.append(value)
+        return NetworkAllowlist(domains=domains)
+
+    def populate_context_post_run(self, context: Any) -> None:
+        """Normalize Codex JSONL to ASCII before Pier's Windows parser reads it.
+
+        Pier opens the session file with the host locale encoding. Codex emits
+        UTF-8, so non-ASCII model text can make metrics collection fail on
+        Windows even when the task and verifier succeeded. Escaping JSON text
+        keeps the event data identical while making it locale-independent.
+        """
+        session_dir = self._get_session_dir()
+        if session_dir is not None:
+            for session_file in session_dir.glob('*.jsonl'):
+                try:
+                    lines = session_file.read_text(encoding='utf-8').splitlines()
+                    normalized = []
+                    for line in lines:
+                        if not line.strip():
+                            normalized.append(line)
+                            continue
+                        normalized.append(json.dumps(json.loads(line), ensure_ascii=True))
+                    session_file.write_text('\n'.join(normalized) + '\n', encoding='ascii')
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                    continue
+        super().populate_context_post_run(context)

@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from backend.core.errors import (
+    AgentLimitExceededError,
     AgentRuntimeDisconnectedError,
     LLMContextWindowExceedError,
     LLMNoResponseError,
@@ -61,6 +62,17 @@ def ctrl(mock_context):
 
 
 class TestRecoveryService:
+    @pytest.mark.asyncio
+    async def test_limit_during_graceful_shutdown_does_not_request_user_input(
+        self, mock_context, ctrl
+    ):
+        ctrl.state.graceful_shutdown_mode = True
+        svc = RecoveryService(mock_context)
+
+        await svc.react_to_exception(AgentLimitExceededError('iteration limit'))
+
+        mock_context.set_agent_state.assert_not_awaited()
+
     def test_timeout_error_text_is_user_facing_not_agent_guidance(self) -> None:
         from backend.inference.exceptions import Timeout
         from backend.orchestration.services.error_formatting import format_error_text

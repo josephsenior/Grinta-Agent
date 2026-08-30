@@ -349,6 +349,23 @@ class RecoveryService:
     ) -> bool:
         if not _is_limit_exceeded_error(exc):
             return False
+        graceful_shutdown_active = (
+            getattr(getattr(controller, 'state', None), 'graceful_shutdown_mode', False)
+            is True
+        )
+        if graceful_shutdown_active:
+            logger.warning(
+                'Agent limit exceeded (%s): graceful shutdown owns finalization', exc
+            )
+            # IterationGuardService owns the one final turn.  Transitioning to
+            # AWAITING_USER_INPUT here makes headless runs inject a synthetic
+            # "Please continue" message, racing the shutdown task and creating
+            # repeated final turns.
+            self._emit_intervention(
+                'step_limit_reached', exc, outcome='graceful_shutdown'
+            )
+            return True
+
         logger.warning(
             'Agent limit exceeded (%s): stopping agent loop and returning to user',
             exc,
@@ -579,8 +596,9 @@ class RecoveryService:
         #   → AWAITING_USER_INPUT — user must fix config/credentials first.
         #
         # Budget / iteration hard limits:
-        #   → AWAITING_USER_INPUT — agent cannot self-recover; re-stepping
-        #     would immediately raise the same error again in an infinite loop.
+        #   → Graceful shutdown owns finalization when active; otherwise
+        #     AWAITING_USER_INPUT. Re-stepping without either guard would
+        #     immediately raise the same error again in an infinite loop.
         #
         # Rate-limited errors (429, 503) and provider/network timeouts:
         #   → AWAITING_USER_INPUT + retry queue — the queue handles the

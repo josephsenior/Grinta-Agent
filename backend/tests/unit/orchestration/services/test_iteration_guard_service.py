@@ -131,6 +131,15 @@ class TestIterationGuardService(unittest.IsolatedAsyncioTestCase):
         call_kwargs = mock_create_task.call_args[1]
         self.assertEqual(call_kwargs['name'], 'graceful-shutdown')
 
+    @patch('backend.utils.async_helpers.async_utils.create_tracked_task')
+    def test_schedule_graceful_shutdown_is_one_shot(self, mock_create_task):
+        """Duplicate limit events must not enqueue multiple final turns."""
+        self.service._schedule_graceful_shutdown('First reason')
+        self.service._schedule_graceful_shutdown('Second reason')
+
+        mock_create_task.assert_called_once()
+        self.assertTrue(self.mock_controller.state.graceful_shutdown_mode)
+
     @patch('backend.orchestration.services.iteration_guard_service.MessageAction')
     async def test_graceful_shutdown_sends_message(self, mock_message_action):
         """Test _graceful_shutdown sends SYSTEM NOTICE message."""
