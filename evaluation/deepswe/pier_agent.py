@@ -82,6 +82,7 @@ class Grinta(BaseInstalledAgent):
         codex_version: str = '0.150.1',
         prevalidate_startup_health: bool = False,
         allow_tree_sitter_bootstrap: bool = False,
+        tree_sitter_languages: str = 'python',
         **kwargs: Any,
     ) -> None:
         if len(grinta_commit) != 40 or any(c not in '0123456789abcdef' for c in grinta_commit):
@@ -94,6 +95,17 @@ class Grinta(BaseInstalledAgent):
         self.codex_version = codex_version
         self.prevalidate_startup_health = prevalidate_startup_health
         self.allow_tree_sitter_bootstrap = allow_tree_sitter_bootstrap
+        requested_languages = ['python', *tree_sitter_languages.split(',')]
+        normalized_languages: list[str] = []
+        for language in requested_languages:
+            language = language.strip().lower()
+            if not language:
+                continue
+            if not all(character.isalnum() or character in {'_', '-', '+'} for character in language):
+                raise ValueError(f'Invalid tree-sitter language name: {language}')
+            if language not in normalized_languages:
+                normalized_languages.append(language)
+        self.tree_sitter_languages = tuple(normalized_languages)
         kwargs.setdefault('version', grinta_commit)
         super().__init__(*args, **kwargs)
 
@@ -123,13 +135,24 @@ class Grinta(BaseInstalledAgent):
         )
         parser_prefetch = ''
         if not self.allow_tree_sitter_bootstrap:
+            prefetch_commands = [
+                (
+                    'for grinta_prefetch_attempt in 1 2 3; do '
+                    f'"$grinta_python" -c {shlex.quote(
+                        "from tree_sitter_language_pack import manifest_languages, prefetch; "
+                        f"language={language!r}; available=set(manifest_languages()); "
+                        "assert language in available, f'unsupported tree-sitter language: {language}'; "
+                        "prefetch([language])"
+                    )} && break; '
+                    'if [ "$grinta_prefetch_attempt" -eq 3 ]; then exit 1; fi; '
+                    'sleep $((grinta_prefetch_attempt * 5)); '
+                    'done; '
+                )
+                for language in self.tree_sitter_languages
+            ]
             parser_prefetch = (
                 'grinta_python="$(head -n 1 "$(command -v grinta-deepswe)" | cut -c 3-)"; '
-                '"$grinta_python" -c "from backend.utils.treesitter._tse_languages import '
-                'LANGUAGE_EXTENSIONS; from tree_sitter_language_pack import manifest_languages, '
-                'prefetch; available=set(manifest_languages()); '
-                "requested=set(LANGUAGE_EXTENSIONS.values()) | {'python'}; "
-                'prefetch(sorted(requested & available))"; '
+                + ''.join(prefetch_commands)
             )
         system_runtime_links = ''
         if not self.allow_tree_sitter_bootstrap:
