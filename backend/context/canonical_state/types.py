@@ -144,11 +144,13 @@ class FailedApproach:
 
 @dataclass
 class BackgroundTaskState:
-    """Detached background process that still needs explicit terminal polling."""
+    """Detached command lifecycle, independent from the task-state evidence store."""
 
     session_id: str = ''
     command: str = ''
     status: str = 'still running'
+    exit_code: int | None = None
+    outcome_known: bool = False
     next_action: str = ''
     recent_output: str = ''
     event_id: int | None = None

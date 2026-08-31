@@ -354,12 +354,16 @@ class ActionExecutionService:
         try:
             from backend.execution.utils.shell.background_turn_sync import (
                 apply_background_drain_to_state,
+                background_lifecycles_for_turn,
                 sync_background_output_for_turn,
             )
 
             drains = sync_background_output_for_turn(executor)
-            if drains:
-                apply_background_drain_to_state(self._context.state, drains)
+            lifecycles = background_lifecycles_for_turn(executor)
+            if drains or lifecycles:
+                apply_background_drain_to_state(
+                    self._context.state, drains, lifecycles
+                )
         except Exception:
             logger.debug(
                 'ActionExecutionService: background turn sync failed',

@@ -80,6 +80,9 @@ from backend.execution.aes.helpers import (
 from backend.execution.aes.helpers import (
     terminal_shell_kind as _terminal_shell_kind_impl,
 )
+from backend.execution.utils.shell.background_turn_sync import (
+    background_session_lifecycle,
+)
 from backend.execution.utils.shell.unified_shell import BaseShellSession
 from backend.ledger.action.terminal import (
     TerminalCloseAction,
@@ -771,6 +774,7 @@ class _AesIoTerminalMixin:
                 mode=mode, has_new_output=has_new_output
             )
             shell_kind = self._terminal_shell_kind(session)
+            execution = background_session_lifecycle(session)
             state = (
                 'SESSION_OUTPUT_DELTA' if mode == 'delta' else 'SESSION_OUTPUT_SNAPSHOT'
             )
@@ -804,6 +808,9 @@ class _AesIoTerminalMixin:
                     'dropped_chars': dropped_chars,
                     **empty_hints,
                 },
+                # This is runtime-observed command state.  It never updates
+                # task_state or constitutes acceptance-criterion evidence.
+                'execution': execution,
                 'progress': bool(has_new_output),
             }
             return obs
@@ -867,6 +874,7 @@ class _AesIoTerminalMixin:
                                 'matched': True,
                                 'pattern': action.pattern,
                             },
+                            'execution': background_session_lifecycle(session),
                             'progress': True,
                         }
                         return obs
@@ -908,6 +916,13 @@ class _AesIoTerminalMixin:
                                 'exit_code': int(exit_code),
                                 'pattern': action.pattern,
                             },
+                            'execution': {
+                                'status': (
+                                    'completed' if int(exit_code) == 0 else 'failed'
+                                ),
+                                'exit_code': int(exit_code),
+                                'outcome_known': True,
+                            },
                             'progress': False,
                         }
                         return obs
@@ -939,6 +954,7 @@ class _AesIoTerminalMixin:
                     'pattern': action.pattern,
                     'timeout': timeout,
                 },
+                'execution': background_session_lifecycle(session),
                 'progress': bool(combined),
             }
             return obs
@@ -954,7 +970,7 @@ class _AesIoTerminalMixin:
             else:
                 lines = [
                     (
-                        f'- {row["session_id"]}: running={row["running"]}'
+                        f'- {row["session_id"]}: status={row["status"]}'
                         f' kind={row["shell_kind"]} cwd={row["cwd"]}'
                         + (
                             f' exit_code={row["exit_code"]}'

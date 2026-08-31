@@ -490,9 +490,15 @@ def _event_detail(event: Event) -> str:
 
 def _active_status(canonical: CanonicalTaskState, state: State | None = None) -> str:
     lines: list[str] = []
-    if canonical.background_tasks:
-        lines.append('Pending background tasks:')
-        for task in canonical.background_tasks[-4:]:
+    pending = [
+        task
+        for task in canonical.background_tasks
+        if not task.outcome_known and task.status in {'still running', 'running', 'unknown'}
+    ]
+    completed = [task for task in canonical.background_tasks if task.outcome_known]
+    if pending:
+        lines.append('Background commands awaiting a known outcome:')
+        for task in pending[-4:]:
             session = task.session_id or 'unknown session'
             lines.append(f'- {session}: {task.command} -> {task.next_action}')
             if task.recent_output:
@@ -500,6 +506,12 @@ def _active_status(canonical: CanonicalTaskState, state: State | None = None) ->
                     f'  Recent output ({session}):\n'
                     f'{_safe_truncate(task.recent_output, 1200)}'
                 )
+    if completed:
+        lines.append('Recent resolved background commands:')
+        for task in completed[-4:]:
+            session = task.session_id or 'unknown session'
+            suffix = f' (exit {task.exit_code})' if task.exit_code is not None else ''
+            lines.append(f'- {session}: {task.status}{suffix}; inspect output before claiming verification.')
     from backend.execution.utils.shell.background_turn_sync import (
         read_turn_drain_extras,
     )

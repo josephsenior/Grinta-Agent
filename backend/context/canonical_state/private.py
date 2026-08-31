@@ -165,10 +165,25 @@ def _merge_background_tasks(
         recent_output = str(item.get('recent_output', ''))[:2000]
         if not recent_output and prev is not None:
             recent_output = prev.recent_output
+        item_outcome_known = bool(item.get('outcome_known', False))
+        # A stale compaction snapshot may still describe a command as running
+        # after the runtime has recorded its final lifecycle. Never regress a
+        # known terminal outcome to an inferred pending state.
+        keep_final = bool(prev is not None and prev.outcome_known and not item_outcome_known)
         by_key[key] = BackgroundTaskState(
             session_id=session_id,
             command=command[:240],
-            status=str(item.get('status', 'still running'))[:80],
+            status=(
+                prev.status if keep_final and prev is not None
+                else str(item.get('status', 'still running'))[:80]
+            ),
+            exit_code=(
+                prev.exit_code if keep_final and prev is not None
+                else int(item['exit_code'])
+                if isinstance(item.get('exit_code'), int)
+                else (prev.exit_code if prev is not None else None)
+            ),
+            outcome_known=item_outcome_known or bool(prev is not None and prev.outcome_known),
             next_action=str(item.get('next_action', 'terminal_read'))[:200],
             recent_output=recent_output,
             event_id=event_id,
@@ -381,19 +396,23 @@ def _resolve_background_tasks_from_events(
             continue
         session_id = str(getattr(event, 'session_id', '')).strip()
         state = str(getattr(event, 'state', '') or '').lower()
+        payload = getattr(event, 'tool_result', {}) or {}
+        execution = payload.get('execution', {}) if isinstance(payload, dict) else {}
+        execution_status = str(execution.get('status', '') or '').lower()
         content = str(getattr(event, 'content', '') or '').lower()
         if session_id and (
-            state in {'done', 'exited', 'finished', 'closed'}
+            execution_status in {'completed', 'failed'}
+            or state in {'done', 'exited', 'finished', 'closed', 'session_wait_exited'}
             or 'process exited' in content
             or 'exit code' in content
         ):
             resolved.add(session_id)
     if resolved:
-        canonical.background_tasks = [
-            task
-            for task in canonical.background_tasks
-            if task.session_id not in resolved
-        ]
+        # Keep a compact final execution record. It is deliberately separate
+        # from task-state evidence and no longer blocks subsequent work.
+        for task in canonical.background_tasks:
+            if task.session_id in resolved:
+                task.outcome_known = True
         _touch_field(
             canonical,
             'background_tasks',
@@ -507,7 +526,7 @@ def _update_blockers(
     source: str,
 ) -> None:
     blockers: list[str] = []
-    if canonical.background_tasks:
+    if any(not task.outcome_known for task in canonical.background_tasks):
         blockers.append(
             'Pending background command must be polled before starting another long command.'
         )
@@ -556,8 +575,11 @@ def _infer_next_action(canonical: CanonicalTaskState) -> str:
         next_action = _next_action_from_task_plan(canonical.task_plan)
         if next_action:
             return next_action
-    if canonical.background_tasks:
-        task = canonical.background_tasks[-1]
+    pending_background = [
+        task for task in canonical.background_tasks if not task.outcome_known
+    ]
+    if pending_background:
+        task = pending_background[-1]
         return task.next_action or f'Read background terminal {task.session_id}.'
     if canonical.verification.command and canonical.verification.status != 'passed':
         return f'Use the latest failing output from {canonical.verification.command} to make the next fix.'

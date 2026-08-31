@@ -800,10 +800,17 @@ def describe_terminal_sessions(executor: Any) -> list[dict[str, Any]]:
             running = code is None
             if code is not None:
                 exit_code = int(code)
+        if exit_code is not None:
+            status = 'completed' if exit_code == 0 else 'failed'
+        elif proc is not None and hasattr(proc, 'poll'):
+            status = 'running'
+        else:
+            status = 'unknown'
         rows.append(
             {
                 'session_id': session_id,
                 'running': running,
+                'status': status,
                 'exit_code': exit_code,
                 'shell_kind': terminal_shell_kind(session),
                 'cwd': str(getattr(session, 'cwd', '') or ''),

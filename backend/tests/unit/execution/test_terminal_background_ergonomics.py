@@ -11,6 +11,7 @@ import pytest
 from backend.execution.server.action_execution_server import RuntimeExecutor
 from backend.execution.utils.shell.background_turn_sync import (
     apply_background_drain_to_state,
+    background_lifecycles_for_turn,
     cap_background_output,
     sync_background_output_for_turn,
 )
@@ -102,6 +103,44 @@ def test_apply_background_drain_to_state_updates_canonical_task() -> None:
 
     updated = load_canonical_state(state=state)
     assert updated.background_tasks[0].recent_output.startswith('listening on')
+
+
+def test_background_lifecycle_records_final_exit_without_task_state_mutation() -> None:
+    """Terminal facts are tracked in canonical context, not task_state."""
+    from backend.context.canonical_state import (
+        load_canonical_state,
+        save_canonical_state,
+    )
+    from backend.context.canonical_state.types import (
+        BackgroundTaskState,
+        CanonicalTaskState,
+    )
+    from backend.orchestration.state.state import State
+
+    session = SimpleNamespace(_process=SimpleNamespace(poll=lambda: 17))
+    executor = SimpleNamespace(
+        session_manager=SimpleNamespace(sessions={'bg-failed': session})
+    )
+    state = State(session_id='terminal-lifecycle')
+    save_canonical_state(
+        CanonicalTaskState(
+            background_tasks=[
+                BackgroundTaskState(session_id='bg-failed', command='make check')
+            ]
+        ),
+        state=state,
+    )
+
+    apply_background_drain_to_state(
+        state,
+        {'bg-failed': 'check failed'},
+        background_lifecycles_for_turn(executor),
+    )
+
+    task = load_canonical_state(state=state).background_tasks[0]
+    assert task.status == 'failed'
+    assert task.exit_code == 17
+    assert task.outcome_known is True
 
 
 @pytest.mark.asyncio
