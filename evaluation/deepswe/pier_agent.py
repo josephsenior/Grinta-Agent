@@ -25,6 +25,7 @@ from pier.models.trial.paths import EnvironmentPaths
 from evaluation.deepswe.pier_compat import (
     codex_npm_install_args,
     normalize_shell_script_lf,
+    resilient_uv_tool_install,
 )
 
 
@@ -125,7 +126,7 @@ class Grinta(BaseInstalledAgent):
         return NetworkAllowlist(domains=domains)
 
     def install_spec(self) -> AgentInstallSpec:
-        quoted_repo = shlex.quote(f'git+{self.grinta_repo}@{self.grinta_commit}')
+        grinta_requirement = f'git+{self.grinta_repo}@{self.grinta_commit}'
         codex_npm_args = codex_npm_install_args(self.codex_version)
         root_install = (
             'if command -v apt-get >/dev/null; then '
@@ -163,9 +164,7 @@ class Grinta(BaseInstalledAgent):
             )
         grinta_install = (
             'set -euo pipefail; '
-            'curl -LsSf https://astral.sh/uv/install.sh | sh; '
-            'export PATH="$HOME/.local/bin:$PATH"; '
-            f'uv tool install --python 3.12 --force {quoted_repo}; '
+            f'{resilient_uv_tool_install(grinta_requirement)}'
             f'{parser_prefetch}'
             'grinta-deepswe --help >/dev/null'
         )
