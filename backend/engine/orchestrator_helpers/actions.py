@@ -24,10 +24,10 @@ if TYPE_CHECKING:
 def _consume_pending_action(orch: Orchestrator) -> Action | None:
     if not orch.pending_actions:
         return None
-    from backend.engine.file_reads import try_batch_file_reads
-
-    batched = try_batch_file_reads(orch.pending_actions)
-    return batched if batched else orch.pending_actions.popleft()
+    # Preserve each native tool call as its own action.  A synthetic shell
+    # command cannot retain every call ID from a parallel ``read_file`` reply,
+    # which breaks assistant/tool result pairing in the next model prompt.
+    return orch.pending_actions.popleft()
 
 
 def _queue_additional_actions(orch: Orchestrator, actions: list[Action]) -> None:

@@ -470,8 +470,8 @@ class CircuitBreaker:
         This is the sole mechanism for reducing ``stuck_detection_count``.
         ``record_success`` handles only error-counter and per-tool decay;
         it does **not** touch stuck detection. Only observation types listed
-        in ``_PROGRESS_OBSERVATION_TYPES`` (file edits, task tracking
-        updates, agent delegation, lsp queries) trigger this call.
+        in ``_PROGRESS_OBSERVATION_TYPES`` (edits, task tracking updates,
+        agent delegation, lsp queries, and terminal work) trigger this call.
         """
         decay = max(0, getattr(self.config, 'error_decay_per_success', 0))
         if decay <= 0:

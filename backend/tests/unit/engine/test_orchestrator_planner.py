@@ -11,7 +11,7 @@ from backend.engine.orchestrator import Orchestrator
 from backend.engine.planner import OrchestratorPlanner, _maybe_log_prompt_metrics
 from backend.ledger.action.agent import AgentThinkAction, CondensationAction
 from backend.ledger.action.empty import NullAction, NullActionReason
-from backend.ledger.action.files import FileEditAction
+from backend.ledger.action.files import FileEditAction, FileReadAction
 from backend.ledger.observation import ErrorObservation
 
 
@@ -164,6 +164,22 @@ class TestCondensationRecoveryHandling:
 
 
 class TestQueuedActionThrottling:
+    def test_consume_pending_reads_preserves_each_original_action(self):
+        orch = Orchestrator.__new__(Orchestrator)
+        reads = [
+            FileReadAction(path='src/one.py'),
+            FileReadAction(path='src/two.py'),
+            FileReadAction(path='src/three.py'),
+            FileReadAction(path='src/four.py'),
+            FileReadAction(path='src/five.py'),
+        ]
+        orch.pending_actions = deque(reads)
+
+        consumed = [orch._consume_pending_action() for _ in reads]
+
+        assert consumed == reads
+        assert not orch.pending_actions
+
     def test_queue_additional_actions_queues_all(self):
         orch = Orchestrator.__new__(Orchestrator)
         orch.pending_actions = deque()

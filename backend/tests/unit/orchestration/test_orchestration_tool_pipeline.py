@@ -153,6 +153,39 @@ class TestToolInvocationPipelineCore:
 
 class TestCircuitBreakerMiddlewarePipeline:
     @pytest.mark.asyncio
+    async def test_observe_file_read_does_not_reset_stuck_detection(self):
+        from backend.ledger.observation.files import FileReadObservation
+
+        controller = MagicMock()
+        service = MagicMock()
+        controller.circuit_breaker_service = service
+        mw = CircuitBreakerMiddleware(controller)
+        ctx = ToolInvocationContext(
+            controller=controller, action=MagicMock(), state=MagicMock()
+        )
+
+        await mw.observe(ctx, FileReadObservation(path='src/app.py', content='x'))
+
+        service.record_success.assert_called_once()
+        service.record_progress_signal.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_observe_file_edit_still_resets_stuck_detection(self):
+        from backend.ledger.observation.files import FileEditObservation
+
+        controller = MagicMock()
+        service = MagicMock()
+        controller.circuit_breaker_service = service
+        mw = CircuitBreakerMiddleware(controller)
+        ctx = ToolInvocationContext(
+            controller=controller, action=MagicMock(), state=MagicMock()
+        )
+
+        await mw.observe(ctx, FileEditObservation(path='src/app.py', content='edited'))
+
+        service.record_progress_signal.assert_called_once_with('FileEditObservation')
+
+    @pytest.mark.asyncio
     async def test_execute_records_high_risk_via_service(self):
         controller = MagicMock()
         service = MagicMock()
@@ -288,7 +321,7 @@ class TestCircuitBreakerMiddlewarePipeline:
         service.record_success.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_observe_cmd_output_records_progress_signal(self):
+    async def test_observe_cmd_output_does_not_reset_stuck_detection(self):
         from backend.ledger.observation.commands import CmdOutputObservation
 
         controller = MagicMock()
@@ -301,7 +334,7 @@ class TestCircuitBreakerMiddlewarePipeline:
         obs = CmdOutputObservation(content='ok', command='echo hi')
         await mw.observe(ctx, obs)
         service.record_success.assert_called_once()
-        service.record_progress_signal.assert_called_once_with('CmdOutputObservation')
+        service.record_progress_signal.assert_not_called()
 
 
 # ── LoggingMiddleware ─────────────────────────────────────────────────

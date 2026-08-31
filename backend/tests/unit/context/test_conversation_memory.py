@@ -25,6 +25,7 @@ from backend.inference.tool_support.tool_result_format import decode_tool_result
 from backend.integrations.mcp.mcp_utils import call_tool_mcp
 from backend.ledger.action import MessageAction
 from backend.ledger.action.browser_tool import BrowserToolAction
+from backend.ledger.action.files import FileReadAction
 from backend.ledger.action.mcp import MCPAction
 from backend.ledger.action.search import GlobAction
 from backend.ledger.event import EventSource
@@ -35,7 +36,7 @@ from backend.ledger.observation import (
     ErrorObservation,
 )
 from backend.ledger.observation.commands import CmdOutputObservation
-from backend.ledger.observation.files import FileEditObservation
+from backend.ledger.observation.files import FileEditObservation, FileReadObservation
 from backend.ledger.observation.mcp import MCPObservation
 from backend.ledger.observation.search import GlobObservation
 
@@ -515,6 +516,64 @@ class TestToolPairingMessageShape:
         assert assistant.tool_calls[0].id == 'tc_glob'
         assert tool.tool_call_id == 'tc_glob'
         assert tool.name == 'glob'
+
+    def test_process_events_pairs_every_parallel_file_read_result(self):
+        mem = _make_memory()
+        initial_user = MessageAction(content='inspect the implementation')
+        initial_user.source = EventSource.USER
+        call_ids = [f'tc_read_{index}' for index in range(5)]
+        response_obj = SimpleNamespace(
+            id='resp_parallel_reads',
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(
+                        role='assistant',
+                        content='Inspecting the relevant files.',
+                        tool_calls=[
+                            SimpleNamespace(
+                                id=call_id,
+                                type='function',
+                                function=SimpleNamespace(
+                                    name='read_file',
+                                    arguments=f'{{"path":"src/{index}.py"}}',
+                                ),
+                            )
+                            for index, call_id in enumerate(call_ids)
+                        ],
+                    )
+                )
+            ],
+        )
+        history = []
+        for index, call_id in enumerate(call_ids):
+            metadata = build_tool_call_metadata(
+                function_name='read_file',
+                tool_call_id=call_id,
+                response_obj=response_obj,
+                total_calls_in_response=len(call_ids),
+            )
+            action = FileReadAction(path=f'src/{index}.py')
+            action.source = EventSource.AGENT
+            action.tool_call_metadata = metadata
+            observation = FileReadObservation(
+                path=f'src/{index}.py', content=f'content {index}'
+            )
+            observation.tool_call_metadata = metadata
+            history.extend([action, observation])
+
+        messages = mem.process_events(
+            condensed_history=history,
+            initial_user_action=initial_user,
+            max_message_chars=None,
+            vision_is_active=False,
+        )
+
+        assistant = next(m for m in messages if m.role == 'assistant' and m.tool_calls)
+        tool_messages = [m for m in messages if m.role == 'tool']
+        assert [call.id for call in assistant.tool_calls] == call_ids
+        assert [message.tool_call_id for message in tool_messages] == call_ids
+        assert all(message.name == 'read_file' for message in tool_messages)
+        assert not any('[CMD_OUTPUT' in str(message.content) for message in messages)
 
     def test_process_events_drops_unpaired_assistant_tool_call_without_observation_metadata(
         self,
