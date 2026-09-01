@@ -14,7 +14,7 @@ architecture diagram; rendered SVG/PNG artifacts are refreshed separately.
 
 **Contributors:** [CONTRIBUTOR_MAP.md](CONTRIBUTOR_MAP.md) · [DEVELOPER.md](DEVELOPER.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [CI.md](CI.md) · [../CONTRIBUTING.md](../CONTRIBUTING.md)
 
-**Evidence:** [../SHOWCASE.md](../SHOWCASE.md) · [showcase/](showcase/) · [evidence/2026-07-09-autonomous-run-report.md](evidence/2026-07-09-autonomous-run-report.md)
+**Evidence:** [../SHOWCASE.md](../SHOWCASE.md) · [showcase/](showcase/) · [evidence/2026-07-09-autonomous-run-report.md](evidence/2026-07-09-autonomous-run-report.md) · [../evaluation/deepswe/CASE_STUDY_2026-09-01.md](../evaluation/deepswe/CASE_STUDY_2026-09-01.md)
 
 **Maintainers:** [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) · [onboarding_reports/](onboarding_reports/) · [launch/REPOSITORY_SETTINGS.md](launch/REPOSITORY_SETTINGS.md) · [launch/CONTRIBUTOR_ISSUES.md](launch/CONTRIBUTOR_ISSUES.md)
 
