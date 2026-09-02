@@ -4,6 +4,16 @@ This is the preliminary, reproducible Grinta evaluation protocol. It uses the
 official DataCurve **Pier** harness and DeepSWE's external behavioral verifier.
 Grinta's own `FINISHED` state is diagnostic and can never produce a PASS.
 
+## Paired case study
+
+The completed eight-task paired case study is documented in
+[`CASE_STUDY_2026-09-01.md`](CASE_STUDY_2026-09-01.md). It is a carefully
+audited, task-by-task comparison of Grinta and native Codex CLI under the same
+Luna-medium subscription-auth configuration. It is deliberately separate from
+the frozen 20-task protocol below: it has one rollout per arm, selected tasks,
+and two Grinta revisions, so it must not be presented as a DeepSWE leaderboard
+score or a general model ranking.
+
 ## What is being evaluated
 
 The agent under test is **Grinta**, not Pier's built-in Codex agent:

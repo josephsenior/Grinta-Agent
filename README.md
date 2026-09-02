@@ -330,7 +330,8 @@ long-horizon software-engineering benchmark with behavioral verifiers. The
 adapter runs Grinta in an isolated task workspace, captures the resulting patch
 and trajectory, and leaves pass/fail decisions to the benchmark verifier.
 
-[Read the evaluation protocol](evaluation/deepswe/README.md).
+[Read the evaluation protocol](evaluation/deepswe/README.md) · [Read the
+eight-task paired case study](evaluation/deepswe/CASE_STUDY_2026-09-01.md).
 
 ## Safety boundary
 
