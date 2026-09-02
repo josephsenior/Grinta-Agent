@@ -37,14 +37,18 @@ class BenchmarkAuthenticationError(RuntimeError):
 def _find_subscription_usage_limit(state: Any) -> str | None:
     for event in reversed(getattr(state, 'history', []) or []):
         if getattr(event, 'error_category', None) == _QUOTA_ERROR_CATEGORY:
-            return str(getattr(event, 'content', '') or 'Subscription usage limit reached')
+            return str(
+                getattr(event, 'content', '') or 'Subscription usage limit reached'
+            )
     return None
 
 
 def _find_authentication_error(state: Any) -> str | None:
     for event in reversed(getattr(state, 'history', []) or []):
         if getattr(event, 'error_category', None) == _AUTH_ERROR_CATEGORY:
-            return str(getattr(event, 'content', '') or 'ChatGPT authentication required')
+            return str(
+                getattr(event, 'content', '') or 'ChatGPT authentication required'
+            )
     return None
 
 

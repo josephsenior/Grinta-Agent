@@ -19,7 +19,9 @@ class Check:
     detail: str
 
 
-def _command(command: Sequence[str], *, timeout: int = 15) -> subprocess.CompletedProcess[str]:
+def _command(
+    command: Sequence[str], *, timeout: int = 15
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         list(command),
         check=False,
@@ -45,7 +47,9 @@ def _codex_auth_check() -> Check:
     )
     if ok:
         # Never expose an auth cache, token, or its contents in benchmark output.
-        return Check('codex_chatgpt_auth', True, 'Codex CLI reports an authenticated session')
+        return Check(
+            'codex_chatgpt_auth', True, 'Codex CLI reports an authenticated session'
+        )
     return Check(
         'codex_chatgpt_auth',
         False,
@@ -68,7 +72,9 @@ def _pier_check() -> Check:
         if result.returncode == 0 and result.stdout.strip():
             bin_dir = Path(result.stdout.strip())
             if (bin_dir / 'pier').is_file() or (bin_dir / 'pier.exe').is_file():
-                return Check('datacurve_pier', True, 'datacurve-pier uv tool is installed')
+                return Check(
+                    'datacurve_pier', True, 'datacurve-pier uv tool is installed'
+                )
     return Check('datacurve_pier', False, 'datacurve-pier is not installed')
 
 
@@ -91,7 +97,11 @@ def _protocol_check(protocol_path: Path) -> Check:
     model = str(reported.get('model', ''))
     api_billing = reported.get('usage_billed_api')
     auth = reported.get('authentication')
-    ok = model.startswith('codex/') and api_billing is False and auth == 'chatgpt_subscription'
+    ok = (
+        model.startswith('codex/')
+        and api_billing is False
+        and auth == 'chatgpt_subscription'
+    )
     detail = (
         f'{model} via ChatGPT subscription; usage-billed API disabled'
         if ok

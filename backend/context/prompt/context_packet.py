@@ -493,7 +493,8 @@ def _active_status(canonical: CanonicalTaskState, state: State | None = None) ->
     pending = [
         task
         for task in canonical.background_tasks
-        if not task.outcome_known and task.status in {'still running', 'running', 'unknown'}
+        if not task.outcome_known
+        and task.status in {'still running', 'running', 'unknown'}
     ]
     completed = [task for task in canonical.background_tasks if task.outcome_known]
     if pending:
@@ -511,7 +512,9 @@ def _active_status(canonical: CanonicalTaskState, state: State | None = None) ->
         for task in completed[-4:]:
             session = task.session_id or 'unknown session'
             suffix = f' (exit {task.exit_code})' if task.exit_code is not None else ''
-            lines.append(f'- {session}: {task.status}{suffix}; inspect output before claiming verification.')
+            lines.append(
+                f'- {session}: {task.status}{suffix}; inspect output before claiming verification.'
+            )
     from backend.execution.utils.shell.background_turn_sync import (
         read_turn_drain_extras,
     )

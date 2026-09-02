@@ -87,8 +87,12 @@ class Grinta(BaseInstalledAgent):
         tree_sitter_languages: str = 'python',
         **kwargs: Any,
     ) -> None:
-        if len(grinta_commit) != 40 or any(c not in '0123456789abcdef' for c in grinta_commit):
-            raise ValueError('grinta_commit must be an exact lowercase 40-character SHA')
+        if len(grinta_commit) != 40 or any(
+            c not in '0123456789abcdef' for c in grinta_commit
+        ):
+            raise ValueError(
+                'grinta_commit must be an exact lowercase 40-character SHA'
+            )
         if reasoning_effort not in {'low', 'medium', 'high', 'xhigh', 'max'}:
             raise ValueError(f'Unsupported reasoning effort: {reasoning_effort}')
         self.grinta_commit = grinta_commit
@@ -103,7 +107,10 @@ class Grinta(BaseInstalledAgent):
             language = language.strip().lower()
             if not language:
                 continue
-            if not all(character.isalnum() or character in {'_', '-', '+'} for character in language):
+            if not all(
+                character.isalnum() or character in {'_', '-', '+'}
+                for character in language
+            ):
                 raise ValueError(f'Invalid tree-sitter language name: {language}')
             if language not in normalized_languages:
                 normalized_languages.append(language)
@@ -140,12 +147,14 @@ class Grinta(BaseInstalledAgent):
             prefetch_commands = [
                 (
                     'for grinta_prefetch_attempt in 1 2 3; do '
-                    f'"$grinta_python" -c {shlex.quote(
-                        "from tree_sitter_language_pack import manifest_languages, prefetch; "
-                        f"language={language!r}; available=set(manifest_languages()); "
-                        "assert language in available, f'unsupported tree-sitter language: {language}'; "
-                        "prefetch([language])"
-                    )} && break; '
+                    f'"$grinta_python" -c {
+                        shlex.quote(
+                            "from tree_sitter_language_pack import manifest_languages, prefetch; "
+                            f"language={language!r}; available=set(manifest_languages()); "
+                            "assert language in available, f'unsupported tree-sitter language: {language}'; "
+                            "prefetch([language])"
+                        )
+                    } && break; '
                     'if [ "$grinta_prefetch_attempt" -eq 3 ]; then exit 1; fi; '
                     'sleep $((grinta_prefetch_attempt * 5)); '
                     'done; '
@@ -215,7 +224,9 @@ class Grinta(BaseInstalledAgent):
     ) -> None:
         del context  # Pier calls populate_context_post_run after this method.
         if not self.model_name or not self.model_name.startswith('codex/'):
-            raise ValueError('model_name must use the subscription-backed codex/ transport')
+            raise ValueError(
+                'model_name must use the subscription-backed codex/ transport'
+            )
         raw_auth_path = self._get_env('CODEX_AUTH_JSON_PATH')
         if not raw_auth_path:
             raise ValueError(
@@ -330,8 +341,12 @@ class CodexCli(PierCodex):
                         if not line.strip():
                             normalized.append(line)
                             continue
-                        normalized.append(json.dumps(json.loads(line), ensure_ascii=True))
-                    session_file.write_text('\n'.join(normalized) + '\n', encoding='ascii')
+                        normalized.append(
+                            json.dumps(json.loads(line), ensure_ascii=True)
+                        )
+                    session_file.write_text(
+                        '\n'.join(normalized) + '\n', encoding='ascii'
+                    )
                 except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                     continue
         super().populate_context_post_run(context)

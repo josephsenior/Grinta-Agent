@@ -169,21 +169,26 @@ def _merge_background_tasks(
         # A stale compaction snapshot may still describe a command as running
         # after the runtime has recorded its final lifecycle. Never regress a
         # known terminal outcome to an inferred pending state.
-        keep_final = bool(prev is not None and prev.outcome_known and not item_outcome_known)
+        keep_final = bool(
+            prev is not None and prev.outcome_known and not item_outcome_known
+        )
         by_key[key] = BackgroundTaskState(
             session_id=session_id,
             command=command[:240],
             status=(
-                prev.status if keep_final and prev is not None
+                prev.status
+                if keep_final and prev is not None
                 else str(item.get('status', 'still running'))[:80]
             ),
             exit_code=(
-                prev.exit_code if keep_final and prev is not None
+                prev.exit_code
+                if keep_final and prev is not None
                 else int(item['exit_code'])
                 if isinstance(item.get('exit_code'), int)
                 else (prev.exit_code if prev is not None else None)
             ),
-            outcome_known=item_outcome_known or bool(prev is not None and prev.outcome_known),
+            outcome_known=item_outcome_known
+            or bool(prev is not None and prev.outcome_known),
             next_action=str(item.get('next_action', 'terminal_read'))[:200],
             recent_output=recent_output,
             event_id=event_id,

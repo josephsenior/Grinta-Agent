@@ -122,7 +122,9 @@ def background_lifecycles_for_turn(executor: Any) -> dict[str, dict[str, Any]]:
         return {}
     return {
         session_id: background_session_lifecycle(session)
-        for session_id, session in list(getattr(session_manager, 'sessions', {}).items())
+        for session_id, session in list(
+            getattr(session_manager, 'sessions', {}).items()
+        )
         if session_id != 'default' and session is not None
     }
 

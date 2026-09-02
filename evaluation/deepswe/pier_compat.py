@@ -21,9 +21,7 @@ def codex_npm_install_args(version: str) -> str:
     wrapper = f'@openai/codex@{version}'
     # The platform binary is an optional alias dependency. npm can omit it
     # after a slow registry fetch, leaving the wrapper unusable at runtime.
-    linux_x64 = (
-        f'@openai/codex-linux-x64@npm:@openai/codex@{version}-linux-x64'
-    )
+    linux_x64 = f'@openai/codex-linux-x64@npm:@openai/codex@{version}-linux-x64'
     return f'{shlex.quote(wrapper)} {shlex.quote(linux_x64)}'
 
 

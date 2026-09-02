@@ -176,9 +176,7 @@ class TestRetryMixin(TestCase):
         def test_function():
             nonlocal calls
             calls += 1
-            raise RateLimitError(
-                'usage_limit_reached', kind=RateLimitKind.USAGE_QUOTA
-            )
+            raise RateLimitError('usage_limit_reached', kind=RateLimitKind.USAGE_QUOTA)
 
         with self.assertRaises(RateLimitError):
             test_function()

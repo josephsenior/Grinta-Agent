@@ -44,8 +44,7 @@ def check_structure_editor_dependencies() -> tuple[bool, str]:
 
         except Exception as e:
             return False, (
-                'Tree-sitter functionality test failed: '
-                f'{type(e).__name__}: {e}'
+                f'Tree-sitter functionality test failed: {type(e).__name__}: {e}'
             )
 
         if tree.root_node.type != 'module':

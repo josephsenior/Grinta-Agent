@@ -228,7 +228,10 @@ def test_background_task_persists_until_terminal_resolution() -> None:
         persist=False,
     )
 
-    assert canonical.background_tasks == []
+    assert len(canonical.background_tasks) == 1
+    completed = canonical.background_tasks[0]
+    assert completed.session_id == 'terminal_7'
+    assert completed.outcome_known is True
 
 
 def test_failed_approaches_are_deduped_and_capped() -> None:

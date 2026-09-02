@@ -36,7 +36,10 @@ def test_codex_auth_check_does_not_echo_command_output(monkeypatch) -> None:
         preflight,
         '_command',
         lambda _: subprocess.CompletedProcess(
-            args=['codex'], returncode=0, stdout='Logged in via ChatGPT SECRET', stderr=''
+            args=['codex'],
+            returncode=0,
+            stdout='Logged in via ChatGPT SECRET',
+            stderr='',
         ),
     )
 

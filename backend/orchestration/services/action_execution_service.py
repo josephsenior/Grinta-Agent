@@ -361,9 +361,7 @@ class ActionExecutionService:
             drains = sync_background_output_for_turn(executor)
             lifecycles = background_lifecycles_for_turn(executor)
             if drains or lifecycles:
-                apply_background_drain_to_state(
-                    self._context.state, drains, lifecycles
-                )
+                apply_background_drain_to_state(self._context.state, drains, lifecycles)
         except Exception:
             logger.debug(
                 'ActionExecutionService: background turn sync failed',
